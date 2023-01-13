@@ -6,15 +6,18 @@
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
         Title="MainWindow" Height="1080" Width="1920" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" WindowState="Maximized" UseLayoutRounding="true" 
-        Background="Black" RenderOptions.BitmapScalingMode="HighQuality">
+        Background="Black" RenderOptions.BitmapScalingMode="HighQuality" FontFamily="Segoe UI Black" FontSize="72">
     <ScrollViewer VerticalScrollBarVisibility="Hidden" PanningMode="Both">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"></RowDefinition>
                 <RowDefinition Height="Auto"></RowDefinition>
                 <RowDefinition Height="Auto"></RowDefinition>
+                <RowDefinition Height="Auto"></RowDefinition>
+                <RowDefinition Height="Auto"></RowDefinition>
+                <RowDefinition Height="Auto"></RowDefinition>
             </Grid.RowDefinitions>
-            <Label Content="Movies" FontSize="72" Foreground="White" ></Label>
+            <Label Content="TV" Foreground="White" ></Label>
             <ListView Grid.Row="1" x:Name="TvBox" Background="Black" BorderBrush="Black">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -29,7 +32,41 @@
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
-            <Label Grid.Row="2" Content="TV" FontSize="72" Foreground="White" ></Label>
+            <!--<Expander Grid.Row="2" Header="Cartoons" Foreground="White" HorizontalAlignment="Left" FlowDirection="RightToLeft">
+                <StackPanel FlowDirection="LeftToRight">
+                    <Label Content="   Ctemp" Foreground="White" ></Label>
+                </StackPanel>
+            </Expander>-->
+            <Label Grid.Row="2" Content="Cartoons" Foreground="White" ></Label>
+            <ListView Grid.Row="3" x:Name="CartoonBox" Background="Black" BorderBrush="Black">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="6" HorizontalAlignment="Center"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Vertical">
+                            <Image Width="300" Height="450" Source="{Binding ImageData}" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            <Label Grid.Row="4" Content="Movies" Foreground="White" ></Label>
+            <ListView Grid.Row="5" x:Name="MovieBox" Background="Black" BorderBrush="Black">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="6" HorizontalAlignment="Center"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Vertical">
+                            <Image Width="300" Height="450" Source="{Binding ImageData}" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
         </Grid>
     </ScrollViewer>
 </Window>
