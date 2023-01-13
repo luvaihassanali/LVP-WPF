@@ -6,6 +6,8 @@ namespace LVP_WPF
 {
     public partial class MainWindow : Window
     {
+        static public MainModel mainModel;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -14,51 +16,51 @@ namespace LVP_WPF
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             // start loader
-            //Cache.ProcessRootDirectories();
+            Cache.ProcessRootDirectories();
             // create model
             // set data context -> load gui
             // stop loader
-            this.MovieBox.ItemsSource = new MovieData[]
+            this.MovieBox.ItemsSource = new MainMovieBox[]
             {
-                new MovieData{Title="Movie 1", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Movie 2", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Movie 3", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Movie 4", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Movie 5", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Movie 6", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Movie 7", ImageData=LoadImage("image.jpg")}
+                new MainMovieBox{Title="Movie 1", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Movie 2", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Movie 3", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Movie 4", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Movie 5", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Movie 6", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Movie 7", Image=LoadImage("image.jpg")}
             };
-            this.TvBox.ItemsSource = new MovieData[]
+            this.TvBox.ItemsSource = new MainMovieBox[]
             {
-                new MovieData{Title="TV 1", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="TV 2", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="TV 3", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="TV 4", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="TV 5", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="TV 6", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="TV 7", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="TV 8", ImageData=LoadImage("image.jpg")},
+                new MainMovieBox{Title="TV 1", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="TV 2", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="TV 3", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="TV 4", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="TV 5", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="TV 6", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="TV 7", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="TV 8", Image=LoadImage("image.jpg")},
             };
-            this.CartoonBox.ItemsSource = new MovieData[]
+            this.CartoonBox.ItemsSource = new MainMovieBox[]
             {
-                new MovieData{Title="Cartoon 1", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 2", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 3", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 4", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 5", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 6", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 7", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 8", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 1", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 2", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 3", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 4", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 5", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 6", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 7", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 8", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 7", ImageData=LoadImage("image.jpg")},
-                new MovieData{Title="Cartoon 8", ImageData=LoadImage("image.jpg")}
+                new MainMovieBox{Title="Cartoon 1", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 2", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 3", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 4", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 5", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 6", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 7", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 8", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 1", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 2", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 3", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 4", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 5", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 6", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 7", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 8", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 7", Image=LoadImage("image.jpg")},
+                new MainMovieBox{Title="Cartoon 8", Image=LoadImage("image.jpg")}
             };
         }
 
