@@ -5,18 +5,22 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
-        Height="270" Width="960" Title="{Binding Title}" ResizeMode="NoResize" WindowStartupLocation="CenterScreen">
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition />
-            <RowDefinition Height="50"/>
-        </Grid.RowDefinitions>
-        <Button Content="Continue" HorizontalAlignment="Right" Margin="0,0,95,7" Grid.Row="1" VerticalAlignment="Bottom" Width="75" Click="Button_Continue_Click"/>
-        <Button Content="Close" HorizontalAlignment="Right" Margin="0,0,10,7" Grid.Row="1" VerticalAlignment="Bottom" Width="75" Click="Button_Close_Click"/>
-        <StackPanel Margin="70,10,10,0">
-            <TextBlock Text="{Binding Caption}" FontSize="20" Foreground="DarkBlue" TextWrapping="Wrap"/>
-            <TextBlock Margin="0,10,0,0" Text="{Binding Message}" TextWrapping="Wrap"/>
-        </StackPanel>
-        <Image Source="{Binding Image}" Stretch="None" HorizontalAlignment="Left" Height="52" Margin="6,10,0,0" VerticalAlignment="Top" Width="55"/>
-    </Grid>
+         Height="300" Width="900" ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI" Background="Black" WindowStyle="None">
+    <Border BorderThickness="1">
+        <Border.BorderBrush>
+            <SolidColorBrush Color="White" Opacity="0.5"/>
+        </Border.BorderBrush>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition />
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <TextBlock Margin="10,0,0,0" Text="{Binding Caption}" FontSize="48" Foreground="LightBlue"/>
+            <TextBlock Grid.Row="1" Margin="10,0,10,0" FontSize="28" Foreground="White" Text="{Binding Message}" TextWrapping="Wrap"/>
+            <Button FontSize="24" Foreground="White" Background="Black" Content="Continue" HorizontalAlignment="Right" Margin="10,10,140,10" Grid.Row="2" Height="40" Width="120" Click="Button_Continue_Click"/>
+            <Button FontSize="24" Foreground="White" Background="Black" Content="Exit" HorizontalAlignment="Right" Margin="10,10,10,10" Grid.Row="2" Height="40" Width="120" Click="Button_Exit_Click"/>
+        </Grid>
+    </Border>
 </Window>

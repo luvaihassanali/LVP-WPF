@@ -1,10 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
-using System.Drawing;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 
 namespace LVP_WPF
@@ -14,7 +10,6 @@ namespace LVP_WPF
     {
         public static int Show(string title, string[][] info, DateTime?[] dates)
         {
-            //To-do: remove icon from parameter
             OptionDialog dialog = new OptionDialog();
             dialog.Caption = title + "?";
             dialog.Message = "Select the correct entry for: " + title;
@@ -40,6 +35,7 @@ namespace LVP_WPF
         private string message;
         [ObservableProperty]
         private BitmapSource image;
+
         private static int returnId = -1;
 
         public OptionDialog()
@@ -48,7 +44,7 @@ namespace LVP_WPF
             InitializeComponent();
         }
 
-        private void Button_Close_Click(object sender, RoutedEventArgs e)
+        private void Button_Exit_Click(object sender, RoutedEventArgs e)
         {
             Environment.Exit(0);
         }

@@ -70,11 +70,7 @@ namespace LVP_WPF
 
             if (numMovieObjects == 0)
             {
-                NotificationDialog.Show(
-                    "Cache.BuildMovieCache",
-                    "Error",
-                    "No movie found for: " + movie.Name,
-                NotifyIcon.Exclamation);
+                NotificationDialog.Show("Error", "No movie found for: " + movie.Name);
                 Environment.Exit(0);
             }
             else if (numMovieObjects != 1)
@@ -118,12 +114,7 @@ namespace LVP_WPF
             if (!(String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
             {
                 string message = "Local movie name does not match retrieved data. Renaming file '" + movie.Name.Replace(":", "") + "' to '" + ((string)movieObject["title"]).Replace(":", "") + "'.";
-                NotificationDialog.Show(
-                    "Cache.UpdateMovieData",
-                    "Warning",
-                     message,
-                NotifyIcon.Exclamation);
-
+                InputDialog.Show("Warning", message);
                 string oldPath = movie.Path;
                 string[] fileNamePath = oldPath.Split('\\');
                 string fileName = fileNamePath[fileNamePath.Length - 1];
@@ -602,11 +593,7 @@ for (int i = 0; i < MainForm.media.TvShows.Length; i++)
                     if (!episodeEntries[j].Contains('%'))
                     {
                         //("Missing separator: " + namePath);
-                        NotificationDialog.Show(
-                            "Cache.ProcessTvDirectory",
-                            "Episode is missing separator",
-                            episodeEntries[j],
-                            NotifyIcon.Exclamation);
+                        NotificationDialog.Show("Error", "Episode is missing separator: " + episodeEntries[j]);
                         Environment.Exit(0);
                     }
                     string[] episodeNameNumber = namePath[namePath.Length - 1].Split(new[] { '%' }, 2);
@@ -708,36 +695,14 @@ for (int i = 0; i < MainForm.media.TvShows.Length; i++)
             string tvDirPath = driveLetter + ":\\media\\tv";
             if (!Directory.Exists(tvDirPath))
             {
-                /*bool inputRes = InputDialog.Show(
-                    "Backup and Restor center",
-                    "You need to be an Administrator to run backup",
-                    "Use Fast User Switching to switch to an account with administrator privileges, or log off and log on as an administrator",
-                NotifyIcon.Exclamation);
-
-                if (inputRes)
-                {
-
-                }
-                else
-                {
-                    Environment.Exit(0);
-                }*/
-                NotificationDialog.Show(
-                    "Cache.ProcessRootDirectory",
-                    "Error",
-                    "TV folder on " + driveLetter + " drive not found.",
-                NotifyIcon.Exclamation);
+                NotificationDialog.Show("Error", "TV folder on " + driveLetter + " drive not found.");
                 Environment.Exit(0);
             }
 
             string movieDirPath = driveLetter + ":\\media\\movie";
             if (!Directory.Exists(movieDirPath))
             {
-                NotificationDialog.Show(
-                    "Cache.ProcessRootDirectory",
-                    "Error",
-                    "Movie folder on " + driveLetter + " drive not found.",
-                NotifyIcon.Exclamation);
+                NotificationDialog.Show("Error", "Movie folder on " + driveLetter + " drive not found.");
                 Environment.Exit(0);
             }
 
