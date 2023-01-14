@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
-        Height="600" Width="1200" Title="{Binding Title}" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" FontFamily="Segoe UI" FontSize="20" 
-        Background="Black" RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" >
+        Height="600" Width="1200" ResizeMode="NoResize" WindowStartupLocation="CenterScreen" 
+        FontFamily="Segoe UI" Background="Black" WindowStyle="None" >
     <Border BorderThickness="1">
         <Border.BorderBrush>
             <SolidColorBrush Color="White" Opacity="0.5"/>
@@ -17,13 +17,13 @@
                 <RowDefinition/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <TextBlock Text="{Binding Caption}" FontSize="32" Margin="10,0,0,0" Foreground="LightBlue"/>
+            <TextBlock Text="{Binding Caption}" FontSize="48" Margin="10,0,0,0" Foreground="LightBlue"/>
             <Grid Margin="10,0,10,0" Grid.Row="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition/>
                 </Grid.RowDefinitions>
-                <TextBlock Margin="0,0,0,10" Foreground="White" Text="{Binding Message}" TextWrapping="Wrap"/>
+                <TextBlock Margin="0,0,0,10" FontSize="32" Foreground="White" Text="{Binding Message}" TextWrapping="Wrap"/>
                 <Grid Grid.Row="1">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -32,23 +32,23 @@
                     </Grid.RowDefinitions>
                     <ListView VerticalAlignment="Top" Grid.Row="2" Name="OptionBox" ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                           Background="Black" BorderBrush="Black">
-                        <ListView.ItemTemplate> 
+                        <ListView.ItemTemplate>
                             <DataTemplate>
-                                <Grid Margin="0,10,0, 10">
+                                <Grid Margin="0,10,0,10">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <TextBlock Margin="10,0,0,0" Foreground="White" FontWeight="Bold" FontSize="22" Text="{Binding Name}" TextWrapping="Wrap"/>
-                                    <TextBlock Margin="10,0,0,0" Foreground="White" Grid.Row="1" Text="{Binding Description}" TextWrapping="Wrap" />
+                                    <TextBlock Margin="10,0,0,0" Foreground="White" FontWeight="Bold" FontSize="20" Text="{Binding Name}" TextWrapping="Wrap"/>
+                                    <TextBlock Margin="10,0,10,0" Foreground="White" Grid.Row="1" FontSize="18" Text="{Binding Description}" TextWrapping="Wrap" />
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
                     </ListView>
                 </Grid>
             </Grid>
-            <Button Foreground="White" Background="Black" Content="Continue" HorizontalAlignment="Right" Margin="10,10,120,10" Grid.Row="2" VerticalAlignment="Bottom" Width="100" Click="Button_Continue_Click"/>
-            <Button Foreground="White" Background="Black" Content="Close" HorizontalAlignment="Right" Margin="10,10,10,10" Grid.Row="2" VerticalAlignment="Bottom" Width="100" Click="Button_Close_Click"/>
+            <Button FontSize="24" Foreground="White" Background="Black" Content="Continue" HorizontalAlignment="Right" Margin="10,10,140,10" Grid.Row="2" Height="40" Width="120" Click="Button_Continue_Click"/>
+            <Button FontSize="24" Foreground="White" Background="Black" Content="Close" HorizontalAlignment="Right" Margin="10,10,10,10" Grid.Row="2"  Height="40" Width="120" Click="Button_Close_Click"/>
         </Grid>
     </Border>
 </Window>

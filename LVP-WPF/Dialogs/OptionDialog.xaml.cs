@@ -12,14 +12,12 @@ namespace LVP_WPF
     [ObservableObject]
     public partial class OptionDialog : Window
     {
-        public static int Show(string title, string[][] info, DateTime?[] dates, NotifyIcon icon)
+        public static int Show(string title, string[][] info, DateTime?[] dates)
         {
             //To-do: remove icon from parameter
             OptionDialog dialog = new OptionDialog();
-            dialog.Title = title + "?";
             dialog.Caption = title + "?";
             dialog.Message = "Select the correct entry for: " + title;
-            dialog.Image = dialog.GetIcon(icon);
             dialog.Topmost = true;
             OptionWindowBox[] entries = new OptionWindowBox[info[0].Length];
             for (int i = 0; i < info[0].Length; i++)
@@ -44,28 +42,10 @@ namespace LVP_WPF
         private BitmapSource image;
         private static int returnId = -1;
 
-        private const int GWL_STYLE = -16;
-        private const int WS_SYSMENU = 0x80000;
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-        [DllImport("user32.dll")]
-        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
         public OptionDialog()
         {
             DataContext = this;
             InitializeComponent();
-            Loaded += (s, e) =>
-            {
-                var hwnd = new WindowInteropHelper(this).Handle;
-                SetWindowLong(hwnd, GWL_STYLE, GetWindowLong(hwnd, GWL_STYLE) & ~WS_SYSMENU);
-            };
-        }
-
-        private BitmapSource GetIcon(NotifyIcon iconType)
-        {
-            Icon icon = (Icon)typeof(SystemIcons).GetProperty(iconType.ToString(), BindingFlags.Public | BindingFlags.Static).GetValue(null, null);
-            return Imaging.CreateBitmapSourceFromHIcon(icon.Handle, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
         }
 
         private void Button_Close_Click(object sender, RoutedEventArgs e)
