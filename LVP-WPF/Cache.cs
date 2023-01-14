@@ -97,7 +97,7 @@ namespace LVP_WPF
                 }
 
                 string[][] info = new string[][] { names, ids, overviews };
-                movie.Id = OptionDialog.Show(movie.Name, info, dates, NotifyIcon.Exclamation);
+                movie.Id = OptionDialog.Show(movie.Name, info, dates, NotifyIcon.Question);
             }
             else
             {
