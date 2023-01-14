@@ -224,7 +224,7 @@ namespace LVP_WPF
 
         private class SortMoviesAlphabeticallyHelper : IComparer
         {
-            int IComparer.Compare(object a, object b)
+            int IComparer.Compare(object? a, object? b)
             {
                 Movie m1 = (Movie)a;
                 Movie m2 = (Movie)b;

@@ -11,7 +11,7 @@ namespace LVP_WPF
     {
     }
 
-    public class MainMovieBox
+    public class MainWindowBox
     {
         private string title;
         public string Title
@@ -27,5 +27,29 @@ namespace LVP_WPF
             set { this.img = value; }
         }
 
+    }
+
+    public class OptionWindowBox
+    {
+        private string name;
+        public string Name
+        {
+            get { return this.name; }
+            set { this.name = value; }
+        }
+
+        private string description;
+        public string Description
+        {
+            get { return this.description; }
+            set { this.description = value; }
+        }
+
+        private int id;
+        public int Id
+        {
+            get { return this.id; }
+            set { this.id = value; }
+        }
     }
 }

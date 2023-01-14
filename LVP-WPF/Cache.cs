@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +24,7 @@ namespace LVP_WPF
         private static string apiTvUrl = apiUrl + "tv/{tv_id}" + apiKey;
         private static string apiTvSeasonUrl = apiUrl + "tv/{tv_id}/season/{season_number}" + apiKey;
         private static string apiMovieUrl = apiUrl + "movie/{movie_id}" + apiKey;
-        private static string bufferString = "";
+        private static string imageDownloadBufferString = "";
 
         private static List<string> tvPathList = new List<string>();
         private static List<string> moviePathList = new List<string>();
@@ -31,421 +33,21 @@ namespace LVP_WPF
 
         internal static async void BuildCache()
         {
-            using (HttpClient client = new HttpClient())
+            HttpClient client = new HttpClient();
+            client.Timeout = TimeSpan.FromMinutes(5);
+
+            for (int i = 0; i < MainWindow.model.Movies.Length; i++)
             {
-                string url = 'some url';
-
-                // best practice to create one HttpClient per Application and inject it
-                //HttpClient client = new HttpClient();
-
-                using (HttpResponseMessage response = await client.GetAsync(url))
-                {
-                    using (HttpContent content = response.Content)
-                    {
-                        var json = await content.ReadAsStringAsync();
-                    }
-                }
+                await BuildMovieCacheAsync(MainWindow.model.Movies[i], client);
             }
-                /*for (int i = 0; i < MainForm.media.Movies.Length; i++)
-                {
-                    // If id is not 0 expected to be init
-                    if (MainForm.media.Movies[i].Id != 0) continue;
-                    UpdateLoadingLabel("Processing: " + MainForm.media.Movies[i].Name);
-                    Movie movie = MainForm.media.Movies[i];
-                    string movieResourceString = client.DownloadString(movieSearch + movie.Name);
 
-                    JObject movieObject = JObject.Parse(movieResourceString);
-                    int totalResults = (int)movieObject["total_results"];
+            /*for (int i = 0; i < MainWindow.mainModel.Movies.Length; i++)
+            {
+                BuildTvShowCache(MainWindow.mainModel.TvShows[i], client);
+            }*/
 
-                    if (totalResults == 0)
-                    {
-                        CustomDialog.ShowMessage("Error", "No movie found for: " + movie.Name, mainForm.Width, mainForm.Height);
-                    }
-                    else if (totalResults != 1)
-                    {
-                        int actualResults = (int)((JArray)movieObject["results"]).Count();
-                        string[] names = new string[actualResults];
-                        string[] ids = new string[actualResults];
-                        string[] overviews = new string[actualResults];
-                        DateTime?[] dates = new DateTime?[actualResults];
+            client.Dispose();
 
-                        for (int j = 0; j < actualResults; j++)
-                        {
-                            names[j] = (string)movieObject["results"][j]["title"];
-                            names[j] = names[j].fixBrokenQuotes();
-                            ids[j] = (string)movieObject["results"][j]["id"];
-                            overviews[j] = (string)movieObject["results"][j]["overview"];
-                            overviews[j] = overviews[j].fixBrokenQuotes();
-                            DateTime temp;
-                            dates[j] = DateTime.TryParse((string)movieObject["results"][j]["release_date"], out temp) ? temp : DateTime.MinValue.AddHours(9);
-                        }
-
-                        string[][] info = new string[][] { names, ids, overviews };
-                        movie.Id = CustomDialog.ShowOptions(movie.Name, info, dates, mainForm.Width, mainForm.Height);
-                    }
-                    else
-                    {
-                        movie.Id = (int)movieObject["results"][0]["id"];
-                    }
-
-                    //404 not found
-                    string movieString = "";
-                    try
-                    {
-                        movieString = client.DownloadString(movieGet.Replace("{movie_id}", movie.Id.ToString()));
-                    }
-                    catch
-                    {
-                        CustomDialog.ShowMessage("Error", "No movie found for: " + movie.Name, mainForm.Width, mainForm.Height);
-                        Environment.Exit(1);
-                    }
-
-                    movieObject = JObject.Parse(movieString);
-                    if (String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0)
-                    {
-                        movie.Backdrop = (string)movieObject["backdrop_path"];
-                        movie.Poster = (string)movieObject["poster_path"];
-                        movie.Overview = (string)movieObject["overview"];
-                        movie.Overview = movie.Overview.fixBrokenQuotes();
-                        movie.RunningTime = (int)movieObject["runtime"];
-
-                        DateTime tempDate;
-                        movie.Date = DateTime.TryParse((string)movieObject["release_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
-
-                        if (movie.Backdrop != null)
-                        {
-                            await DownloadImage(movie.Backdrop, movie.Name, true, token);
-                            movie.Backdrop = bufferString;
-                        }
-
-                        if (movie.Poster != null)
-                        {
-                            await DownloadImage(movie.Poster, movie.Name, true, token);
-                            movie.Poster = bufferString;
-                        }
-                    }
-                    else
-                    {
-                        string message = "Local movie name does not match retrieved data. Renaming file '" + movie.Name.Replace(":", "") + "' to '" + ((string)movieObject["title"]).Replace(":", "") + "'.";
-                        CustomDialog.ShowMessage("Warning", message, mainForm.Width, mainForm.Height);
-
-                        string oldPath = movie.Path;
-                        string[] fileNamePath = oldPath.Split('\\');
-                        string fileName = fileNamePath[fileNamePath.Length - 1];
-                        string extension = fileName.Split('.')[1];
-                        string newFileName = ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(); ;
-                        string newPath = oldPath.Replace(fileName, newFileName + "." + extension);
-                        string invalid = new string(Path.GetInvalidPathChars()) + '?';
-
-                        foreach (char c in invalid)
-                        {
-                            newPath = newPath.Replace(c.ToString(), "");
-                        }
-
-                        File.Move(oldPath, newPath);
-
-                        movie.Path = newPath;
-                        movie.Name = newFileName;
-                        movie.Id = (int)movieObject["id"];
-                        movie.Backdrop = (string)movieObject["backdrop_path"];
-                        movie.Poster = (string)movieObject["poster_path"];
-                        movie.Overview = (string)movieObject["overview"];
-                        movie.Overview = movie.Overview.fixBrokenQuotes();
-
-                        DateTime tempDate;
-                        movie.Date = DateTime.TryParse((string)movieObject["release_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
-
-                        if (movie.Backdrop != null)
-                        {
-                            await DownloadImage(movie.Backdrop, movie.Name, true, token);
-                            movie.Backdrop = bufferString;
-                        }
-
-                        if (movie.Poster != null)
-                        {
-                            await DownloadImage(movie.Poster, movie.Name, true, token);
-                            movie.Poster = bufferString;
-                        }
-                    }
-                }
-                */
-                /*
-                for (int i = 0; i < MainForm.media.TvShows.Length; i++)
-                {
-                    TvShow tvShow = MainForm.media.TvShows[i];
-
-                    if (tvShow.Name.Equals("Tom & Jerry"))
-                    {
-                        CustomCache.BuildTomAndJerryData(tvShow);
-                        continue;
-                    }
-                    else if (tvShow.Name.Equals("Looney Tunes"))
-                    {
-                        CustomCache.BuildLooneyTunesData(tvShow);
-                        continue;
-                    }
-
-                    // If id is not 0 then general show data initialized
-                    if (tvShow.Id == 0)
-                    {
-                        string tvResourceString = client.DownloadString(tvSearch + tvShow.Name);
-
-                        JObject tvObject = JObject.Parse(tvResourceString);
-                        int totalResults = (int)tvObject["total_results"];
-
-                        if (totalResults == 0)
-                        {
-                            CustomDialog.ShowMessage("Error", "No tv show for: " + tvShow.Name, mainForm.Width, mainForm.Height);
-                        }
-                        else if (totalResults != 1)
-                        {
-                            int actualResults = (int)((JArray)tvObject["results"]).Count();
-                            string[] names = new string[actualResults];
-                            string[] ids = new string[actualResults];
-                            string[] overviews = new string[actualResults];
-                            DateTime?[] dates = new DateTime?[actualResults];
-
-                            for (int j = 0; j < actualResults; j++)
-                            {
-                                names[j] = (string)tvObject["results"][j]["name"];
-                                names[j] = names[j].fixBrokenQuotes();
-                                ids[j] = (string)tvObject["results"][j]["id"];
-                                overviews[j] = (string)tvObject["results"][j]["overview"];
-                                overviews[j] = overviews[j].fixBrokenQuotes();
-
-                                DateTime temp;
-                                dates[j] = DateTime.TryParse((string)tvObject["results"][j]["first_air_date"], out temp) ? temp : DateTime.MinValue.AddHours(9);
-                            }
-
-                            string[][] info = new string[][] { names, ids, overviews };
-                            tvShow.Id = CustomDialog.ShowOptions(tvShow.Name, info, dates, mainForm.Width, mainForm.Height);
-                        }
-                        else
-                        {
-                            tvShow.Id = (int)tvObject["results"][0]["id"];
-                        }
-
-                        // 404
-                        string tvString = "";
-                        try
-                        {
-                            tvString = client.DownloadString(tvGet.Replace("{tv_id}", tvShow.Id.ToString()));
-                        }
-                        catch
-                        {
-                            CustomDialog.ShowMessage("Error", "No tv show found for: " + tvShow.Name, mainForm.Width, mainForm.Height);
-                            Environment.Exit(1);
-                        }
-
-                        tvObject = JObject.Parse(tvString);
-                        tvShow.Overview = (string)tvObject["overview"];
-                        tvShow.Overview = tvShow.Overview.fixBrokenQuotes();
-                        tvShow.Poster = (string)tvObject["poster_path"];
-                        tvShow.Backdrop = (string)tvObject["backdrop_path"];
-                        tvShow.RunningTime = (int)tvObject["episode_run_time"][0];
-                        var genres = tvObject["genres"];
-                        foreach (var genre in genres)
-                        {
-                            if ((int)genre["id"] == 16 && !(tvShow.Name == "Family Guy" || tvShow.Name == "The Simpsons" || tvShow.Name == "Futurama" || tvShow.Name == "The Boondocks" || tvShow.Name == "American Dad!"))
-                            {
-                                tvShow.Cartoon = true;
-                            }
-                        }
-
-                        DateTime tempDate;
-                        tvShow.Date = DateTime.TryParse((string)tvObject["first_air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
-
-                        if (tvShow.Backdrop != null)
-                        {
-                            await DownloadImage(tvShow.Backdrop, tvShow.Name, false, token);
-                            tvShow.Backdrop = bufferString;
-                        }
-
-                        if (tvShow.Poster != null)
-                        {
-                            await DownloadImage(tvShow.Poster, tvShow.Name, false, token);
-                            tvShow.Poster = bufferString;
-                        }
-                    }
-
-                    // Always check season data for new content
-                    // Some shows first season index = 1
-                    string tvIdExceptionsStr = ConfigurationManager.AppSettings["tvIdExceptions"];
-                    string[] tvIdExceptionsStrArr = tvIdExceptionsStr.Split(';');
-                    int[] tvIdExceptions = new int[tvIdExceptionsStrArr.Length];
-                    for (int idIdx = 0; idIdx < tvIdExceptionsStrArr.Length; idIdx++)
-                    {
-                        tvIdExceptions[idIdx] = int.Parse(tvIdExceptionsStrArr[idIdx]);
-                    }
-                    int seasonIndex = 0;
-                    if (tvIdExceptions.Contains(tvShow.Id))
-                    {
-                        seasonIndex = 1;
-                    }
-                    for (int j = 0; j < tvShow.Seasons.Length; j++)
-                    {
-                        Season season = tvShow.Seasons[j];
-
-                        if (season.Id == -1) continue;
-
-                        string seasonLabel = tvShow.Seasons[j].Id == -1 ? "Extras" : (j + 1).ToString();
-                        UpdateLoadingLabel("Processing: " + tvShow.Name + " Season " + seasonLabel);
-
-                        string seasonApiCall = tvSeasonGet.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
-
-                        string seasonString = "";
-                        try
-                        {
-                            seasonString = client.DownloadString(seasonApiCall);
-                        }
-                        catch
-                        {
-                            CustomDialog.ShowMessage("Error", "Season first index error: " + tvShow.Name + ", ID = " + tvShow.Id, mainForm.Width, mainForm.Height);
-                            Environment.Exit(1);
-                        }
-
-                        JObject seasonObject = JObject.Parse(seasonString);
-                        if (((string)seasonObject["name"]).Contains("Specials"))
-                        {
-                            seasonIndex++;
-                            seasonString = client.DownloadString(tvSeasonGet.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString()));
-                            seasonObject = JObject.Parse(seasonString);
-                        }
-
-                        if (season.Poster == null)
-                        {
-                            season.Poster = (string)seasonObject["poster_path"];
-                            DateTime tempDate;
-                            season.Date = DateTime.TryParse((string)seasonObject["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
-
-                            if (season.Poster != null)
-                            {
-                                await DownloadImage(season.Poster, tvShow.Name, false, token);
-                                season.Poster = bufferString;
-                            }
-                        }
-
-                        JArray jEpisodes = (JArray)seasonObject["episodes"];
-                        Episode[] episodes = season.Episodes;
-                        int jEpIndex = 0;
-
-                        for (int k = 0; k < episodes.Length; k++)
-                        {
-                            if (episodes[k].Id != 0)
-                            {
-                                jEpIndex++;
-                                continue;
-                            }
-                            if (k > jEpisodes.Count - 1)
-                            {
-                                string message = "Episode index out of TMDB episodes range S" + seasonIndex.ToString() + "E" + (k + 1).ToString();
-                                CustomDialog.ShowMessage("Warning: " + tvShow.Name, message, mainForm.Width, mainForm.Height);
-                                continue;
-                            }
-                            Episode episode = episodes[k];
-
-                            if (episode.Name.Contains('#'))
-                            {
-                                string[] multiEpNames = episode.Name.Split('#');
-                                JObject[] jEpisodesMulti = new JObject[multiEpNames.Length];
-                                int numEps = multiEpNames.Length;
-                                String multiEpisodeOverview = "";
-                                for (int l = 0; l < numEps; l++)
-                                {
-                                    jEpisodesMulti[l] = (JObject)jEpisodes[jEpIndex + l];
-                                    String jCurrMultiEpisodeName = (string)jEpisodesMulti[l]["name"];
-                                    String jCurrMultiEpisodeOverview = (string)jEpisodesMulti[l]["overview"];
-                                    String currMultiEpisodeName = multiEpNames[l];
-                                    if (String.Compare(currMultiEpisodeName, jCurrMultiEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture,
-                                        System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
-                                    {
-                                        string message = "Multi episode name does not match retrieved data: Episode name: '" + currMultiEpisodeName + "', retrieved: '" + jCurrMultiEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
-                                        CustomDialog.ShowMessage("Warning: " + tvShow.Name, message, mainForm.Width, mainForm.Height);
-                                    }
-                                    multiEpisodeOverview += (jCurrMultiEpisodeOverview + Environment.NewLine + Environment.NewLine);
-                                }
-
-                                episode.Id = (int)jEpisodesMulti[numEps - 1]["episode_number"];
-                                episode.Backdrop = (string)jEpisodesMulti[numEps - 1]["still_path"];
-                                episode.Overview = multiEpisodeOverview;
-                                DateTime tempDate;
-                                episode.Date = DateTime.TryParse((string)jEpisodesMulti[numEps - 1]["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
-
-                                if (episode.Backdrop != null)
-                                {
-                                    await DownloadImage(episode.Backdrop, tvShow.Name, false, token);
-                                    episode.Backdrop = bufferString;
-                                }
-                                jEpIndex += (numEps);
-                                continue;
-                            }
-
-                            JObject jEpisode = (JObject)jEpisodes[jEpIndex];
-                            String jEpisodeName = (string)jEpisode["name"];
-                            if (String.Compare(episode.Name, jEpisodeName.fixBrokenQuotes(),
-                                System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0)
-                            {
-                                episode.Id = (int)jEpisode["episode_number"];
-                                episode.Overview = (string)jEpisode["overview"];
-                                episode.Overview = episode.Overview.fixBrokenQuotes();
-                                episode.Backdrop = (string)jEpisode["still_path"];
-                                DateTime tempDate;
-                                episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
-
-                                if (episode.Backdrop != null)
-                                {
-                                    await DownloadImage(episode.Backdrop, tvShow.Name, false, token);
-                                    episode.Backdrop = bufferString;
-                                }
-                            }
-                            else
-                            {
-                                string message = "Local episode name does not match retrieved data. Renaming file '" + episode.Name + "' to '" + jEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
-                                CustomDialog.ShowMessage("Warning: " + tvShow.Name, message, mainForm.Width, mainForm.Height);
-
-                                string oldPath = episode.Path;
-                                jEpisodeName = (string)jEpisode["name"];
-                                string newPath = oldPath.Replace(episode.Name, jEpisodeName.fixBrokenQuotes());
-                                string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
-                                foreach (char c in invalid)
-                                {
-                                    newPath = newPath.Replace(c.ToString(), "");
-                                }
-                                try
-                                {
-                                    char drive = newPath[0];
-                                    string drivePath = drive + ":";
-                                    newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
-
-                                    File.Move(oldPath, newPath);
-                                }
-                                catch (Exception e)
-                                {
-                                    CustomDialog.ShowMessage("Error", e.Message, mainForm.Width, mainForm.Height);
-                                }
-
-                                episode.Path = newPath;
-                                episode.Name = jEpisodeName.fixBrokenQuotes();
-                                episode.Id = (int)jEpisode["episode_number"];
-                                episode.Overview = (string)jEpisode["overview"];
-                                episode.Overview = episode.Overview.fixBrokenQuotes();
-                                episode.Backdrop = (string)jEpisode["still_path"];
-                                DateTime tempDate;
-                                episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
-
-                                if (episode.Backdrop != null)
-                                {
-                                    await DownloadImage(episode.Backdrop, tvShow.Name, false, token);
-                                    episode.Backdrop = bufferString;
-                                }
-                            }
-                            jEpIndex++;
-                        }
-                        seasonIndex++;
-                    }
-                }
-            }
-*/
             //Array.Sort(MainForm.media.Movies, Movie.SortMoviesAlphabetically());
             //Array.Sort(MainForm.media.TvShows, TvShow.SortTvShowsAlphabetically());
 
@@ -453,6 +55,389 @@ namespace LVP_WPF
             //File.WriteAllText(MainForm.jsonFile, jsonString);
         }
 
+        private static async Task BuildMovieCacheAsync(Movie movie, HttpClient client)
+        {
+            if (movie.Id != 0) return;
+            //To-do create binding in gui model for update label
+            //UpdateLoadingLabel("Processing: " + MainForm.media.Movies[i].Name);
+            string movieSearchUrl = apiMovieSearchUrl + movie.Name;
+            using HttpResponseMessage movieSearchResponse = await client.GetAsync(movieSearchUrl);
+            using HttpContent movieSearchContent = movieSearchResponse.Content;
+            string movieResourceString = await movieSearchContent.ReadAsStringAsync();
+
+            JObject movieObject = JObject.Parse(movieResourceString);
+            int numMovieObjects = (int)movieObject["total_results"];
+
+            if (numMovieObjects == 0)
+            {
+                NotificationDialog.Show(
+                    "Cache.BuildMovieCache",
+                    "Error",
+                    "No movie found for: " + movie.Name,
+                NotifyIcon.Exclamation);
+                Environment.Exit(0);
+            }
+            else if (numMovieObjects != 1)
+            {
+                int resultCount = ((JArray)movieObject["results"]).Count();
+                string[] names = new string[resultCount];
+                string[] ids = new string[resultCount];
+                string[] overviews = new string[resultCount];
+                DateTime?[] dates = new DateTime?[resultCount];
+
+                for (int j = 0; j < resultCount; j++)
+                {
+                    names[j] = (string)movieObject["results"][j]["title"];
+                    names[j] = names[j].fixBrokenQuotes();
+                    ids[j] = (string)movieObject["results"][j]["id"];
+                    overviews[j] = (string)movieObject["results"][j]["overview"];
+                    overviews[j] = overviews[j].fixBrokenQuotes();
+                    DateTime temp;
+                    dates[j] = DateTime.TryParse((string)movieObject["results"][j]["release_date"], out temp) ? temp : DateTime.MinValue.AddHours(9);
+                }
+
+                string[][] info = new string[][] { names, ids, overviews };
+                movie.Id = OptionDialog.Show(movie.Name, info, dates, NotifyIcon.Exclamation);
+            }
+            else
+            {
+                movie.Id = (int)movieObject["results"][0]["id"];
+            }
+
+            string movieUrl = apiMovieUrl.Replace("{movie_id}", movie.Id.ToString());
+            using HttpResponseMessage movieResponse = await client.GetAsync(movieUrl);
+            using HttpContent movieContent = movieResponse.Content;
+            string movieString = await movieContent.ReadAsStringAsync();
+
+            movieObject = JObject.Parse(movieString);
+            await UpdateMovieData(movie, movieObject);
+        }
+
+        private static async Task UpdateMovieData(Movie movie, JObject movieObject)
+        {
+            if (!(String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
+            {
+                string message = "Local movie name does not match retrieved data. Renaming file '" + movie.Name.Replace(":", "") + "' to '" + ((string)movieObject["title"]).Replace(":", "") + "'.";
+                NotificationDialog.Show(
+                    "Cache.UpdateMovieData",
+                    "Warning",
+                     message,
+                NotifyIcon.Exclamation);
+
+                string oldPath = movie.Path;
+                string[] fileNamePath = oldPath.Split('\\');
+                string fileName = fileNamePath[fileNamePath.Length - 1];
+                string extension = fileName.Split('.')[1];
+                string newFileName = ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(); ;
+                string newPath = oldPath.Replace(fileName, newFileName + "." + extension);
+                string invalid = new string(Path.GetInvalidPathChars()) + '?';
+                foreach (char c in invalid)
+                {
+                    newPath = newPath.Replace(c.ToString(), "");
+                }
+                File.Move(oldPath, newPath);
+                movie.Path = newPath;
+                movie.Name = newFileName;
+            }
+
+            DateTime tempDate;
+            movie.Date = DateTime.TryParse((string)movieObject["release_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+            movie.Backdrop = (string)movieObject["backdrop_path"];
+            movie.Poster = (string)movieObject["poster_path"];
+            movie.Overview = (string)movieObject["overview"];
+            movie.Overview = movie.Overview.fixBrokenQuotes();
+            movie.RunningTime = (int)movieObject["runtime"];
+
+            if (movie.Backdrop != null)
+            {
+                movie.Backdrop = await DownloadImage(movie.Backdrop, movie.Name, true);
+            }
+
+            if (movie.Poster != null)
+            {
+                movie.Poster = await DownloadImage(movie.Poster, movie.Name, true);
+            }
+        }
+
+        private static void BuildTvShowCache(TvShow tvShow, HttpClient client)
+        {
+            /*
+for (int i = 0; i < MainForm.media.TvShows.Length; i++)
+{
+    TvShow tvShow = MainForm.media.TvShows[i];
+
+    if (tvShow.Name.Equals("Tom & Jerry"))
+    {
+        CustomCache.BuildTomAndJerryData(tvShow);
+        continue;
+    }
+    else if (tvShow.Name.Equals("Looney Tunes"))
+    {
+        CustomCache.BuildLooneyTunesData(tvShow);
+        continue;
+    }
+
+    // If id is not 0 then general show data initialized
+    if (tvShow.Id == 0)
+    {
+        string tvResourceString = client.DownloadString(tvSearch + tvShow.Name);
+
+        JObject tvObject = JObject.Parse(tvResourceString);
+        int totalResults = (int)tvObject["total_results"];
+
+        if (totalResults == 0)
+        {
+            CustomDialog.ShowMessage("Error", "No tv show for: " + tvShow.Name, mainForm.Width, mainForm.Height);
+        }
+        else if (totalResults != 1)
+        {
+            int actualResults = (int)((JArray)tvObject["results"]).Count();
+            string[] names = new string[actualResults];
+            string[] ids = new string[actualResults];
+            string[] overviews = new string[actualResults];
+            DateTime?[] dates = new DateTime?[actualResults];
+
+            for (int j = 0; j < actualResults; j++)
+            {
+                names[j] = (string)tvObject["results"][j]["name"];
+                names[j] = names[j].fixBrokenQuotes();
+                ids[j] = (string)tvObject["results"][j]["id"];
+                overviews[j] = (string)tvObject["results"][j]["overview"];
+                overviews[j] = overviews[j].fixBrokenQuotes();
+
+                DateTime temp;
+                dates[j] = DateTime.TryParse((string)tvObject["results"][j]["first_air_date"], out temp) ? temp : DateTime.MinValue.AddHours(9);
+            }
+
+            string[][] info = new string[][] { names, ids, overviews };
+            tvShow.Id = CustomDialog.ShowOptions(tvShow.Name, info, dates, mainForm.Width, mainForm.Height);
+        }
+        else
+        {
+            tvShow.Id = (int)tvObject["results"][0]["id"];
+        }
+
+        // 404
+        string tvString = "";
+        try
+        {
+            tvString = client.DownloadString(tvGet.Replace("{tv_id}", tvShow.Id.ToString()));
+        }
+        catch
+        {
+            CustomDialog.ShowMessage("Error", "No tv show found for: " + tvShow.Name, mainForm.Width, mainForm.Height);
+            Environment.Exit(1);
+        }
+
+        tvObject = JObject.Parse(tvString);
+        tvShow.Overview = (string)tvObject["overview"];
+        tvShow.Overview = tvShow.Overview.fixBrokenQuotes();
+        tvShow.Poster = (string)tvObject["poster_path"];
+        tvShow.Backdrop = (string)tvObject["backdrop_path"];
+        tvShow.RunningTime = (int)tvObject["episode_run_time"][0];
+        var genres = tvObject["genres"];
+        foreach (var genre in genres)
+        {
+            if ((int)genre["id"] == 16 && !(tvShow.Name == "Family Guy" || tvShow.Name == "The Simpsons" || tvShow.Name == "Futurama" || tvShow.Name == "The Boondocks" || tvShow.Name == "American Dad!"))
+            {
+                tvShow.Cartoon = true;
+            }
+        }
+
+        DateTime tempDate;
+        tvShow.Date = DateTime.TryParse((string)tvObject["first_air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+
+        if (tvShow.Backdrop != null)
+        {
+            await DownloadImage(tvShow.Backdrop, tvShow.Name, false, token);
+            tvShow.Backdrop = bufferString;
+        }
+
+        if (tvShow.Poster != null)
+        {
+            await DownloadImage(tvShow.Poster, tvShow.Name, false, token);
+            tvShow.Poster = bufferString;
+        }
+    }
+
+    // Always check season data for new content
+    // Some shows first season index = 1
+    string tvIdExceptionsStr = ConfigurationManager.AppSettings["tvIdExceptions"];
+    string[] tvIdExceptionsStrArr = tvIdExceptionsStr.Split(';');
+    int[] tvIdExceptions = new int[tvIdExceptionsStrArr.Length];
+    for (int idIdx = 0; idIdx < tvIdExceptionsStrArr.Length; idIdx++)
+    {
+        tvIdExceptions[idIdx] = int.Parse(tvIdExceptionsStrArr[idIdx]);
+    }
+    int seasonIndex = 0;
+    if (tvIdExceptions.Contains(tvShow.Id))
+    {
+        seasonIndex = 1;
+    }
+    for (int j = 0; j < tvShow.Seasons.Length; j++)
+    {
+        Season season = tvShow.Seasons[j];
+
+        if (season.Id == -1) continue;
+
+        string seasonLabel = tvShow.Seasons[j].Id == -1 ? "Extras" : (j + 1).ToString();
+        UpdateLoadingLabel("Processing: " + tvShow.Name + " Season " + seasonLabel);
+
+        string seasonApiCall = tvSeasonGet.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
+
+        string seasonString = "";
+        try
+        {
+            seasonString = client.DownloadString(seasonApiCall);
+        }
+        catch
+        {
+            CustomDialog.ShowMessage("Error", "Season first index error: " + tvShow.Name + ", ID = " + tvShow.Id, mainForm.Width, mainForm.Height);
+            Environment.Exit(1);
+        }
+
+        JObject seasonObject = JObject.Parse(seasonString);
+        if (((string)seasonObject["name"]).Contains("Specials"))
+        {
+            seasonIndex++;
+            seasonString = client.DownloadString(tvSeasonGet.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString()));
+            seasonObject = JObject.Parse(seasonString);
+        }
+
+        if (season.Poster == null)
+        {
+            season.Poster = (string)seasonObject["poster_path"];
+            DateTime tempDate;
+            season.Date = DateTime.TryParse((string)seasonObject["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+
+            if (season.Poster != null)
+            {
+                await DownloadImage(season.Poster, tvShow.Name, false, token);
+                season.Poster = bufferString;
+            }
+        }
+
+        JArray jEpisodes = (JArray)seasonObject["episodes"];
+        Episode[] episodes = season.Episodes;
+        int jEpIndex = 0;
+
+        for (int k = 0; k < episodes.Length; k++)
+        {
+            if (episodes[k].Id != 0)
+            {
+                jEpIndex++;
+                continue;
+            }
+            if (k > jEpisodes.Count - 1)
+            {
+                string message = "Episode index out of TMDB episodes range S" + seasonIndex.ToString() + "E" + (k + 1).ToString();
+                CustomDialog.ShowMessage("Warning: " + tvShow.Name, message, mainForm.Width, mainForm.Height);
+                continue;
+            }
+            Episode episode = episodes[k];
+
+            if (episode.Name.Contains('#'))
+            {
+                string[] multiEpNames = episode.Name.Split('#');
+                JObject[] jEpisodesMulti = new JObject[multiEpNames.Length];
+                int numEps = multiEpNames.Length;
+                String multiEpisodeOverview = "";
+                for (int l = 0; l < numEps; l++)
+                {
+                    jEpisodesMulti[l] = (JObject)jEpisodes[jEpIndex + l];
+                    String jCurrMultiEpisodeName = (string)jEpisodesMulti[l]["name"];
+                    String jCurrMultiEpisodeOverview = (string)jEpisodesMulti[l]["overview"];
+                    String currMultiEpisodeName = multiEpNames[l];
+                    if (String.Compare(currMultiEpisodeName, jCurrMultiEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture,
+                        System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
+                    {
+                        string message = "Multi episode name does not match retrieved data: Episode name: '" + currMultiEpisodeName + "', retrieved: '" + jCurrMultiEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
+                        CustomDialog.ShowMessage("Warning: " + tvShow.Name, message, mainForm.Width, mainForm.Height);
+                    }
+                    multiEpisodeOverview += (jCurrMultiEpisodeOverview + Environment.NewLine + Environment.NewLine);
+                }
+
+                episode.Id = (int)jEpisodesMulti[numEps - 1]["episode_number"];
+                episode.Backdrop = (string)jEpisodesMulti[numEps - 1]["still_path"];
+                episode.Overview = multiEpisodeOverview;
+                DateTime tempDate;
+                episode.Date = DateTime.TryParse((string)jEpisodesMulti[numEps - 1]["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+
+                if (episode.Backdrop != null)
+                {
+                    await DownloadImage(episode.Backdrop, tvShow.Name, false, token);
+                    episode.Backdrop = bufferString;
+                }
+                jEpIndex += (numEps);
+                continue;
+            }
+
+            JObject jEpisode = (JObject)jEpisodes[jEpIndex];
+            String jEpisodeName = (string)jEpisode["name"];
+            if (String.Compare(episode.Name, jEpisodeName.fixBrokenQuotes(),
+                System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0)
+            {
+                episode.Id = (int)jEpisode["episode_number"];
+                episode.Overview = (string)jEpisode["overview"];
+                episode.Overview = episode.Overview.fixBrokenQuotes();
+                episode.Backdrop = (string)jEpisode["still_path"];
+                DateTime tempDate;
+                episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+
+                if (episode.Backdrop != null)
+                {
+                    await DownloadImage(episode.Backdrop, tvShow.Name, false, token);
+                    episode.Backdrop = bufferString;
+                }
+            }
+            else
+            {
+                string message = "Local episode name does not match retrieved data. Renaming file '" + episode.Name + "' to '" + jEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
+                CustomDialog.ShowMessage("Warning: " + tvShow.Name, message, mainForm.Width, mainForm.Height);
+
+                string oldPath = episode.Path;
+                jEpisodeName = (string)jEpisode["name"];
+                string newPath = oldPath.Replace(episode.Name, jEpisodeName.fixBrokenQuotes());
+                string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
+                foreach (char c in invalid)
+                {
+                    newPath = newPath.Replace(c.ToString(), "");
+                }
+                try
+                {
+                    char drive = newPath[0];
+                    string drivePath = drive + ":";
+                    newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
+
+                    File.Move(oldPath, newPath);
+                }
+                catch (Exception e)
+                {
+                    CustomDialog.ShowMessage("Error", e.Message, mainForm.Width, mainForm.Height);
+                }
+
+                episode.Path = newPath;
+                episode.Name = jEpisodeName.fixBrokenQuotes();
+                episode.Id = (int)jEpisode["episode_number"];
+                episode.Overview = (string)jEpisode["overview"];
+                episode.Overview = episode.Overview.fixBrokenQuotes();
+                episode.Backdrop = (string)jEpisode["still_path"];
+                DateTime tempDate;
+                episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+
+                if (episode.Backdrop != null)
+                {
+                    await DownloadImage(episode.Backdrop, tvShow.Name, false, token);
+                    episode.Backdrop = bufferString;
+                }
+            }
+            jEpIndex++;
+        }
+        seasonIndex++;
+    }
+}
+}*/
+        }
 
         internal static string ReplaceFirst(string text, string search, string replace)
         {
@@ -464,30 +449,32 @@ namespace LVP_WPF
             return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }
 
-        internal static async Task DownloadImage(string imagePath, string name, bool isMovie, CancellationToken token)
+        internal static async Task<string> DownloadImage(string imagePath, string name, bool isMovie)
         {
             string url = apiImageUrl + imagePath;
             string dirPath;
             string filePath;
+            CancellationTokenSource source = new CancellationTokenSource();
+            CancellationToken token = source.Token;
 
             if (isMovie)
             {
-                dirPath = "Cache\\Movies\\" + name;
+                dirPath = "cache\\movies\\" + name;
                 filePath = dirPath + imagePath.Replace("/", "\\");
             }
             else
             {
-                dirPath = "Cache\\TV\\" + name;
+                dirPath = "cache\\tv\\" + name;
                 filePath = dirPath + imagePath.Replace("/", "\\");
+            }
+
+            if (!Directory.Exists(dirPath))
+            {
+                Directory.CreateDirectory(dirPath);
             }
 
             if (!File.Exists(filePath))
             {
-                if (!Directory.Exists(dirPath))
-                {
-                    Directory.CreateDirectory(dirPath);
-                }
-
                 using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, short.MaxValue, true))
                 {
                     try
@@ -509,12 +496,13 @@ namespace LVP_WPF
                     }
                 }
             }
-            bufferString = filePath;
+
+            return filePath;
         }
 
         #endregion
 
-        internal static void ProcessRootDirectories()
+        internal static void Initialize()
         {
             string driveString = ConfigurationManager.AppSettings["Drives"];
             string[] drives = driveString.Split(';');
@@ -523,29 +511,19 @@ namespace LVP_WPF
                 ProcessRootDirectory(drive);
             }
 
-            MainWindow.mainModel = new MainModel(moviePathList.Count, tvPathList.Count);
+            MainWindow.model = new MainModel(moviePathList.Count, tvPathList.Count);
             for (int i = 0; i < moviePathList.Count; i++)
             {
-                MainWindow.mainModel.Movies[i] = ProcessMovieDirectory(moviePathList[i]);
+                MainWindow.model.Movies[i] = ProcessMovieDirectory(moviePathList[i]);
             }
 
             for (int i = 0; i < tvPathList.Count; i++)
             {
-                MainWindow.mainModel.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
+                MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
             }
 
             bool update = CheckForUpdates();
-            if (update)
-            {
-                /*this.Invoke(new MethodInvoker(delegate
-                {
-                    //To-do: make init here
-                    loadingCircle1.Visible = true;
-                }));
-                cacheBuilder.UpdateLoadingLabel(null);
-                Task buildCache = cacheBuilder.BuildCacheAsync();
-                buildCache.Wait();*/
-            }
+            if (update) BuildCache();
         }
 
         internal static bool CheckForUpdates()
@@ -563,15 +541,15 @@ namespace LVP_WPF
                 return true;
             }
 
-            bool result = !MainWindow.mainModel.Compare(prevMedia);
+            bool result = !MainWindow.model.Compare(prevMedia);
 
             if (!result)
             {
-                MainWindow.mainModel = prevMedia;
+                MainWindow.model = prevMedia;
             }
             else
             {
-                MainWindow.mainModel.Ingest(prevMedia);
+                MainWindow.model.Ingest(prevMedia);
             }
 
             return result;
@@ -769,9 +747,24 @@ namespace LVP_WPF
 
         static public void Save()
         {
-            string jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(MainWindow.mainModel);
+            string jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(MainWindow.model);
             File.WriteAllText(jsonFile, jsonString);
             Trace.WriteLine("Media data file saved");
         }
+    }
+}
+public static class StringExtension
+{
+    private const string targetSingleQuoteSymbol = "'";
+    private const string genericSingleQuoteSymbol = "â€™";
+    private const string openSingleQuoteSymbol = "â€˜";
+    private const string closeSingleQuoteSymbol = "â€™";
+    private const string frenchAccentAigu = "Ã©";
+    private const string frenchAccentGrave = "Ã";
+    // look at that 70s show?
+    public static string fixBrokenQuotes(this string str)
+    {
+        return str.Replace(genericSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(openSingleQuoteSymbol, targetSingleQuoteSymbol)
+            .Replace(closeSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(frenchAccentAigu, "e").Replace(frenchAccentGrave, "a").Replace("%", "percent");
     }
 }

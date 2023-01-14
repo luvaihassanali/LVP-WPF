@@ -18,7 +18,7 @@
                 <RowDefinition Height="Auto"></RowDefinition>
             </Grid.RowDefinitions>
             <Label Content="TV" Foreground="White" ></Label>
-            <ListView Grid.Row="1" x:Name="TvBox" Background="Black" BorderBrush="Black">
+            <ListView Grid.Row="1" Name="TvBox" Background="Black" BorderBrush="Black">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="6" HorizontalAlignment="Center"/>
@@ -38,7 +38,7 @@
                 </StackPanel>
             </Expander>-->
             <Label Grid.Row="2" Content="Cartoons" Foreground="White" ></Label>
-            <ListView Grid.Row="3" x:Name="CartoonBox" Background="Black" BorderBrush="Black">
+            <ListView Grid.Row="3" Name="CartoonBox" Background="Black" BorderBrush="Black">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="6" HorizontalAlignment="Center"/>
@@ -53,7 +53,7 @@
                 </ListView.ItemTemplate>
             </ListView>
             <Label Grid.Row="4" Content="Movies" Foreground="White" ></Label>
-            <ListView Grid.Row="5" x:Name="MovieBox" Background="Black" BorderBrush="Black">
+            <ListView Grid.Row="5" Name="MovieBox" Background="Black" BorderBrush="Black">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="6" HorizontalAlignment="Center"/>
