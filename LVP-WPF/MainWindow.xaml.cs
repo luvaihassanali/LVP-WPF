@@ -13,10 +13,10 @@ namespace LVP_WPF
             InitializeComponent();
         }
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             //To-do: start loader
-            Cache.Initialize();
+            await Cache.Initialize();
 
             this.MovieBox.ItemsSource = new MainWindowBox[]
             {

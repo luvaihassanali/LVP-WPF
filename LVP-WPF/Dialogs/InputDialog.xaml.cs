@@ -39,7 +39,7 @@ namespace LVP_WPF
 
         private void Button_Exit_Click(object sender, RoutedEventArgs e)
         {
-            DialogResult = false;
+            Environment.Exit(0);
         }
 
         private void Button_Continue_Click(object sender, RoutedEventArgs e)
