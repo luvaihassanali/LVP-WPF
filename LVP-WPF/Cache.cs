@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -61,8 +62,8 @@ namespace LVP_WPF
             client.Dispose();
             Array.Sort(MainWindow.model.Movies, Movie.SortMoviesAlphabetically());
             Array.Sort(MainWindow.model.TvShows, TvShow.SortTvShowsAlphabetically());
-            //string jsonString = JsonConvert.SerializeObject(MainForm.media);
-            //File.WriteAllText(MainForm.jsonFile, jsonString);
+            string jsonString = JsonConvert.SerializeObject(MainWindow.model);
+            File.WriteAllText(jsonFile, jsonString);
         }
 
         private static async Task BuildTvShowCache(TvShow tvShow, HttpClient client)
@@ -119,13 +120,22 @@ namespace LVP_WPF
                 tvShow.Overview = tvShow.Overview.fixBrokenQuotes();
                 tvShow.Poster = (string)tvObject["poster_path"];
                 tvShow.Backdrop = (string)tvObject["backdrop_path"];
-                tvShow.RunningTime = (int)tvObject["episode_run_time"][0];
+                int[] runtime = JObject.Parse(tvShowString)["episode_run_time"].Select(x => (int)x).ToArray();
+                if (runtime.Length != 0)
+                {
+                    tvShow.RunningTime = runtime[0];
+                }
+                else
+                {
+                    tvShow.RunningTime = 15;
+                }
 
                 var genres = tvObject["genres"];
                 foreach (var genre in genres)
                 {
-                    //To-do: move to app config
-                    if ((int)genre["id"] == 16 && !(tvShow.Name == "Family Guy" || tvShow.Name == "The Simpsons" || tvShow.Name == "Futurama" || tvShow.Name == "The Boondocks" || tvShow.Name == "American Dad!"))
+                    string cartoonExceptionStr = ConfigurationManager.AppSettings["CartoonExceptions"];
+                    string[] cartoonExceptions = cartoonExceptionStr.Split(";");
+                    if ((int)genre["id"] == 16 && !cartoonExceptions.Contains(tvShow.Name))
                     {
                         tvShow.Cartoon = true;
                     }
@@ -147,7 +157,7 @@ namespace LVP_WPF
 
         private static async Task BuildSeasonCache(TvShow tvShow, HttpClient client)
         {
-            string tvIdExceptions = ConfigurationManager.AppSettings["TvExceptionIds"]; 
+            string tvIdExceptions = ConfigurationManager.AppSettings["TvExceptionIds"];
             int seasonIndex = 0;
             if (tvIdExceptions.Contains(tvShow.Id.ToString()))
             {
@@ -268,6 +278,7 @@ namespace LVP_WPF
                         {
                             newPath = newPath.Replace(c.ToString(), "");
                         }
+
                         try
                         {
                             char drive = newPath[0];

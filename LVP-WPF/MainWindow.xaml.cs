@@ -66,7 +66,7 @@ namespace LVP_WPF
         int index = 1;
         private BitmapImage LoadImage(string filename)
         {
-            return new BitmapImage(new Uri("C:\\Users\\luv\\Desktop\\lvp-temp\\" + (index++).ToString() + ".jpg"));
+            return new BitmapImage(new Uri("C:\\Users\\luv\\Desktop\\lvp-temp\\tmp\\" + (index++).ToString() + ".jpg"));
         }
     }
 }

@@ -31,8 +31,6 @@ namespace LVP_WPF
             set => tvShows = value;
         }
 
-        public (int, int) Count => (movies.Length, tvShows.Length);
-
         internal bool Compare(MainModel prevMedia)
         {
             Array.Sort(this.Movies, Movie.SortMoviesAlphabetically());
