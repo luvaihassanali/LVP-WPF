@@ -59,6 +59,7 @@ namespace LVP_WPF
             {
                 foreach (Episode episode in season.Episodes)
                 {
+                    MainWindow.gui.ProgressBarValue++;
                     int id = ids[index];
                     string title = titles[index];
                     string date = dates[index];
@@ -129,6 +130,7 @@ namespace LVP_WPF
             {
                 foreach (Episode episode in season.Episodes)
                 {
+                    MainWindow.gui.ProgressBarValue++;
                     int id = ids[index];
                     string title = titles[index];
                     string date = dates[index];

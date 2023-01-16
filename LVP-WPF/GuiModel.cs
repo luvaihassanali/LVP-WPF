@@ -8,6 +8,13 @@ namespace LVP_WPF
     {
         [ObservableProperty]
         private string loadLabel;
+        [ObservableProperty]
+        private int progressBarValue;
+
+        public GuiModel()
+        {
+            progressBarValue = 0;
+        }
     }
 
     public class MainWindowBox

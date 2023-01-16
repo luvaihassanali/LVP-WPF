@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 
 namespace LVP_WPF
 {
@@ -28,8 +29,41 @@ namespace LVP_WPF
 
         private static List<string> tvPathList = new List<string>();
         private static List<string> moviePathList = new List<string>();
+        private static int mediaCount = 0;
 
-        #region BuildCache function
+        internal static async Task Initialize(ProgressBar p)
+        {
+            string driveString = ConfigurationManager.AppSettings["Drives"];
+            string[] drives = driveString.Split(';');
+            foreach (string drive in drives)
+            {
+                ProcessRootDirectory(drive);
+            }
+
+            MainWindow.model = new MainModel(moviePathList.Count, tvPathList.Count);
+            for (int i = 0; i < moviePathList.Count; i++)
+            {
+                MainWindow.model.Movies[i] = ProcessMovieDirectory(moviePathList[i]);
+                mediaCount++;
+            }
+
+            for (int i = 0; i < tvPathList.Count; i++)
+            {
+                MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
+            }
+
+            bool update = CheckForUpdates();
+            if (update)
+            {
+                p.Dispatcher.Invoke(() => { 
+                    p.Visibility = Visibility.Visible;
+                    p.Maximum = mediaCount;
+                });
+                await BuildCache();
+            }
+        }
+
+        #region BuildCache functions
 
         internal static async Task BuildCache()
         {
@@ -39,6 +73,7 @@ namespace LVP_WPF
             for (int i = 0; i < MainWindow.model.Movies.Length; i++)
             {
                 await BuildMovieCacheAsync(MainWindow.model.Movies[i], client);
+                MainWindow.gui.ProgressBarValue++;
             }
 
             for (int i = 0; i < MainWindow.model.TvShows.Length; i++)
@@ -214,6 +249,7 @@ namespace LVP_WPF
 
                 for (int k = 0; k < episodes.Length; k++)
                 {
+                    MainWindow.gui.ProgressBarValue++;
                     if (episodes[k].Id != 0)
                     {
                         jEpIndex++;
@@ -471,30 +507,6 @@ namespace LVP_WPF
 
         #endregion
 
-        internal static async Task Initialize()
-        {
-            string driveString = ConfigurationManager.AppSettings["Drives"];
-            string[] drives = driveString.Split(';');
-            foreach (string drive in drives)
-            {
-                ProcessRootDirectory(drive);
-            }
-
-            MainWindow.model = new MainModel(moviePathList.Count, tvPathList.Count);
-            for (int i = 0; i < moviePathList.Count; i++)
-            {
-                MainWindow.model.Movies[i] = ProcessMovieDirectory(moviePathList[i]);
-            }
-
-            for (int i = 0; i < tvPathList.Count; i++)
-            {
-                MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
-            }
-
-            bool update = CheckForUpdates();
-            if (update) await BuildCache();
-        }
-
         internal static bool CheckForUpdates()
         {
             MainModel prevMedia = null;
@@ -552,6 +564,7 @@ namespace LVP_WPF
                     extras.Episodes = new Episode[extraEpisodes.Count];
                     for (int j = 0; j < extraEpisodes.Count; j++)
                     {
+                        mediaCount++;
                         extras.Episodes[j] = extraEpisodes[j];
                     }
                     show.Seasons[show.Seasons.Length - 1] = extras;
@@ -567,6 +580,7 @@ namespace LVP_WPF
 
                 for (int j = 0; j < episodeEntries.Length; j++)
                 {
+                    mediaCount++;
                     string[] namePath = episodeEntries[j].Split('\\');
                     if (!episodeEntries[j].Contains('%'))
                     {

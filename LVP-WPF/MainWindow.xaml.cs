@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
@@ -7,19 +9,38 @@ namespace LVP_WPF
     public partial class MainWindow : Window
     {
         static public MainModel model;
+        static public GuiModel gui;
 
         public MainWindow()
         {
             InitializeComponent();
+            gui = new GuiModel();
+            DataContext = gui;
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            //To-do: start loader
-            await Cache.Initialize();
+            await Cache.Initialize(progressBar);
+            progressBar.Visibility = Visibility.Collapsed;
+            coffeeGif.Visibility = Visibility.Collapsed;
+            coffeeGif.Source = null;
+            DisplayControls();
+        }
 
-            this.MovieBox.ItemsSource = new MainWindowBox[]
-            {
+        private void Coffee_Gif_Ended(object sender, EventArgs e)
+        {
+            coffeeGif.Position = TimeSpan.FromMilliseconds(1);
+        }
+
+        internal void DisplayControls()
+        {
+            mainGrid.Visibility = Visibility.Visible;
+            //tvHeader.Dispatcher.Invoke(() => { tvHeader.Visibility = Visibility.Visible; });
+            //movieHeader.Dispatcher.Invoke(() => { movieHeader.Visibility = Visibility.Visible; });
+            //cartoonsHeader.Dispatcher.Invoke(() => { cartoonsHeader.Visibility = Visibility.Visible; });
+            tvHeader.Visibility = Visibility.Visible;
+            /*this.MovieBox.ItemsSource = new MainWindowBox[]
+             {
                 new MainWindowBox{Title="Movie 1", Image=LoadImage("image.jpg")},
                 new MainWindowBox{Title="Movie 2", Image=LoadImage("image.jpg")},
                 new MainWindowBox{Title="Movie 3", Image=LoadImage("image.jpg")},
@@ -27,7 +48,7 @@ namespace LVP_WPF
                 new MainWindowBox{Title="Movie 5", Image=LoadImage("image.jpg")},
                 new MainWindowBox{Title="Movie 6", Image=LoadImage("image.jpg")},
                 new MainWindowBox{Title="Movie 7", Image=LoadImage("image.jpg")}
-            };
+             };
             this.TvBox.ItemsSource = new MainWindowBox[]
             {
                 new MainWindowBox{Title="TV 1", Image=LoadImage("image.jpg")},
@@ -59,8 +80,7 @@ namespace LVP_WPF
                 new MainWindowBox{Title="Cartoon 8", Image=LoadImage("image.jpg")},
                 new MainWindowBox{Title="Cartoon 7", Image=LoadImage("image.jpg")},
                 new MainWindowBox{Title="Cartoon 8", Image=LoadImage("image.jpg")}
-            };
-            // stop loader
+            };*/
         }
 
         int index = 1;
