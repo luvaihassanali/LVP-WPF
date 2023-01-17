@@ -52,14 +52,19 @@ namespace LVP_WPF
                 MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
             }
 
+            MainWindow.gui.ProgressBarMax = mediaCount;
             bool update = CheckForUpdates();
             if (update)
             {
-                p.Dispatcher.Invoke(() => { 
-                    p.Visibility = Visibility.Visible;
-                    p.Maximum = mediaCount;
-                });
                 await BuildCache();
+            } 
+            else
+            {
+                for (int i = 0; i <= mediaCount; i++)
+                {
+                    await Task.Delay(5);
+                    MainWindow.gui.ProgressBarValue = i;
+                }
             }
         }
 

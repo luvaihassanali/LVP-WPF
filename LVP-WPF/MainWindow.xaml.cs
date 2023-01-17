@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
@@ -24,47 +25,38 @@ namespace LVP_WPF
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             await Cache.Initialize(progressBar);
-            DisplayControls();
-
-            progressBar.Visibility = Visibility.Collapsed;
-            coffeeGif.Visibility = Visibility.Collapsed;
+            await Task.Run(() => { AssignControlContext(); });
+            loadGrid.Visibility = Visibility.Collapsed;
             coffeeGif.Source = null;
-
-            _ = Task.Run(() =>
-              {
-                  AssignControlContext();
-              });
         }
 
         internal void AssignControlContext()
         {
-            Dispatcher.Invoke(() =>
+            for (int i = 0; i < model.Movies.Length; i++)
             {
-                for (int i = 0; i < model.Movies.Length; i++)
+                MovieBox.Dispatcher.Invoke(() =>
                 {
                     gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = LoadImage(model.Movies[i].Poster) });
-                }
+                });
+            }
 
-                for (int i = 0; i < model.TvShows.Length; i++)
+            for (int i = 0; i < model.TvShows.Length; i++)
+            {
+                if (model.TvShows[i].Cartoon)
                 {
-                    if (model.TvShows[i].Cartoon)
+                    CartoonBox.Dispatcher.Invoke(() =>
                     {
                         gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster) });
-                    }
-                    else
+                    });
+                }
+                else
+                {
+                    TvShowBox.Dispatcher.Invoke(() =>
                     {
                         gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster) });
-                    }
+                    });
                 }
-            });
-        }
-
-        internal void DisplayControls()
-        {
-            mainGrid.Visibility = Visibility.Visible;
-            tvHeader.Visibility = Visibility.Visible;
-            movieHeader.Visibility = Visibility.Visible;
-            cartoonsHeader.Visibility = Visibility.Visible;
+            }
         }
 
         private BitmapImage LoadImage(string filename)
