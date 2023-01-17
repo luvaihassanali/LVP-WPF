@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -24,8 +25,10 @@ namespace LVP_WPF
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
+            //To-do increase vertical padding between boxes
             await Cache.Initialize(progressBar);
             await Task.Run(() => { AssignControlContext(); });
+
             loadGrid.Visibility = Visibility.Collapsed;
             coffeeGif.Source = null;
         }
@@ -36,33 +39,41 @@ namespace LVP_WPF
             {
                 MovieBox.Dispatcher.Invoke(() =>
                 {
-                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = LoadImage(model.Movies[i].Poster) });
+                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = LoadImage(model.Movies[i].Poster, 300) });
                 });
             }
-
+            
             for (int i = 0; i < model.TvShows.Length; i++)
             {
                 if (model.TvShows[i].Cartoon)
                 {
                     CartoonBox.Dispatcher.Invoke(() =>
                     {
-                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster) });
+                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster, 300) });
                     });
                 }
                 else
                 {
                     TvShowBox.Dispatcher.Invoke(() =>
                     {
-                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster) });
+                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster, 300) });
                     });
                 }
             }
         }
 
-        private BitmapImage LoadImage(string filename)
+        private BitmapImage LoadImage(string filename, int pixelWidth)
         {
+            //To-do: resize images to see if helps memory
             string path = AppDomain.CurrentDomain.BaseDirectory;
-            return new BitmapImage(new Uri(path + filename));
+            BitmapImage image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.UriSource = new Uri(path + filename);
+            image.DecodePixelWidth = pixelWidth;
+            image.EndInit();
+            image.Freeze();
+            return image;
         }
 
         private void Coffee_Gif_Ended(object sender, EventArgs e)
