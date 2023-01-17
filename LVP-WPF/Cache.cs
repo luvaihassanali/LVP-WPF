@@ -60,11 +60,22 @@ namespace LVP_WPF
             } 
             else
             {
+                //To-do: make <= not mediaCount
                 for (int i = 0; i <= mediaCount; i++)
                 {
-                    await Task.Delay(5);
+                    await Task.Delay(1);
                     MainWindow.gui.ProgressBarValue = i;
                 }
+            }
+            
+            for (int i = 0; i < MainWindow.model.Movies.Length; i++)
+            {
+                MainWindow.model.MediaDict.Add(MainWindow.model.Movies[i].Id, MainWindow.model.Movies[i]);
+            }
+
+            for (int i = 0; i < MainWindow.model.TvShows.Length; i++)
+            {
+                MainWindow.model.MediaDict.Add(MainWindow.model.TvShows[i].Id, MainWindow.model.TvShows[i]);
             }
         }
 

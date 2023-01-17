@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -25,12 +26,27 @@ namespace LVP_WPF
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            //To-do increase vertical padding between boxes
             await Cache.Initialize(progressBar);
             await Task.Run(() => { AssignControlContext(); });
-
             loadGrid.Visibility = Visibility.Collapsed;
             coffeeGif.Source = null;
+        }
+
+        private void ListView_Click(object sender, RoutedEventArgs e)
+        {
+            MainWindowBox item = (MainWindowBox)(sender as ListView).SelectedItem;
+            if (item != null)
+            {
+                var mediaItem = model.MediaDict[item.Id];
+                if (mediaItem is Movie)
+                {
+                    Trace.WriteLine("Movie");
+                }
+                else
+                {
+                    Trace.WriteLine("TV");
+                }
+            }
         }
 
         internal void AssignControlContext()
@@ -42,7 +58,7 @@ namespace LVP_WPF
                     gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = LoadImage(model.Movies[i].Poster, 300) });
                 });
             }
-            
+
             for (int i = 0; i < model.TvShows.Length; i++)
             {
                 if (model.TvShows[i].Cartoon)

@@ -12,11 +12,17 @@ namespace LVP_WPF
     {
         private Movie[] movies;
         private TvShow[] tvShows;
+        private Dictionary<int, Movie> movieDict;
+        private Dictionary<int, TvShow> tvShowDict;
+        private Dictionary<int, Media> mediaDict;
 
         public MainModel(int m, int s)
         {
             movies = new Movie[m];
+            movieDict = new Dictionary<int, Movie>();
             tvShows = new TvShow[s];
+            tvShowDict = new Dictionary<int, TvShow>();
+            mediaDict = new Dictionary<int, Media>();
         }
 
         public Movie[] Movies
@@ -29,6 +35,24 @@ namespace LVP_WPF
         {
             get => tvShows;
             set => tvShows = value;
+        }
+
+        public Dictionary<int, Movie> MovieDict
+        {
+            get => movieDict;
+            set => movieDict = value;
+        }
+
+        public Dictionary <int, TvShow> TvShowDict
+        {
+            get => tvShowDict;
+            set => tvShowDict = value;
+        }
+
+        public Dictionary <int, Media> MediaDict
+        {
+            get => mediaDict;
+            set => mediaDict = value;
         }
 
         internal bool Compare(MainModel prevMedia)
@@ -128,9 +152,20 @@ namespace LVP_WPF
         }
     }
 
-    public class Movie
+    public class Media
     {
         private int id;
+
+        public int Id
+        {
+            get => id;
+            set => id = value;
+        }
+    }
+
+    public class Movie : Media
+    {
+        //private int id;
         private string name;
         private string path;
         private string poster;
@@ -149,11 +184,12 @@ namespace LVP_WPF
             subtitleTrack = 0;
         }
 
-        public int Id
+        /*public int Id
         {
             get => id;
             set => id = value;
-        }
+        }*/
+
         public string Name
         {
             get => name;
@@ -231,10 +267,10 @@ namespace LVP_WPF
         }
     }
 
-    public class TvShow
+    public class TvShow : Media
     {
         private bool cartoon;
-        private int id;
+        //private int id;
         private string name;
         private string overview;
         private string backdrop;
@@ -259,11 +295,11 @@ namespace LVP_WPF
             set => cartoon = value;
         }
 
-        public int Id
+        /*public int Id
         {
             get => id;
             set => id = value;
-        }
+        }*/
 
         public string Name
         {

@@ -21,7 +21,7 @@ namespace LVP_WPF
 
         public GuiModel()
         {
-            progressBarValue = 0;
+            progressBarValue = 5;
             progressBarMax = 100;
             movies = new ObservableCollection<MainWindowBox>();
             tvShows = new ObservableCollection<MainWindowBox>();
