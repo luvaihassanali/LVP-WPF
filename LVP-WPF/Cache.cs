@@ -204,7 +204,6 @@ namespace LVP_WPF
                 Season season = tvShow.Seasons[j];
                 if (season.Id == -1) continue;
                 string seasonLabel = tvShow.Seasons[j].Id == -1 ? "Extras" : (j + 1).ToString();
-                //To-do: UpdateLoadingLabel("Processing: " + tvShow.Name + " Season " + seasonLabel);
 
                 string seasonString = "";
                 try
@@ -352,8 +351,6 @@ namespace LVP_WPF
         private static async Task BuildMovieCacheAsync(Movie movie, HttpClient client)
         {
             if (movie.Id != 0) return;
-            //To-do create binding in gui model for update label
-            //UpdateLoadingLabel("Processing: " + MainForm.media.Movies[i].Name);
             string movieSearchUrl = apiMovieSearchUrl + movie.Name;
             using HttpResponseMessage movieSearchResponse = await client.GetAsync(movieSearchUrl);
             using HttpContent movieSearchContent = movieSearchResponse.Content;

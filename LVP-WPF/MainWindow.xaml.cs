@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace LVP_WPF
 {
@@ -21,72 +24,58 @@ namespace LVP_WPF
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             await Cache.Initialize(progressBar);
+            DisplayControls();
+
             progressBar.Visibility = Visibility.Collapsed;
             coffeeGif.Visibility = Visibility.Collapsed;
             coffeeGif.Source = null;
-            DisplayControls();
+
+            _ = Task.Run(() =>
+              {
+                  AssignControlContext();
+              });
         }
 
-        private void Coffee_Gif_Ended(object sender, EventArgs e)
+        internal void AssignControlContext()
         {
-            coffeeGif.Position = TimeSpan.FromMilliseconds(1);
+            Dispatcher.Invoke(() =>
+            {
+                for (int i = 0; i < model.Movies.Length; i++)
+                {
+                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = LoadImage(model.Movies[i].Poster) });
+                }
+
+                for (int i = 0; i < model.TvShows.Length; i++)
+                {
+                    if (model.TvShows[i].Cartoon)
+                    {
+                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster) });
+                    }
+                    else
+                    {
+                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster) });
+                    }
+                }
+            });
         }
 
         internal void DisplayControls()
         {
             mainGrid.Visibility = Visibility.Visible;
-            //tvHeader.Dispatcher.Invoke(() => { tvHeader.Visibility = Visibility.Visible; });
-            //movieHeader.Dispatcher.Invoke(() => { movieHeader.Visibility = Visibility.Visible; });
-            //cartoonsHeader.Dispatcher.Invoke(() => { cartoonsHeader.Visibility = Visibility.Visible; });
             tvHeader.Visibility = Visibility.Visible;
-            /*this.MovieBox.ItemsSource = new MainWindowBox[]
-             {
-                new MainWindowBox{Title="Movie 1", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Movie 2", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Movie 3", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Movie 4", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Movie 5", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Movie 6", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Movie 7", Image=LoadImage("image.jpg")}
-             };
-            this.TvBox.ItemsSource = new MainWindowBox[]
-            {
-                new MainWindowBox{Title="TV 1", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="TV 2", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="TV 3", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="TV 4", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="TV 5", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="TV 6", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="TV 7", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="TV 8", Image=LoadImage("image.jpg")},
-            };
-            this.CartoonBox.ItemsSource = new MainWindowBox[]
-            {
-                new MainWindowBox{Title="Cartoon 1", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 2", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 3", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 4", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 5", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 6", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 7", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 8", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 1", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 2", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 3", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 4", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 5", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 6", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 7", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 8", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 7", Image=LoadImage("image.jpg")},
-                new MainWindowBox{Title="Cartoon 8", Image=LoadImage("image.jpg")}
-            };*/
+            movieHeader.Visibility = Visibility.Visible;
+            cartoonsHeader.Visibility = Visibility.Visible;
         }
 
-        int index = 1;
         private BitmapImage LoadImage(string filename)
         {
-            return new BitmapImage(new Uri("C:\\Users\\luv\\Desktop\\lvp-temp\\tmp\\" + (index++).ToString() + ".jpg"));
+            string path = AppDomain.CurrentDomain.BaseDirectory;
+            return new BitmapImage(new Uri(path + filename));
+        }
+
+        private void Coffee_Gif_Ended(object sender, EventArgs e)
+        {
+            coffeeGif.Position = TimeSpan.FromMilliseconds(1);
         }
     }
 }

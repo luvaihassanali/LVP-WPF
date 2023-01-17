@@ -1,4 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Windows.Media.Imaging;
 
 namespace LVP_WPF
@@ -7,55 +9,70 @@ namespace LVP_WPF
     public partial class GuiModel
     {
         [ObservableProperty]
-        private string loadLabel;
-        [ObservableProperty]
         private int progressBarValue;
+        [ObservableProperty]
+        ObservableCollection<MainWindowBox> movies;
+        [ObservableProperty]
+        ObservableCollection<MainWindowBox> tvShows;
+        [ObservableProperty]
+        ObservableCollection<MainWindowBox> cartoons;
 
         public GuiModel()
         {
-            progressBarValue = 0;
+            progressBarValue = 5;
+            movies = new ObservableCollection<MainWindowBox>();
+            tvShows = new ObservableCollection<MainWindowBox>();
+            cartoons = new ObservableCollection<MainWindowBox>();
         }
     }
 
-    public class MainWindowBox
+    public partial class MainWindowBox
     {
+        private int id;
         private string title;
+        private BitmapImage image;
+
+        public int Id
+        {
+            get { return id; }
+            set { id = value; }
+        }
+
         public string Title
         {
-            get { return this.title; }
-            set { this.title = value; }
+            get { return title; }
+            set { title = value; }
         }
 
-        private BitmapImage img;
         public BitmapImage Image
         {
-            get { return this.img; }
-            set { this.img = value; }
+            get { return image; }
+            set { image = value; }
         }
-
     }
 
     public class OptionWindowBox
     {
+        private int id;
+        private string description;
         private string name;
+
         public string Name
         {
-            get { return this.name; }
-            set { this.name = value; }
+            get { return name; }
+            set { name = value; }
         }
 
-        private string description;
         public string Description
         {
-            get { return this.description; }
-            set { this.description = value; }
+            get { return description; }
+            set { description = value; }
         }
 
-        private int id;
         public int Id
         {
-            get { return this.id; }
-            set { this.id = value; }
+            get { return id; }
+            set { id = value; }
         }
     }
 }

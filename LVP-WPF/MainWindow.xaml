@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
-        Title="MainWindow" Height="1080" Width="1920" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" WindowState="Maximized" UseLayoutRounding="true" 
-        Background="Black" RenderOptions.BitmapScalingMode="HighQuality" FontFamily="Segoe UI Black" FontSize="72">
+        Title="MainWindow" Background="Black" Height="1080" Width="1920" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" WindowState="Maximized" UseLayoutRounding="true" 
+        RenderOptions.BitmapScalingMode="HighQuality" FontFamily="Segoe UI Black" FontSize="72">
     <Grid>
         <Grid>
             <MediaElement UnloadedBehavior="Manual" Name="coffeeGif" MediaEnded="Coffee_Gif_Ended" Source="Resources/coffee.gif" MaxWidth="498" MaxHeight="431" Stretch="None" LoadedBehavior="Play" Visibility="Visible" />
@@ -23,7 +23,7 @@
                     <RowDefinition Height="Auto"></RowDefinition>
                 </Grid.RowDefinitions>
                 <Label Name="tvHeader" Content="TV" Foreground="White" Visibility="Hidden"></Label>
-                <ListView Grid.Row="1" Name="TvBox" Background="Black" BorderBrush="Black">
+                <ListView Grid.Row="1" ItemsSource="{Binding TvShows}" Name="TvBox" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="6" HorizontalAlignment="Center"/>
@@ -43,7 +43,7 @@
                 </StackPanel>
             </Expander>-->
                 <Label Name="cartoonsHeader" Grid.Row="2" Content="Cartoons" Foreground="White" Visibility="Hidden" ></Label>
-                <ListView Grid.Row="3" Name="CartoonBox" Background="Black" BorderBrush="Black">
+                <ListView ItemsSource="{Binding Cartoons}" Grid.Row="3" Name="CartoonBox" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="6" HorizontalAlignment="Center"/>
@@ -58,7 +58,7 @@
                     </ListView.ItemTemplate>
                 </ListView>
                 <Label Name="movieHeader" Grid.Row="4" Content="Movies" Foreground="White" Visibility="Hidden"></Label>
-                <ListView Grid.Row="5" Name="MovieBox" Background="Black" BorderBrush="Black">
+                <ListView ItemsSource="{Binding Movies}" Grid.Row="5" Name="MovieBox" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="6" HorizontalAlignment="Center"/>
