@@ -5,9 +5,27 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
-        Title="TvShowWindow" Background="Black" Height="1050" Width="960" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI Black" FontSize="48">
+        Title="TvShowWindow" Background="Black" Height="1050" Width="1152" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
+        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI" FontSize="48">
+
     <Grid>
-        
+        <Grid Name="loadGrid" ZIndex="-1" Background="Black"></Grid>
+        <Grid Name="mainGrid">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="648"/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            <Image Source="{Binding Backdrop}" Stretch="Fill"/>
+            <Grid Grid.Row="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Label Margin="10,0,0,0" Content="{Binding Caption}" Foreground="White"/>
+                <TextBlock Grid.Row="1" Margin="15,0,15,0" Foreground="White" FontSize="20" Text="{Binding Description}" TextWrapping="Wrap"/>
+                <Button Name="seasonButton" Click="Button_Season_Click" Grid.Row="2" Margin="10" Background="Black" Foreground="White" FontSize="20" Content="Seasons"></Button>
+            </Grid>
+        </Grid>
     </Grid>
 </Window>

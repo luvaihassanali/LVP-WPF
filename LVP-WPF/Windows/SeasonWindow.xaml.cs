@@ -19,27 +19,23 @@ namespace LVP_WPF.Windows
     /// Interaction logic for SeasonWindow.xaml
     /// </summary>
     
-    [ObservableObject]
     public partial class SeasonWindow : Window
     {
-        public static void Show(Season season)
+        public static void Show(TvShow tvShow)
         {
-            /*InputDialog dialog = new InputDialog();
-             dialog.Caption = caption;
-             dialog.Message = message;
-             dialog.Topmost = true;
-             dialog.ShowDialog();
-             if ((bool)dialog.DialogResult)
-             {
-                 return true;
-             }
-             return false;*/
+            SeasonWindow seasonWindow = new SeasonWindow();
+            SeasonWindowBox[] seasonBoxes = new SeasonWindowBox[tvShow.Seasons.Length];
+            for (int i = 0; i < tvShow.Seasons.Length; i++)
+            {
+                seasonBoxes[i] = new SeasonWindowBox
+                {
+                    Id = tvShow.Seasons[i].Id,
+                    Image = Cache.LoadImage(tvShow.Seasons[i].Poster, 150)
+                };
+            }
+            seasonWindow.SeasonBox.ItemsSource = seasonBoxes;
+            seasonWindow.ShowDialog();
         }
-
-        /*[ObservableProperty]
-        private string caption;
-        [ObservableProperty]
-        private string message;*/
 
         public SeasonWindow()
         {
@@ -47,9 +43,9 @@ namespace LVP_WPF.Windows
             InitializeComponent();
         }
 
-        private void Button_Season_Click(object sender, RoutedEventArgs e)
+        private void ListView_Click(object sender, RoutedEventArgs e)
         {
-            Environment.Exit(0);
+            SeasonWindowBox item = (SeasonWindowBox)(sender as ListView).SelectedItem;
         }
     }
 }

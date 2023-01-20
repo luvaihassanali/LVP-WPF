@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
         Title="MainWindow" Background="Black" Height="1050" Width="1920" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI Black" FontSize="72">
+        RenderOptions.BitmapScalingMode="HighQuality" WindowState="Maximized" FontFamily="Segoe UI Black" FontSize="72">
     <Grid>
         <Grid Name="loadGrid" ZIndex="2" Background="Black">
             <MediaElement Name="coffeeGif" MediaEnded="Coffee_Gif_Ended" Source="Resources/coffee.gif" MaxWidth="498" MaxHeight="431" Stretch="None" LoadedBehavior="Play" />
@@ -91,7 +91,7 @@
                     </ListView.ItemTemplate>
                 </ListView>
                 <Label Name="movieHeader" Grid.Row="4" Content="Movies" Foreground="White"></Label>
-                <ListView ItemsSource="{Binding Movies}" Grid.Row="5" Name="MovieBox" Background="Black" BorderBrush="Black">
+                <ListView  PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Movies}" Grid.Row="5" Name="MovieBox" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="6" HorizontalAlignment="Center"/>

@@ -30,7 +30,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <ListView VerticalAlignment="Top" Grid.Row="2" Name="OptionBox" ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                    <ListView Grid.Row="2" Name="OptionBox" ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                           Background="Black" BorderBrush="Black">
                         <ListView.ItemTemplate>
                             <DataTemplate>

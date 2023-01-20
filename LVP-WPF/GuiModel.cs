@@ -78,4 +78,20 @@ namespace LVP_WPF
             set { id = value; }
         }
     }
+
+    public class SeasonWindowBox
+    {
+        private int id;
+        private BitmapImage image;
+        public int Id
+        {
+            get { return id; }
+            set { id = value; }
+        }
+        public BitmapImage Image
+        {
+            get { return image; }
+            set { image = value; }
+        }
+    }
 }

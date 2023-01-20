@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 
 namespace LVP_WPF
 {
@@ -715,7 +716,21 @@ namespace LVP_WPF
             moviePathList.AddRange(Directory.GetDirectories(movieDirPath));
         }
 
-        static public void Save()
+        internal static BitmapImage LoadImage(string filename, int pixelWidth)
+        {
+            //To-do: resize images to see if helps memory
+            string path = AppDomain.CurrentDomain.BaseDirectory;
+            BitmapImage image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.UriSource = new Uri(path + filename);
+            image.DecodePixelWidth = pixelWidth;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+
+        internal static void Save()
         {
             string jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(MainWindow.model);
             File.WriteAllText(jsonFile, jsonString);

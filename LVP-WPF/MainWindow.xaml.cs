@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LVP_WPF.Windows;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -28,25 +29,27 @@ namespace LVP_WPF
         {
             await Cache.Initialize(progressBar);
             await Task.Run(() => { AssignControlContext(); });
-            loadGrid.Visibility = Visibility.Collapsed;
+            Panel.SetZIndex(loadGrid, -1);
             coffeeGif.Source = null;
         }
 
         private void ListView_Click(object sender, RoutedEventArgs e)
         {
+            mainGrid.Opacity = 0.1;
             MainWindowBox item = (MainWindowBox)(sender as ListView).SelectedItem;
             if (item != null)
             {
                 var mediaItem = model.MediaDict[item.Id];
                 if (mediaItem is Movie)
                 {
-                    Trace.WriteLine("Movie");
+                    MovieWindow.Show((Movie)mediaItem);
                 }
                 else
                 {
-                    Trace.WriteLine("TV");
+                    TvShowWindow.Show((TvShow)mediaItem);
                 }
             }
+            mainGrid.Opacity = 1.0;
         }
 
         internal void AssignControlContext()
@@ -55,7 +58,7 @@ namespace LVP_WPF
             {
                 MovieBox.Dispatcher.Invoke(() =>
                 {
-                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = LoadImage(model.Movies[i].Poster, 300) });
+                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = Cache.LoadImage(model.Movies[i].Poster, 300) });
                 });
             }
 
@@ -65,31 +68,17 @@ namespace LVP_WPF
                 {
                     CartoonBox.Dispatcher.Invoke(() =>
                     {
-                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster, 300) });
+                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(model.TvShows[i].Poster, 300) });
                     });
                 }
                 else
                 {
                     TvShowBox.Dispatcher.Invoke(() =>
                     {
-                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = LoadImage(model.TvShows[i].Poster, 300) });
+                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(model.TvShows[i].Poster, 300) });
                     });
                 }
             }
-        }
-
-        private BitmapImage LoadImage(string filename, int pixelWidth)
-        {
-            //To-do: resize images to see if helps memory
-            string path = AppDomain.CurrentDomain.BaseDirectory;
-            BitmapImage image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.UriSource = new Uri(path + filename);
-            image.DecodePixelWidth = pixelWidth;
-            image.EndInit();
-            image.Freeze();
-            return image;
         }
 
         private void Coffee_Gif_Ended(object sender, EventArgs e)

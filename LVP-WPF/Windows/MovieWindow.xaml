@@ -5,9 +5,23 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
-        Title="MovieWindow" Background="Black" Height="1050" Width="960" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI Black" FontSize="48">
+        Title="MovieWindow" Background="Black" Height="1050" Width="1152" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
+        RenderOptions.BitmapScalingMode="HighQuality" FontFamily="Segoe UI" FontSize="48">
     <Grid>
-        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="648"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <Image Source="{Binding Backdrop}" Stretch="Fill"/>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <Label Margin="10,0,0,0" Content="{Binding Caption}" Foreground="White"/>
+            <Label Grid.Row="1" Margin="10,0,0,0" Content="{Binding RunningTime}" FontSize="24" Foreground="White"/>
+            <TextBlock Grid.Row="2" Margin="15,20,15,0" Foreground="White" FontSize="20" Text="{Binding Description}" TextWrapping="Wrap"/>
+        </Grid>
     </Grid>
 </Window>

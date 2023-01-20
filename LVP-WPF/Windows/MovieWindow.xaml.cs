@@ -24,32 +24,29 @@ namespace LVP_WPF.Windows
     {
         public static void Show(Movie movie)
         {
-            /*InputDialog dialog = new InputDialog();
-             dialog.Caption = caption;
-             dialog.Message = message;
-             dialog.Topmost = true;
-             dialog.ShowDialog();
-             if ((bool)dialog.DialogResult)
-             {
-                 return true;
-             }
-             return false;*/
+            MovieWindow window = new MovieWindow();
+            window.Caption = movie.Name;
+            TimeSpan temp = TimeSpan.FromMinutes(movie.RunningTime);
+            string hour = temp.Hours > 1 ? "hours " : "hour ";
+            window.RunningTime = "Running time: " + temp.Hours + " " + hour + temp.Minutes + " minutes";
+            window.Description = movie.Overview.Length > 1011 ? movie.Overview.Substring(0, 1011) + "..." : movie.Overview;
+            window.Backdrop = Cache.LoadImage(movie.Backdrop, 960);
+            window.ShowDialog();
         }
 
-        /*[ObservableProperty]
+        [ObservableProperty]
         private string caption;
         [ObservableProperty]
-        private string message;*/
+        private string runningTime;
+        [ObservableProperty]
+        private string description;
+        [ObservableProperty]
+        private BitmapImage backdrop;
 
         public MovieWindow()
         {
             DataContext = this;
             InitializeComponent();
-        }
-
-        private void Button_Season_Click(object sender, RoutedEventArgs e)
-        {
-            Environment.Exit(0);
         }
     }
 }
