@@ -179,7 +179,7 @@ namespace LVP_WPF
                 }
                 else
                 {
-                    tvShow.RunningTime = 15;
+                    tvShow.RunningTime = -1;
                 }
 
                 var genres = tvObject["genres"];

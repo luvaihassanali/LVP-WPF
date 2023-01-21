@@ -83,15 +83,62 @@ namespace LVP_WPF
     {
         private int id;
         private BitmapImage image;
+
         public int Id
         {
             get { return id; }
             set { id = value; }
         }
+
         public BitmapImage Image
         {
             get { return image; }
             set { image = value; }
+        }
+    }
+
+    [ObservableObject]
+    public partial class EpisodeWindowBox
+    {
+        private int id;
+        private string name;
+        private string description;
+        private BitmapImage image;
+        private BitmapImage overlay;
+        [ObservableProperty]
+        private int progress;
+        [ObservableProperty]
+        private int total;
+        [ObservableProperty]
+        private double opacity;
+
+        public int Id
+        {
+            get { return id; }
+            set { id = value; }
+        }
+        public string Name
+        {
+            get { return name; }
+            set { name = value; }
+        }
+
+        public string Description
+        {
+            get { return description; }
+            set { description = value; }
+        }
+
+        public BitmapImage Image
+        {
+            get { return image; }
+            set { image = value; }
+        }
+
+        public BitmapImage Overlay
+        {
+            get { return overlay; }
+            set { overlay = value; }
         }
     }
 }

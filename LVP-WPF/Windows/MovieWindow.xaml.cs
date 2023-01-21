@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,10 +19,12 @@ namespace LVP_WPF.Windows
     /// <summary>
     /// Interaction logic for MovieWindow.xaml
     /// </summary>
-    
+
     [ObservableObject]
     public partial class MovieWindow : Window
     {
+        private static MovieWindow mw;
+
         public static void Show(Movie movie)
         {
             MovieWindow window = new MovieWindow();
@@ -31,6 +34,8 @@ namespace LVP_WPF.Windows
             window.RunningTime = "Running time: " + temp.Hours + " " + hour + temp.Minutes + " minutes";
             window.Description = movie.Overview.Length > 1011 ? movie.Overview.Substring(0, 1011) + "..." : movie.Overview;
             window.Backdrop = Cache.LoadImage(movie.Backdrop, 960);
+            window.Overlay = Cache.LoadImage("Resources/play.png", 960);
+            mw = window;
             window.ShowDialog();
         }
 
@@ -42,11 +47,28 @@ namespace LVP_WPF.Windows
         private string description;
         [ObservableProperty]
         private BitmapImage backdrop;
+        [ObservableProperty]
+        private BitmapImage overlay;
 
         public MovieWindow()
         {
             DataContext = this;
             InitializeComponent();
+        }
+
+        private void Image_MouseEnter(object sender, MouseEventArgs e)
+        {
+            mw.PlayOverlay.Opacity = 1.0;
+        }
+
+        private void Image_MouseLeave(object sender, MouseEventArgs e)
+        {
+            mw.PlayOverlay.Opacity = 0;
+        }
+
+        private void Play_Click(object sender, MouseButtonEventArgs e)
+        {
+            Trace.WriteLine("click");
         }
     }
 }

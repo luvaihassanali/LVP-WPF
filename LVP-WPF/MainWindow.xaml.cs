@@ -30,6 +30,7 @@ namespace LVP_WPF
             await Cache.Initialize(progressBar);
             await Task.Run(() => { AssignControlContext(); });
             Panel.SetZIndex(loadGrid, -1);
+            progressBar.Visibility = Visibility.Collapsed;
             coffeeGif.Source = null;
         }
 
