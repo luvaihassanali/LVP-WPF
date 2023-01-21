@@ -71,32 +71,32 @@ namespace LVP_WPF.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static System.Drawing.Bitmap extras {
+        internal static byte[] extras {
             get {
                 object obj = ResourceManager.GetObject("extras", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
+                return ((byte[])(obj));
             }
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static System.Drawing.Bitmap noprev {
+        internal static byte[] noPrev {
             get {
-                object obj = ResourceManager.GetObject("noprev", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
+                object obj = ResourceManager.GetObject("noPrev", resourceCulture);
+                return ((byte[])(obj));
             }
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static System.Drawing.Bitmap noprev_wide {
+        internal static byte[] noPrevWide {
             get {
-                object obj = ResourceManager.GetObject("noprev_wide", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
+                object obj = ResourceManager.GetObject("noPrevWide", resourceCulture);
+                return ((byte[])(obj));
             }
         }
         

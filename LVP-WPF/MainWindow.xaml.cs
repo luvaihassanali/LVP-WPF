@@ -57,9 +57,10 @@ namespace LVP_WPF
         {
             for (int i = 0; i < model.Movies.Length; i++)
             {
+                string img = model.Movies[i].Poster == null ? "Resources/noPrev.png" : model.Movies[i].Poster;
                 MovieBox.Dispatcher.Invoke(() =>
                 {
-                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = Cache.LoadImage(model.Movies[i].Poster, 300) });
+                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = Cache.LoadImage(img, 300) });
                 });
             }
 
@@ -67,16 +68,18 @@ namespace LVP_WPF
             {
                 if (model.TvShows[i].Cartoon)
                 {
+                    string img = model.TvShows[i].Poster == null ? "Resources/noPrev.png" : model.TvShows[i].Poster;
                     CartoonBox.Dispatcher.Invoke(() =>
                     {
-                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(model.TvShows[i].Poster, 300) });
+                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
                     });
                 }
                 else
                 {
+                    string img = model.TvShows[i].Poster == null ? "Resources/noPrev.png" : model.TvShows[i].Poster;
                     TvShowBox.Dispatcher.Invoke(() =>
                     {
-                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(model.TvShows[i].Poster, 300) });
+                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
                     });
                 }
             }

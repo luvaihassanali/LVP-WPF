@@ -33,7 +33,8 @@ namespace LVP_WPF.Windows
             string hour = temp.Hours > 1 ? "hours " : "hour ";
             window.RunningTime = "Running time: " + temp.Hours + " " + hour + temp.Minutes + " minutes";
             window.Description = movie.Overview.Length > 1011 ? movie.Overview.Substring(0, 1011) + "..." : movie.Overview;
-            window.Backdrop = Cache.LoadImage(movie.Backdrop, 960);
+            string img = movie.Backdrop == null ? "Resources/noPrevWide.png" : movie.Backdrop;
+            window.Backdrop = Cache.LoadImage(img, 960);
             window.Overlay = Cache.LoadImage("Resources/play.png", 960);
             mw = window;
             window.ShowDialog();
@@ -56,12 +57,12 @@ namespace LVP_WPF.Windows
             InitializeComponent();
         }
 
-        private void Image_MouseEnter(object sender, MouseEventArgs e)
+        private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
         {
             mw.PlayOverlay.Opacity = 1.0;
         }
 
-        private void Image_MouseLeave(object sender, MouseEventArgs e)
+        private void Backdrop_MouseLeave(object sender, MouseEventArgs e)
         {
             mw.PlayOverlay.Opacity = 0;
         }

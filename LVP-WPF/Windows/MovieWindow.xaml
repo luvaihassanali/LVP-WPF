@@ -12,7 +12,7 @@
             <RowDefinition Height="648"/>
             <RowDefinition/>
         </Grid.RowDefinitions>
-        <Image Name="PlayOverlay" Panel.ZIndex="2" Opacity="0" PreviewMouseLeftButtonDown="Play_Click" MouseEnter="Image_MouseEnter" MouseLeave="Image_MouseLeave" Source="{Binding Overlay}"/>
+        <Image Name="PlayOverlay" Panel.ZIndex="2" Opacity="0" PreviewMouseLeftButtonDown="Play_Click" MouseEnter="Backdrop_MouseEnter" MouseLeave="Backdrop_MouseLeave" Source="{Binding Overlay}"/>
         <Image Source="{Binding Backdrop}"/>
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>

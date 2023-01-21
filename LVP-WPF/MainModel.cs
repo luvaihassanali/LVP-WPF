@@ -152,6 +152,7 @@ namespace LVP_WPF
         }
     }
 
+    //To-do: move common vars into media class
     public class Media
     {
         private int id;

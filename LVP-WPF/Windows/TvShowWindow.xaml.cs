@@ -32,7 +32,8 @@ namespace LVP_WPF.Windows
             TvShowWindow window = new TvShowWindow();
             window.ShowName = tvShow.Name + " (" + tvShow.Date.GetValueOrDefault().Year + ")";
             window.Description = tvShow.Overview.Length > 377 ? tvShow.Overview.Substring(0, 377) + "..." : tvShow.Overview;
-            window.Backdrop = Cache.LoadImage(tvShow.Backdrop, 960);
+            string img = tvShow.Backdrop == null ? "Resources/noPrevWide.png" : tvShow.Backdrop;
+            window.Backdrop = Cache.LoadImage(img, 960);
             window.seasonButton.Content = "Season " + tvShow.CurrSeason.ToString();
             Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
             window.Overlay = Cache.LoadImage("Resources/play.png", 960);
@@ -58,12 +59,12 @@ namespace LVP_WPF.Windows
             InitializeComponent();
         }
 
-        private void Image_MouseEnter(object sender, MouseEventArgs e)
+        private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
         {
             tw.PlayOverlay.Opacity = 1.0;
         }
 
-        private void Image_MouseLeave(object sender, MouseEventArgs e)
+        private void Backdrop_MouseLeave(object sender, MouseEventArgs e)
         {
             tw.PlayOverlay.Opacity = 0;
         }
@@ -71,14 +72,16 @@ namespace LVP_WPF.Windows
         private void Play_Click(object sender, MouseButtonEventArgs e)
         {
             Trace.WriteLine("click");
+            //play last episode
         }
 
         private void SmallPlay_Click(object sender, MouseButtonEventArgs e)
         {
             Trace.WriteLine("small click");
+            //get selected item
         }
 
-        private void ListView_MouseMove(object sender, MouseEventArgs e)
+        private void EpisodeListView_MouseMove(object sender, MouseEventArgs e)
         {
             HitTestResult hitTestResult = VisualTreeHelper.HitTest(EpisodeBox, Mouse.GetPosition(EpisodeBox));
             if (hitTestResult == null) return;
@@ -106,10 +109,18 @@ namespace LVP_WPF.Windows
 
         private void Update(int seasonIndex)
         {
-            tvShow.CurrSeason = seasonIndex;
-            tw.seasonButton.Content = "Season " + tvShow.CurrSeason.ToString();
             tw.EpisodeBox.ItemsSource = null;
-            Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
+            Episode[] episodes;
+            if (seasonIndex == -1)
+            {
+                tw.seasonButton.Content = "Extras";
+                episodes = tvShow.Seasons[tvShow.Seasons.Length - 1].Episodes;
+            }
+            else
+            {
+                tw.seasonButton.Content = "Season " + seasonIndex.ToString();
+                episodes = tvShow.Seasons[seasonIndex - 1].Episodes;
+            }
             tw.EpisodeBox.ItemsSource = CreateEpisodeBoxes(episodes);
         }
 
@@ -118,14 +129,26 @@ namespace LVP_WPF.Windows
             EpisodeWindowBox[] episodeBoxes = new EpisodeWindowBox[episodes.Length];
             for (int i = 0; i < episodes.Length; i++)
             {
+                string img = episodes[i].Backdrop == null ? "Resources/noPrevWide.png" : episodes[i].Backdrop;
+                string description;
+                if (episodes[i].Overview != null)
+                {
+                    description = episodes[i].Overview.Length > 610 ? episodes[i].Overview.Substring(0, 610) + "..." : episodes[i].Overview;
+                }
+                else
+                {
+                    description = episodes[i].Name;
+                }
+
+                long total = episodes[i].Length == 0 ? 1 : episodes[i].Length;
                 episodeBoxes[i] = new EpisodeWindowBox
                 {
                     Id = episodes[i].Id,
                     Name = episodes[i].Name,
-                    Description = episodes[i].Overview,
-                    Image = Cache.LoadImage(episodes[i].Backdrop, 300),
+                    Description = description,
+                    Image = Cache.LoadImage(img, 300),
                     Progress = (int)episodes[i].SavedTime,
-                    Total = (int)episodes[i].Length,
+                    Total = (int)total,
                     Overlay = Cache.LoadImage("Resources/play.png", 960),
                     Opacity = 0
                 };
@@ -133,21 +156,16 @@ namespace LVP_WPF.Windows
             return episodeBoxes;
         }
 
-        private void Button_Season_Click(object sender, RoutedEventArgs e)
+        private void SeasonButton_Click(object sender, RoutedEventArgs e)
         {
             mainGrid.Opacity = 0.1;
             int seasonIndex = SeasonWindow.Show(tvShow);
-            if (seasonIndex != -1)
-            {
-                Trace.WriteLine("szn: " + seasonIndex);
-                Update(seasonIndex);
-            }
+            if (seasonIndex != 0) Update(seasonIndex);
             mainGrid.Opacity = 1.0;
         }
 
-        private void ListView_MouseLeave(object sender, MouseEventArgs e)
+        private void EpisodeListView_MouseLeave(object sender, MouseEventArgs e)
         {
-
             for (int i = 0; i < EpisodeBox.Items.Count; i++)
             {
                 EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeBox.Items[i];

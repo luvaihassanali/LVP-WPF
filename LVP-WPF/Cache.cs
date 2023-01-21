@@ -524,7 +524,6 @@ namespace LVP_WPF
         internal static bool CheckForUpdates()
         {
             MainModel prevMedia = null;
-
             if (File.Exists(jsonFile))
             {
                 string jsonString = File.ReadAllText(jsonFile);
@@ -537,7 +536,6 @@ namespace LVP_WPF
             }
 
             bool result = !MainWindow.model.Compare(prevMedia);
-
             if (!result)
             {
                 MainWindow.model = prevMedia;
@@ -598,7 +596,6 @@ namespace LVP_WPF
                     string[] namePath = episodeEntries[j].Split('\\');
                     if (!episodeEntries[j].Contains('%'))
                     {
-                        //("Missing separator: " + namePath);
                         NotificationDialog.Show("Error", "Episode is missing separator: " + episodeEntries[j]);
                         Environment.Exit(0);
                     }
@@ -750,6 +747,6 @@ public static class StringExtension
     public static string fixBrokenQuotes(this string str)
     {
         return str.Replace(genericSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(openSingleQuoteSymbol, targetSingleQuoteSymbol)
-            .Replace(closeSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(frenchAccentAigu, "e").Replace(frenchAccentGrave, "a").Replace("%", "percent");
+            .Replace(closeSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(frenchAccentAigu, "e").Replace(frenchAccentGrave, "a").Replace("%", "percent").Replace("  ", " ");
     }
 }

@@ -21,7 +21,7 @@ namespace LVP_WPF.Windows
     
     public partial class SeasonWindow : Window
     {
-        private static int seasonIndex = -1;
+        private static int seasonIndex = 0;
         private static SeasonWindow sw;
 
         public static int Show(TvShow tvShow)
@@ -31,10 +31,19 @@ namespace LVP_WPF.Windows
             SeasonWindowBox[] seasonBoxes = new SeasonWindowBox[tvShow.Seasons.Length];
             for (int i = 0; i < tvShow.Seasons.Length; i++)
             {
+                string img;
+                if (tvShow.Seasons[i].Id == -1)
+                {
+                    img = "Resources/extras.png";
+                }
+                else
+                {
+                    img = tvShow.Seasons[i].Poster == null ? "Resources/noPrev.png" : tvShow.Seasons[i].Poster;
+                }
                 seasonBoxes[i] = new SeasonWindowBox
                 {
                     Id = tvShow.Seasons[i].Id,
-                    Image = Cache.LoadImage(tvShow.Seasons[i].Poster, 150)
+                    Image = Cache.LoadImage(img, 150)
                 };
             }
             seasonWindow.SeasonBox.ItemsSource = seasonBoxes;
@@ -49,12 +58,12 @@ namespace LVP_WPF.Windows
             InitializeComponent();
         }
 
-        private void ListView_Click(object sender, RoutedEventArgs e)
+        private void SeasonListView_Click(object sender, RoutedEventArgs e)
         {
             SeasonWindowBox item = (SeasonWindowBox)(sender as ListView).SelectedItem;
             if (seasonIndex == item.Id)
             {
-                seasonIndex = -1;
+                seasonIndex = 0;
             } 
             else
             {
@@ -65,6 +74,12 @@ namespace LVP_WPF.Windows
             {
                 sw.Close();
             });
+        }
+
+        private void SeasonWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            //layoutController.Select("seasonButton");
+            //Loading Cursor?
         }
     }
 }

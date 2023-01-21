@@ -15,7 +15,7 @@
                     <RowDefinition Height="648"/>
                     <RowDefinition/>
                 </Grid.RowDefinitions>
-                <Image Name="PlayOverlay" Panel.ZIndex="2" Opacity="0" PreviewMouseLeftButtonDown="Play_Click" MouseEnter="Image_MouseEnter" MouseLeave="Image_MouseLeave" Source="{Binding Overlay}"/>
+                <Image Name="PlayOverlay" Panel.ZIndex="2" Opacity="0" PreviewMouseLeftButtonDown="Play_Click" MouseEnter="Backdrop_MouseEnter" MouseLeave="Backdrop_MouseLeave" Source="{Binding Overlay}"/>
                 <Image Source="{Binding Backdrop}"/>
                 <Grid Grid.Row="1">
                     <Grid.RowDefinitions>
@@ -26,7 +26,7 @@
                     </Grid.RowDefinitions>
                     <Label Margin="10,0,0,0" FontWeight="Bold" Content="{Binding ShowName}" Foreground="White"/>
                     <TextBlock Grid.Row="1" Margin="15,0,15,0" Foreground="White" FontSize="20" Text="{Binding Description}" TextWrapping="Wrap"/>
-                    <Button Name="seasonButton" Click="Button_Season_Click" Grid.Row="2" Margin="10" Background="Black" Foreground="White" FontSize="20" Content="Seasons"></Button>
+                    <Button Name="seasonButton" Click="SeasonButton_Click" Grid.Row="2" Margin="10" Background="Black" Foreground="White" FontSize="20" Content="Seasons"></Button>
                     <Grid Grid.Row="3">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -34,7 +34,7 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <ListView PreviewMouseLeftButtonDown="SmallPlay_Click" Grid.Row="3" Name="EpisodeBox" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Black" BorderBrush="Black"
-                                  PreviewMouseMove="ListView_MouseMove" MouseLeave="ListView_MouseLeave">
+                                  PreviewMouseMove="EpisodeListView_MouseMove" MouseLeave="EpisodeListView_MouseLeave">
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>
