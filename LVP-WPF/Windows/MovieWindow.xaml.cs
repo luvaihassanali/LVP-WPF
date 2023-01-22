@@ -23,20 +23,20 @@ namespace LVP_WPF.Windows
     [ObservableObject]
     public partial class MovieWindow : Window
     {
-        private static MovieWindow mw;
+        private static Movie movie;
 
-        public static void Show(Movie movie)
+        public static void Show(Movie m)
         {
             MovieWindow window = new MovieWindow();
-            window.Caption = movie.Name;
-            TimeSpan temp = TimeSpan.FromMinutes(movie.RunningTime);
+            window.Caption = m.Name;
+            TimeSpan temp = TimeSpan.FromMinutes(m.RunningTime);
             string hour = temp.Hours > 1 ? "hours " : "hour ";
             window.RunningTime = "Running time: " + temp.Hours + " " + hour + temp.Minutes + " minutes";
-            window.Description = movie.Overview.Length > 1011 ? movie.Overview.Substring(0, 1011) + "..." : movie.Overview;
-            string img = movie.Backdrop == null ? "Resources/noPrevWide.png" : movie.Backdrop;
+            window.Description = m.Overview.Length > 1011 ? m.Overview.Substring(0, 1011) + "..." : m.Overview;
+            string img = m.Backdrop == null ? "Resources/noPrevWide.png" : m.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);
             window.Overlay = Cache.LoadImage("Resources/play.png", 960);
-            mw = window;
+            movie = m;
             window.ShowDialog();
         }
 
@@ -59,17 +59,22 @@ namespace LVP_WPF.Windows
 
         private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
         {
-            mw.PlayOverlay.Opacity = 1.0;
+            this.PlayOverlay.Opacity = 1.0;
         }
 
         private void Backdrop_MouseLeave(object sender, MouseEventArgs e)
         {
-            mw.PlayOverlay.Opacity = 0;
+            this.PlayOverlay.Opacity = 0;
         }
 
         private void Play_Click(object sender, MouseButtonEventArgs e)
         {
-            Trace.WriteLine("click");
+            PlayerWindow.Show(movie);
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
         }
     }
 }

@@ -8,6 +8,8 @@ namespace LVP_WPF
     [ObservableObject]
     public partial class OptionDialog : Window
     {
+        private static int returnId = -1;
+
         public static int Show(string title, string[][] info, DateTime?[] dates)
         {
             OptionDialog dialog = new OptionDialog();
@@ -35,8 +37,6 @@ namespace LVP_WPF
         private string message;
         [ObservableProperty]
         private BitmapSource image;
-
-        private static int returnId = -1;
 
         public OptionDialog()
         {

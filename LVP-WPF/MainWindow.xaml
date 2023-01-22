@@ -8,11 +8,11 @@
         Title="MainWindow" Background="Black" Height="1050" Width="1920" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
         RenderOptions.BitmapScalingMode="HighQuality" WindowState="Maximized" FontFamily="Segoe UI Black" FontSize="72">
     <Grid>
-        <Grid Name="loadGrid" ZIndex="2" Background="Black">
+        <Grid Name="loadGrid" ZIndex="3" Background="Black">
             <MediaElement Name="coffeeGif" MediaEnded="Coffee_Gif_Ended" Source="Resources/coffee.gif" MaxWidth="498" MaxHeight="431" Stretch="None" LoadedBehavior="Play" />
             <ProgressBar Name="progressBar" Value="{Binding ProgressBarValue}" Maximum="{Binding ProgressBarMax}" Width="498" Height= "10" IsIndeterminate="False" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,428,0,0" Background="#FF9CCAC4" Foreground="#FF068494" BorderBrush="#FF9CCAC4"  />
         </Grid>
-        <ScrollViewer VerticalScrollBarVisibility="Hidden" PanningMode="Both">
+        <ScrollViewer ScrollChanged="ScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Hidden" PanningMode="Both">
             <Grid Name="mainGrid">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"></RowDefinition>
@@ -22,6 +22,15 @@
                     <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
                 </Grid.RowDefinitions>
+                <Button Name="closeButton" Panel.ZIndex="2" Click="CloseButton_Click" BorderBrush="White" Foreground="White" Background="Transparent" BorderThickness="3" 
+                        Width="50" Height="50" HorizontalAlignment="Right" Margin="0,0,10,30">
+                    <TextBlock Text="✖" Margin="0,-3,1,0" FontSize="28" FontFamily="Segoe UI"/>
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="5"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
                 <Label Name="tvHeader" Content="TV" Foreground="White"/>
                 <ListView PreviewMouseLeftButtonUp="ListView_Click" Grid.Row="1" ItemsSource="{Binding TvShows}" Name="TvShowBox" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>

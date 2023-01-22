@@ -24,7 +24,6 @@ namespace LVP_WPF.Windows
     public partial class TvShowWindow : Window
     {
         static private TvShow tvShow;
-        static private TvShowWindow tw;
 
         public static void Show(TvShow t)
         {
@@ -38,7 +37,6 @@ namespace LVP_WPF.Windows
             Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
             window.Overlay = Cache.LoadImage("Resources/play.png", 960);
             window.EpisodeBox.ItemsSource = CreateEpisodeBoxes(episodes);
-            tw = window;
             window.ShowDialog();
         }
 
@@ -61,24 +59,24 @@ namespace LVP_WPF.Windows
 
         private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
         {
-            tw.PlayOverlay.Opacity = 1.0;
+            this.PlayOverlay.Opacity = 1.0;
         }
 
         private void Backdrop_MouseLeave(object sender, MouseEventArgs e)
         {
-            tw.PlayOverlay.Opacity = 0;
+            this.PlayOverlay.Opacity = 0;
         }
 
         private void Play_Click(object sender, MouseButtonEventArgs e)
         {
-            Trace.WriteLine("click");
-            //play last episode
-        }
-
-        private void SmallPlay_Click(object sender, MouseButtonEventArgs e)
-        {
-            Trace.WriteLine("small click");
-            //get selected item
+            if (tvShow.LastEpisode == null)
+            {
+                PlayerWindow.Show(tvShow.Seasons[0].Episodes[0]);
+            }
+            else
+            {
+                PlayerWindow.Show(tvShow.LastEpisode);
+            }
         }
 
         private void EpisodeListView_MouseMove(object sender, MouseEventArgs e)
@@ -109,19 +107,19 @@ namespace LVP_WPF.Windows
 
         private void Update(int seasonIndex)
         {
-            tw.EpisodeBox.ItemsSource = null;
+            this.EpisodeBox.ItemsSource = null;
             Episode[] episodes;
             if (seasonIndex == -1)
             {
-                tw.seasonButton.Content = "Extras";
+                this.seasonButton.Content = "Extras";
                 episodes = tvShow.Seasons[tvShow.Seasons.Length - 1].Episodes;
             }
             else
             {
-                tw.seasonButton.Content = "Season " + seasonIndex.ToString();
+                this.seasonButton.Content = "Season " + seasonIndex.ToString();
                 episodes = tvShow.Seasons[seasonIndex - 1].Episodes;
             }
-            tw.EpisodeBox.ItemsSource = CreateEpisodeBoxes(episodes);
+            this.EpisodeBox.ItemsSource = CreateEpisodeBoxes(episodes);
         }
 
         static private EpisodeWindowBox[] CreateEpisodeBoxes(Episode[] episodes)
@@ -170,6 +168,25 @@ namespace LVP_WPF.Windows
             {
                 EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeBox.Items[i];
                 ep.Opacity = 0.0;
+            }
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+
+        private void EpisodeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            EpisodeWindowBox item = (EpisodeWindowBox)(sender as ListView).SelectedItem;
+            Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
+            foreach (Episode episode in episodes)
+            {
+                if (item.Id == episode.Id)
+                {
+                    PlayerWindow.Show(episode);
+                    return;
+                }
             }
         }
     }

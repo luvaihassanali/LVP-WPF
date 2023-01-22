@@ -89,5 +89,23 @@ namespace LVP_WPF
         {
             coffeeGif.Position = TimeSpan.FromMilliseconds(1);
         }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+
+        private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            //To-do: change to only on mouse over
+            if (e.VerticalOffset == 0)
+            {
+                closeButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                closeButton.Visibility = Visibility.Hidden;
+            }
+        }
     }
 }

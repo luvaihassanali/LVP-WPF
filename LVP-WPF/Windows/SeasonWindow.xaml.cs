@@ -22,7 +22,6 @@ namespace LVP_WPF.Windows
     public partial class SeasonWindow : Window
     {
         private static int seasonIndex = 0;
-        private static SeasonWindow sw;
 
         public static int Show(TvShow tvShow)
         {
@@ -47,7 +46,6 @@ namespace LVP_WPF.Windows
                 };
             }
             seasonWindow.SeasonBox.ItemsSource = seasonBoxes;
-            sw = seasonWindow;
             seasonWindow.ShowDialog();
             return seasonIndex;
         }
@@ -61,19 +59,8 @@ namespace LVP_WPF.Windows
         private void SeasonListView_Click(object sender, RoutedEventArgs e)
         {
             SeasonWindowBox item = (SeasonWindowBox)(sender as ListView).SelectedItem;
-            if (seasonIndex == item.Id)
-            {
-                seasonIndex = 0;
-            } 
-            else
-            {
-                seasonIndex = item.Id;
-            }
-
-            sw.Dispatcher.Invoke(() =>
-            {
-                sw.Close();
-            });
+            seasonIndex = item.Id;
+            this.Close();
         }
 
         private void SeasonWindow_Loaded(object sender, RoutedEventArgs e)

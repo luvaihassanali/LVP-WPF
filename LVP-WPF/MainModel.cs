@@ -12,16 +12,12 @@ namespace LVP_WPF
     {
         private Movie[] movies;
         private TvShow[] tvShows;
-        private Dictionary<int, Movie> movieDict;
-        private Dictionary<int, TvShow> tvShowDict;
         private Dictionary<int, Media> mediaDict;
 
         public MainModel(int m, int s)
         {
             movies = new Movie[m];
-            movieDict = new Dictionary<int, Movie>();
             tvShows = new TvShow[s];
-            tvShowDict = new Dictionary<int, TvShow>();
             mediaDict = new Dictionary<int, Media>();
         }
 
@@ -35,18 +31,6 @@ namespace LVP_WPF
         {
             get => tvShows;
             set => tvShows = value;
-        }
-
-        public Dictionary<int, Movie> MovieDict
-        {
-            get => movieDict;
-            set => movieDict = value;
-        }
-
-        public Dictionary <int, TvShow> TvShowDict
-        {
-            get => tvShowDict;
-            set => tvShowDict = value;
         }
 
         public Dictionary <int, Media> MediaDict
@@ -156,19 +140,24 @@ namespace LVP_WPF
     public class Media
     {
         private int id;
+        private string path;
 
         public int Id
         {
             get => id;
             set => id = value;
         }
+
+        public string Path
+        {
+            get => path;
+            set => path = value;
+        }
     }
 
     public class Movie : Media
     {
-        //private int id;
         private string name;
-        private string path;
         private string poster;
         private string backdrop;
         private string overview;
@@ -180,16 +169,10 @@ namespace LVP_WPF
         public Movie(string n, string p)
         {
             name = n;
-            path = p;
+            Path = p;
             subtitles = false;
             subtitleTrack = 0;
         }
-
-        /*public int Id
-        {
-            get => id;
-            set => id = value;
-        }*/
 
         public string Name
         {
@@ -197,11 +180,6 @@ namespace LVP_WPF
             set => name = value;
         }
 
-        public string Path
-        {
-            get => path;
-            set => path = value;
-        }
         public string Backdrop
         {
             get => backdrop;
@@ -247,14 +225,13 @@ namespace LVP_WPF
         internal bool Compare(Movie localMovie)
         {
             if (!this.name.Equals(localMovie.Name)) return false;
-            if (!this.path.Equals(localMovie.Path)) return false;
-
+            if (!this.Path.Equals(localMovie.Path)) return false;
             return true;
         }
 
         public static IComparer SortMoviesAlphabetically()
         {
-            return (IComparer)new SortMoviesAlphabeticallyHelper();
+            return new SortMoviesAlphabeticallyHelper();
         }
 
         private class SortMoviesAlphabeticallyHelper : IComparer
@@ -271,7 +248,6 @@ namespace LVP_WPF
     public class TvShow : Media
     {
         private bool cartoon;
-        //private int id;
         private string name;
         private string overview;
         private string backdrop;
@@ -295,12 +271,6 @@ namespace LVP_WPF
             get => cartoon;
             set => cartoon = value;
         }
-
-        /*public int Id
-        {
-            get => id;
-            set => id = value;
-        }*/
 
         public string Name
         {
@@ -368,7 +338,7 @@ namespace LVP_WPF
 
         public static IComparer SortTvShowsAlphabetically()
         {
-            return (IComparer)new SortTvShowsAlphabeticallyHelper();
+            return new SortTvShowsAlphabeticallyHelper();
         }
 
         private class SortTvShowsAlphabeticallyHelper : IComparer
@@ -430,31 +400,23 @@ namespace LVP_WPF
         }
     }
 
-    public class Episode
+    public class Episode : Media
     {
         private bool multiEpisode = false;
-        private int id;
         private string name;
         private string backdrop;
         private string overview;
-        private string path;
         DateTime? date;
         private long savedTime;
         private long length;
 
         public Episode(int i, string n, string p, bool me = false)
         {
-            id = i;
+            Id = i;
             name = n;
-            path = p;
+            Path = p;
             savedTime = 0;
             multiEpisode = me;
-        }
-
-        public int Id
-        {
-            get => id;
-            set => id = value;
         }
 
         public string Name
@@ -477,12 +439,6 @@ namespace LVP_WPF
         {
             get => date;
             set => date = value;
-        }
-
-        public string Path
-        {
-            get => path;
-            set => path = value;
         }
 
         public long SavedTime
