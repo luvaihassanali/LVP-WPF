@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -24,6 +26,11 @@ namespace LVP_WPF.Windows
     public partial class TvShowWindow : Window
     {
         static private TvShow tvShow;
+        static public bool cartoonShuffle = false;
+        static public int cartoonIndex = 0;
+        static public int cartoonLimit = 20;
+        static public List<TvShow> cartoons = new List<TvShow>();
+        static public List<Episode> cartoonShuffleList = new List<Episode>();
 
         public static void Show(TvShow t)
         {
@@ -55,6 +62,12 @@ namespace LVP_WPF.Windows
         {
             DataContext = this;
             InitializeComponent();
+        }
+
+        static public TvShow CurrentTvShow
+        {
+            get => tvShow;
+            set => tvShow = value;
         }
 
         private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
@@ -105,7 +118,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void Update(int seasonIndex)
+        internal void Update(int seasonIndex)
         {
             this.EpisodeBox.ItemsSource = null;
             Episode[] episodes;
@@ -188,6 +201,31 @@ namespace LVP_WPF.Windows
                     return;
                 }
             }
+        }
+
+        internal static void PlayRandomCartoons()
+        {
+            cartoonLimit = Int32.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
+            for (int i = 0; i < cartoonLimit; i++)
+            {
+                Episode e = GetRandomEpisode();
+                cartoonShuffleList.Add(e);
+            }
+            Episode rndEpisode = cartoonShuffleList[cartoonIndex];
+            PlayerWindow.Show(rndEpisode);
+        }
+
+        internal static Random rnd = new Random();
+        internal static Episode GetRandomEpisode()
+        {
+            Episode rndEpisode;
+            int rndVal = rnd.Next(cartoons.Count);
+            TvShow rndShow = cartoons[rndVal];
+            rndVal = rnd.Next(rndShow.Seasons.Length);
+            Season rndSeason = rndShow.Seasons[rndVal];
+            rndVal = rnd.Next(rndSeason.Episodes.Length);
+            rndEpisode = rndSeason.Episodes[rndVal];
+            return rndEpisode;
         }
     }
 }

@@ -73,6 +73,7 @@ namespace LVP_WPF
                     {
                         gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
                     });
+                    TvShowWindow.cartoons.Add(model.TvShows[i]);
                 }
                 else
                 {
@@ -106,6 +107,11 @@ namespace LVP_WPF
             {
                 closeButton.Visibility = Visibility.Hidden;
             }
+        }
+
+        private void CartoonsHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            TvShowWindow.PlayRandomCartoons();
         }
     }
 }

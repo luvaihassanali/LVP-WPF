@@ -74,7 +74,7 @@
                     <Label Content="   Ctemp" Foreground="White" ></Label>
                 </StackPanel>
             </Expander>-->
-                <Label Name="cartoonsHeader" Grid.Row="2" Content="Cartoons" Foreground="White"></Label>
+                <Label Name="cartoonsHeader" PreviewMouseDown="CartoonsHeader_Click" Grid.Row="2" Content="Cartoons" Foreground="White"></Label>
                 <ListView PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Cartoons}" Grid.Row="3" Name="CartoonBox" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>

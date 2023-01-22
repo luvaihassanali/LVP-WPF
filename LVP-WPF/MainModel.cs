@@ -453,6 +453,12 @@ namespace LVP_WPF
             set => length = value;
         }
 
+        public bool MultiEpisode
+        {
+            get => multiEpisode;
+            set => multiEpisode = value;
+        }
+
         internal bool Compare(Episode otherEpisode)
         {
             if (!this.name.Equals(otherEpisode.name)) return false;

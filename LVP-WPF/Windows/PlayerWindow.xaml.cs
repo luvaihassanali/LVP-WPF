@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -85,11 +86,88 @@ namespace LVP_WPF.Windows
 
         private void MediaPlayer_EndReached(object? sender, EventArgs e)
         {
-            //logic
-            //logic
-            //for every close
-            //skipClosing = true;
-            //this.Close();
+            SliderValue = 0;
+
+            if (TvShowWindow.cartoonShuffle)
+            {
+                TvShowWindow.cartoonIndex++;
+                if (TvShowWindow.cartoonIndex == TvShowWindow.cartoonLimit)
+                {
+                    skipClosing = true;
+                    this.Close();
+                }
+
+                currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
+                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
+                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+                return;
+            }
+
+            if (currMedia as Episode != null)
+            {
+                Episode episode = (Episode)currMedia;
+                episode.SavedTime = episode.Length;
+                //To-do: update progress bar
+                if (episode.Id == -1)
+                {
+                    skipClosing = true;
+                    this.Close();
+                }
+
+                TvShow tvShow = TvShowWindow.CurrentTvShow;
+                for (int i = 0; i < tvShow.Seasons.Length; i++)
+                {
+                    Season season = tvShow.Seasons[i];
+                    for (int j = 0; j < season.Episodes.Length; j++)
+                    {
+                        if (episode.Name.Equals(season.Episodes[j].Name))
+                        {
+                            if (j == season.Episodes.Length - 1)
+                            {
+                                // if last season (check for extras)
+                                if (i == tvShow.Seasons.Length - 2 && tvShow.Seasons[tvShow.Seasons.Length - 1].Id == -1 ||
+                                    i == tvShow.Seasons.Length - 1)
+                                {
+                                    skipClosing = true;
+                                    this.Close();
+                                }
+                                else
+                                {
+                                    // season change
+                                    season = tvShow.Seasons[i + 1];
+                                    tvShow.CurrSeason = season.Id;
+                                    episode = season.Episodes[0];
+                                    LibVLCSharp.Shared.Media next = CreateMedia(episode);
+                                    ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+
+                                    foreach (Window window in Application.Current.Windows)
+                                    {
+                                        if (window.Title.Equals("TvShowWindow"))
+                                        {
+                                            TvShowWindow tvShowWindow = (TvShowWindow)window;
+                                            tvShowWindow.Update(tvShow.CurrSeason);
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                episode = season.Episodes[j + 1];
+                                LibVLCSharp.Shared.Media next = CreateMedia(episode);
+                                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+                                return;
+                            }
+                        }
+                    }
+                }
+
+            }
+            else //if Movie
+            {
+                skipClosing = true;
+                this.Close();
+            }
         }
 
         private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
@@ -134,10 +212,52 @@ namespace LVP_WPF.Windows
 
         private void Window_Closed(object sender, EventArgs e)
         {
-            // timers
+            if (pollingTimer != null)
+            {
+                if (pollingTimer.IsEnabled) pollingTimer.Stop();
+                pollingTimer.IsEnabled = false;
+                pollingTimer = null;
+            }
+
             if (!skipClosing)
             {
-                // end logic 
+                if (currMedia as Episode != null)
+                {
+                    Episode episode = (Episode)currMedia;
+                    TvShow tvShow = TvShowWindow.CurrentTvShow;
+                    int seasonIndex = 0;
+                    bool found = false;
+                    for (int i = 0; i < tvShow.Seasons.Length; i++)
+                    {
+                        Season season = tvShow.Seasons[i];
+                        for (int j = 0; j < season.Episodes.Length; j++)
+                        {
+                            if (episode.Name.Equals(season.Episodes[j].Name))
+                            {
+                                seasonIndex = season.Id;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) break;
+                    }
+
+                    long endTime = mediaPlayer.Time;
+                    if (endTime > episode.Length) endTime = episode.Length;
+                    if (endTime > 0)
+                    {
+                        if (seasonIndex == -1)
+                        {
+                            episode.SavedTime = endTime;
+                        }
+                        else
+                        {
+                            episode.SavedTime = endTime;
+                            tvShow.CurrSeason = seasonIndex;
+                            tvShow.LastEpisode = episode;
+                        }
+                    }
+                }
             }
 
             mediaPlayer.Dispose();
@@ -153,7 +273,7 @@ namespace LVP_WPF.Windows
         private void VideoView_MouseMove(object sender, MouseEventArgs e)
         {
             Point p = Mouse.GetPosition(this);
-            if (p.Y > this.Height - 100)
+            if (p.Y > this.Height - 100 || p.Y < 100)
             {
                 if (!pollingTimer.IsEnabled)
                 {
@@ -176,6 +296,7 @@ namespace LVP_WPF.Windows
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
+            if (mediaPlayer.IsPlaying) mediaPlayer.Stop();
             this.Close();
         }
 
@@ -234,6 +355,11 @@ namespace LVP_WPF.Windows
                     mediaPlayer.SeekTo(seekTime);
                 }
             }
+        }
+
+        internal void Pause()
+        {
+
         }
 
         private void InitializeIdleTimer()
