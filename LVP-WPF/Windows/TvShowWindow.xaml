@@ -9,13 +9,13 @@
         RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI" FontSize="42">
     <Grid>
         <Grid Name="loadGrid" ZIndex="-1" Background="Black"></Grid>
-        <ScrollViewer VerticalScrollBarVisibility="Hidden" PanningMode="Both">
+        <ScrollViewer Name="scrollView" VerticalScrollBarVisibility="Hidden" PanningMode="Both">
             <Grid Name="mainGrid">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="648"/>
                     <RowDefinition/>
                 </Grid.RowDefinitions>
-                <Button Panel.ZIndex="3" Click="CloseButton_Click" BorderBrush="White" Foreground="White" Background="Transparent" BorderThickness="3" 
+                <Button Name="closeButton" Panel.ZIndex="3" Click="CloseButton_Click" BorderBrush="White" Foreground="White" Background="Transparent" BorderThickness="3" 
                         Width="50" Height="50" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,10,10,0">
                     <TextBlock Text="✖" Margin="0,-3,1,0" FontSize="28" FontFamily="Segoe UI"/>
                     <Button.Resources>
@@ -63,7 +63,7 @@
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
                                             <TextBlock Margin="10,0,0,0" Foreground="White" FontWeight="Bold" FontSize="20" Text="{Binding Name}"/>
-                                            <TextBlock MaxWidth="832" Grid.Row="1" Margin="10,0,10,0" Foreground="White" FontSize="18" Text="{Binding Description}" TextWrapping="Wrap"/>
+                                            <TextBlock MaxWidth="830" Grid.Row="1" Margin="10,0,10,0" Foreground="White" FontSize="18" Text="{Binding Description}" TextWrapping="Wrap"/>
                                         </Grid>
                                     </Grid>
                                 </DataTemplate>

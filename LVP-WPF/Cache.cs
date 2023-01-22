@@ -731,7 +731,6 @@ namespace LVP_WPF
         {
             string jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(MainWindow.model);
             File.WriteAllText(jsonFile, jsonString);
-            Trace.WriteLine("Media data file saved");
         }
     }
 }

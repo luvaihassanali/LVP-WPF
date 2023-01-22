@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
 using System;
+using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,17 +24,19 @@ namespace LVP_WPF.Windows
     [ObservableObject]
     public partial class PlayerWindow : Window
     {
-        private static Media currMedia;
+        static private TvShowWindow? tvShowWindow;
+        static private Media currMedia;
         private LibVLC libVLC;
         private MediaPlayer mediaPlayer;
         private DispatcherTimer pollingTimer;
         private bool skipClosing = false;
         private bool sliderMouseDown = false;
 
-        public static void Show(Media m)
+        public static void Show(Media m, TvShowWindow? tw = null)
         {
             PlayerWindow window = new PlayerWindow();
             currMedia = m;
+            tvShowWindow = tw;
             window.ShowDialog();
         }
 
@@ -48,16 +51,16 @@ namespace LVP_WPF.Windows
         {
             DataContext = this;
             InitializeComponent();
-            videoView.Loaded += VideoView_Loaded;
-        }
-
-        void VideoView_Loaded(object sender, RoutedEventArgs e)
-        {
             Core.Initialize();
             libVLC = new LibVLC();
             mediaPlayer = new MediaPlayer(libVLC);
             videoView.MediaPlayer = mediaPlayer;
+            SliderValue = 0;
+            SliderMax = 1;
+        }
 
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
             mediaPlayer.TimeChanged += MediaPlayer_TimeChanged;
             mediaPlayer.LengthChanged += MediaPlayer_LengthChanged;
             mediaPlayer.EncounteredError += MediaPlayer_EncounteredError;
@@ -65,7 +68,12 @@ namespace LVP_WPF.Windows
             mediaPlayer.EnableMouseInput = false;
             mediaPlayer.EnableKeyInput = false;
 
+            pollingTimer = new DispatcherTimer();
+            pollingTimer.Interval = TimeSpan.FromSeconds(3);
+            pollingTimer.Tick += PollingTimer_Tick;
+
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
+            Trace.WriteLine("Play: " + currMedia.Path);
             bool res = mediaPlayer.Play(currVLCMedia);
             if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
 
@@ -77,11 +85,6 @@ namespace LVP_WPF.Windows
                     mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(episode.SavedTime));
                 }
             }
-
-            pollingTimer = new DispatcherTimer();
-            pollingTimer.Interval = TimeSpan.FromSeconds(3);
-            pollingTimer.Tick += PollingTimer_Tick;
-            pollingTimer.Start();
         }
 
         private void MediaPlayer_EndReached(object? sender, EventArgs e)
@@ -99,6 +102,7 @@ namespace LVP_WPF.Windows
 
                 currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
+                Trace.WriteLine("Play: " + currMedia.Path);
                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                 return;
             }
@@ -107,14 +111,15 @@ namespace LVP_WPF.Windows
             {
                 Episode episode = (Episode)currMedia;
                 episode.SavedTime = episode.Length;
-                //To-do: update progress bar
+                UpdateProgressBar(episode);
+
                 if (episode.Id == -1)
                 {
                     skipClosing = true;
                     this.Close();
                 }
 
-                TvShow tvShow = TvShowWindow.CurrentTvShow;
+                TvShow tvShow = TvShowWindow.tvShow;
                 for (int i = 0; i < tvShow.Seasons.Length; i++)
                 {
                     Season season = tvShow.Seasons[i];
@@ -133,28 +138,25 @@ namespace LVP_WPF.Windows
                                 }
                                 else
                                 {
-                                    // season change
+                                    Trace.WriteLine(tvShow.Name + " season change from " + (i) + " to " + (i + 1));
                                     season = tvShow.Seasons[i + 1];
                                     tvShow.CurrSeason = season.Id;
-                                    episode = season.Episodes[0];
-                                    LibVLCSharp.Shared.Media next = CreateMedia(episode);
+                                    currMedia = season.Episodes[0];
+                                    LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
+                                    Trace.WriteLine("Play: " + currMedia.Path);
                                     ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-
-                                    foreach (Window window in Application.Current.Windows)
+                                    tvShowWindow.Dispatcher.Invoke(() =>
                                     {
-                                        if (window.Title.Equals("TvShowWindow"))
-                                        {
-                                            TvShowWindow tvShowWindow = (TvShowWindow)window;
-                                            tvShowWindow.Update(tvShow.CurrSeason);
-                                            return;
-                                        }
-                                    }
+                                        tvShowWindow.Update(tvShow.CurrSeason);
+                                    });
+                                    return;
                                 }
                             }
                             else
                             {
-                                episode = season.Episodes[j + 1];
-                                LibVLCSharp.Shared.Media next = CreateMedia(episode);
+                                currMedia = season.Episodes[j + 1];
+                                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
+                                Trace.WriteLine("Play: " + currMedia.Path);
                                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                                 return;
                             }
@@ -219,12 +221,12 @@ namespace LVP_WPF.Windows
                 pollingTimer = null;
             }
 
-            if (!skipClosing)
+            if (!TvShowWindow.cartoonShuffle && !skipClosing)
             {
                 if (currMedia as Episode != null)
                 {
                     Episode episode = (Episode)currMedia;
-                    TvShow tvShow = TvShowWindow.CurrentTvShow;
+                    TvShow tvShow = TvShowWindow.tvShow;
                     int seasonIndex = 0;
                     bool found = false;
                     for (int i = 0; i < tvShow.Seasons.Length; i++)
@@ -257,11 +259,30 @@ namespace LVP_WPF.Windows
                             tvShow.LastEpisode = episode;
                         }
                     }
+                    UpdateProgressBar(episode);
                 }
             }
 
+            if (mediaPlayer.IsPlaying) mediaPlayer.Stop();
             mediaPlayer.Dispose();
             libVLC.Dispose();
+        }
+
+        private void UpdateProgressBar(Episode episode)
+        {
+            tvShowWindow.Dispatcher.Invoke(() =>
+            {
+                for (int i = 0; i < tvShowWindow.EpisodeBox.Items.Count; i++)
+                {
+                    EpisodeWindowBox epBox = (EpisodeWindowBox)tvShowWindow.EpisodeBox.Items[i];
+                    if (epBox.Id == episode.Id)
+                    {
+                        epBox.Progress = (int)episode.SavedTime;
+                        epBox.Total = (int)episode.Length;
+                        break;
+                    }
+                }
+            });
         }
 
         private void PollingTimer_Tick(object? sender, EventArgs e)
@@ -296,7 +317,7 @@ namespace LVP_WPF.Windows
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            if (mediaPlayer.IsPlaying) mediaPlayer.Stop();
+            closeButton.MouseLeave -= Control_MouseLeave;
             this.Close();
         }
 

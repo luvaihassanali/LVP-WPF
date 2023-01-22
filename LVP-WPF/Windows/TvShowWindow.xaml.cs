@@ -25,12 +25,12 @@ namespace LVP_WPF.Windows
     [ObservableObject]
     public partial class TvShowWindow : Window
     {
-        static private TvShow tvShow;
-        static public bool cartoonShuffle = false;
-        static public int cartoonIndex = 0;
-        static public int cartoonLimit = 20;
-        static public List<TvShow> cartoons = new List<TvShow>();
-        static public List<Episode> cartoonShuffleList = new List<Episode>();
+        static internal TvShow tvShow;
+        static internal bool cartoonShuffle = false;
+        static internal int cartoonIndex = 0;
+        static internal int cartoonLimit = 20;
+        static internal List<TvShow> cartoons = new List<TvShow>();
+        static internal List<Episode> cartoonShuffleList = new List<Episode>();
 
         public static void Show(TvShow t)
         {
@@ -64,12 +64,6 @@ namespace LVP_WPF.Windows
             InitializeComponent();
         }
 
-        static public TvShow CurrentTvShow
-        {
-            get => tvShow;
-            set => tvShow = value;
-        }
-
         private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
         {
             this.PlayOverlay.Opacity = 1.0;
@@ -84,11 +78,11 @@ namespace LVP_WPF.Windows
         {
             if (tvShow.LastEpisode == null)
             {
-                PlayerWindow.Show(tvShow.Seasons[0].Episodes[0]);
+                PlayerWindow.Show(tvShow.Seasons[0].Episodes[0], this);
             }
             else
             {
-                PlayerWindow.Show(tvShow.LastEpisode);
+                PlayerWindow.Show(tvShow.LastEpisode, this);
             }
         }
 
@@ -120,6 +114,7 @@ namespace LVP_WPF.Windows
 
         internal void Update(int seasonIndex)
         {
+            scrollView.ScrollToHome();
             this.EpisodeBox.ItemsSource = null;
             Episode[] episodes;
             if (seasonIndex == -1)
@@ -144,7 +139,7 @@ namespace LVP_WPF.Windows
                 string description;
                 if (episodes[i].Overview != null)
                 {
-                    description = episodes[i].Overview.Length > 610 ? episodes[i].Overview.Substring(0, 610) + "..." : episodes[i].Overview;
+                    description = episodes[i].Overview.Length > 605 ? episodes[i].Overview.Substring(0, 605) + "..." : episodes[i].Overview;
                 }
                 else
                 {
@@ -192,12 +187,14 @@ namespace LVP_WPF.Windows
         private void EpisodeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             EpisodeWindowBox item = (EpisodeWindowBox)(sender as ListView).SelectedItem;
+            if (item == null) return;
             Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
             foreach (Episode episode in episodes)
             {
                 if (item.Id == episode.Id)
                 {
-                    PlayerWindow.Show(episode);
+                    PlayerWindow.Show(episode, this);
+                    EpisodeBox.SelectedIndex = -1;
                     return;
                 }
             }
@@ -205,6 +202,7 @@ namespace LVP_WPF.Windows
 
         internal static void PlayRandomCartoons()
         {
+            cartoonShuffle = true;
             cartoonLimit = Int32.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
             for (int i = 0; i < cartoonLimit; i++)
             {
@@ -213,6 +211,7 @@ namespace LVP_WPF.Windows
             }
             Episode rndEpisode = cartoonShuffleList[cartoonIndex];
             PlayerWindow.Show(rndEpisode);
+            cartoonShuffle = false;
         }
 
         internal static Random rnd = new Random();
