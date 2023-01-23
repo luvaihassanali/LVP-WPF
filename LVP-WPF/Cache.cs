@@ -9,7 +9,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 
@@ -110,12 +109,11 @@ namespace LVP_WPF
 
                 await BuildTvShowCache(tvShow, client);
             }
-
             client.Dispose();
+
             Array.Sort(MainWindow.model.Movies, Movie.SortMoviesAlphabetically());
             Array.Sort(MainWindow.model.TvShows, TvShow.SortTvShowsAlphabetically());
-            string jsonString = JsonConvert.SerializeObject(MainWindow.model);
-            File.WriteAllText(jsonFile, jsonString);
+            SaveData();
         }
 
         private static async Task BuildTvShowCache(TvShow tvShow, HttpClient client)
@@ -527,7 +525,7 @@ namespace LVP_WPF
             if (File.Exists(jsonFile))
             {
                 string jsonString = File.ReadAllText(jsonFile);
-                prevMedia = Newtonsoft.Json.JsonConvert.DeserializeObject<MainModel>(jsonString);
+                prevMedia = JsonConvert.DeserializeObject<MainModel>(jsonString);
             }
 
             if (prevMedia == null)
@@ -607,7 +605,6 @@ namespace LVP_WPF
                 }
                 show.Seasons[i] = season;
             }
-
             return show;
         }
 
@@ -634,8 +631,8 @@ namespace LVP_WPF
                 Episode ep = new Episode(-1, episodeName, entry);
                 extras.Add(ep);
             }
-            string[] subDirectories = Directory.GetDirectories(targetDir);
-            foreach (string subDir in subDirectories)
+            string[] subDirs = Directory.GetDirectories(targetDir);
+            foreach (string subDir in subDirs)
             {
                 ProcessExtrasDirectory(extras, subDir);
             }
@@ -647,16 +644,12 @@ namespace LVP_WPF
             string[] s2Parts = s2.Split('%');
             string[] s3Parts = s1Parts[s1Parts.Length - 2].Split('\\');
             string[] s4Parts = s2Parts[s2Parts.Length - 2].Split('\\');
+
             string s5Part = s3Parts[s3Parts.Length - 1];
             string s6Part = s4Parts[s4Parts.Length - 1];
-            if (s5Part.Contains("#"))
-            {
-                s5Part = s5Part.Split('#')[0];
-            }
-            if (s6Part.Contains("#"))
-            {
-                s6Part = s6Part.Split('#')[0];
-            }
+            if (s5Part.Contains("#")) s5Part = s5Part.Split('#')[0];
+            if (s6Part.Contains("#")) s6Part = s6Part.Split('#')[0];
+
             int indexA = Int32.Parse(s5Part);
             int indexB = Int32.Parse(s6Part);
             if (indexA == indexB)
@@ -671,7 +664,6 @@ namespace LVP_WPF
             {
                 return -1;
             }
-
         }
 
         internal static int SeasonComparer(string seasonB, string seasonA)
@@ -727,9 +719,10 @@ namespace LVP_WPF
             return image;
         }
 
-        internal static void Save()
+        internal static void SaveData()
         {
-            string jsonString = Newtonsoft.Json.JsonConvert.SerializeObject(MainWindow.model);
+            MainWindow.model.MediaDict = null;
+            string jsonString = JsonConvert.SerializeObject(MainWindow.model);
             File.WriteAllText(jsonFile, jsonString);
         }
     }
@@ -742,7 +735,7 @@ public static class StringExtension
     private const string closeSingleQuoteSymbol = "â€™";
     private const string frenchAccentAigu = "Ã©";
     private const string frenchAccentGrave = "Ã";
-    // look at that 70s show?
+    //To-do: look at that 70s show/other descriptions, might have missed
     public static string fixBrokenQuotes(this string str)
     {
         return str.Replace(genericSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(openSingleQuoteSymbol, targetSingleQuoteSymbol)

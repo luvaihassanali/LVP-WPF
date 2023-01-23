@@ -9,7 +9,7 @@
         RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" Loaded="SeasonWindow_Loaded">
     <Grid>
         <Grid>
-            <ListView ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseLeftButtonUp="SeasonListView_Click" Name="SeasonBox" Background="Black" BorderBrush="Black">
+            <ListView ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseLeftButtonUp="SeasonListView_Click" Name="SeasonListView" Background="Black" BorderBrush="Black">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="3" HorizontalAlignment="Left" VerticalAlignment="Top"/>

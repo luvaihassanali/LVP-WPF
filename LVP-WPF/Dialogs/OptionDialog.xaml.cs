@@ -44,12 +44,12 @@ namespace LVP_WPF
             InitializeComponent();
         }
 
-        private void Button_Exit_Click(object sender, RoutedEventArgs e)
+        private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
             Environment.Exit(0);
         }
 
-        private void Button_Continue_Click(object sender, RoutedEventArgs e)
+        private void ContinueButton_Click(object sender, RoutedEventArgs e)
         {
             if (OptionBox.SelectedIndex == -1) return;
             OptionWindowBox o = (OptionWindowBox)OptionBox.SelectedItem;

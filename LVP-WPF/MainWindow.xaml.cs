@@ -1,15 +1,9 @@
 ﻿using LVP_WPF.Windows;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Animation;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 
 namespace LVP_WPF
 {
@@ -17,12 +11,22 @@ namespace LVP_WPF
     {
         static public MainModel model;
         static public GuiModel gui;
+        static private bool mouseHubKilled;
 
         public MainWindow()
         {
             InitializeComponent();
             gui = new GuiModel();
             DataContext = gui;
+
+            Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
+            if (mouseHubProcess.Length != 0)
+            {
+                mouseHubProcess[0].Kill();
+                mouseHubKilled = true;
+            }
+            //worker = new MouseWorker(this);
+            //worker.Start();
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -58,7 +62,7 @@ namespace LVP_WPF
             for (int i = 0; i < model.Movies.Length; i++)
             {
                 string img = model.Movies[i].Poster == null ? "Resources/noPrev.png" : model.Movies[i].Poster;
-                MovieBox.Dispatcher.Invoke(() =>
+                MovieListView.Dispatcher.Invoke(() =>
                 {
                     gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = Cache.LoadImage(img, 300) });
                 });
@@ -69,7 +73,7 @@ namespace LVP_WPF
                 if (model.TvShows[i].Cartoon)
                 {
                     string img = model.TvShows[i].Poster == null ? "Resources/noPrev.png" : model.TvShows[i].Poster;
-                    CartoonBox.Dispatcher.Invoke(() =>
+                    CartoonsListView.Dispatcher.Invoke(() =>
                     {
                         gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
                     });
@@ -78,7 +82,7 @@ namespace LVP_WPF
                 else
                 {
                     string img = model.TvShows[i].Poster == null ? "Resources/noPrev.png" : model.TvShows[i].Poster;
-                    TvShowBox.Dispatcher.Invoke(() =>
+                    TvShowListView.Dispatcher.Invoke(() =>
                     {
                         gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
                     });
@@ -112,6 +116,20 @@ namespace LVP_WPF
         private void CartoonsHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             TvShowWindow.PlayRandomCartoons();
+        }
+
+        private void Window_Closed(object sender, EventArgs e)
+        {
+            if (mouseHubKilled)
+            {
+                string path = AppDomain.CurrentDomain.BaseDirectory;
+#if DEBUG
+                path = path.Replace("bin\\Debug\\", "Utilities\\MouseHub\\MouseHub\\bin\\Debug\\MouseHub.exe");
+#else
+                path = path.Replace("bin\\Release\\", "Utilities\\MouseHub\\MouseHub\\bin\\Release\\MouseHub.exe");
+#endif
+                Process.Start(path);
+            }
         }
     }
 }

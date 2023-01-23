@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
-        Title="MainWindow" Background="Black" Height="1050" Width="1920" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
+        Title="MainWindow" Background="Black" Height="1050" Width="1920" Loaded="Window_Loaded" Closed="Window_Closed" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
         RenderOptions.BitmapScalingMode="HighQuality" WindowState="Maximized" FontFamily="Segoe UI Black" FontSize="72">
     <Grid>
         <Grid Name="loadGrid" ZIndex="3" Background="Black">
@@ -32,7 +32,7 @@
                     </Button.Resources>
                 </Button>
                 <Label Name="tvHeader" Content="TV" Foreground="White"/>
-                <ListView PreviewMouseLeftButtonUp="ListView_Click" Grid.Row="1" ItemsSource="{Binding TvShows}" Name="TvShowBox" Background="Black" BorderBrush="Black">
+                <ListView PreviewMouseLeftButtonUp="ListView_Click" Grid.Row="1" ItemsSource="{Binding TvShows}" Name="TvShowListView" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="6" HorizontalAlignment="Center"/>
@@ -75,7 +75,7 @@
                 </StackPanel>
             </Expander>-->
                 <Label Name="cartoonsHeader" PreviewMouseDown="CartoonsHeader_Click" Grid.Row="2" Content="Cartoons" Foreground="White"></Label>
-                <ListView PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Cartoons}" Grid.Row="3" Name="CartoonBox" Background="Black" BorderBrush="Black">
+                <ListView PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Cartoons}" Grid.Row="3" Name="CartoonsListView" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="6" HorizontalAlignment="Center"/>
@@ -100,7 +100,7 @@
                     </ListView.ItemTemplate>
                 </ListView>
                 <Label Name="movieHeader" Grid.Row="4" Content="Movies" Foreground="White"></Label>
-                <ListView  PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Movies}" Grid.Row="5" Name="MovieBox" Background="Black" BorderBrush="Black">
+                <ListView  PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Movies}" Grid.Row="5" Name="MovieListView" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="6" HorizontalAlignment="Center"/>

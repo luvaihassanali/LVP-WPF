@@ -1,16 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
-using System.ComponentModel;
-using System.Drawing;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Media.Imaging;
 
 namespace LVP_WPF
-{    
+{
     [ObservableObject]
     public partial class NotificationDialog : Window
     {
@@ -34,7 +27,7 @@ namespace LVP_WPF
             InitializeComponent();
         }
 
-        private void Button_Exit_Click(object sender, RoutedEventArgs e)
+        private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
             Environment.Exit(0);
         }

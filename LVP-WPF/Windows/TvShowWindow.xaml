@@ -42,7 +42,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <ListView Grid.Row="3" Name="EpisodeBox" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Black" BorderBrush="Black"
+                        <ListView Grid.Row="3" Name="EpisodeListView" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Black" BorderBrush="Black"
                                   PreviewMouseMove="EpisodeListView_MouseMove" MouseLeave="EpisodeListView_MouseLeave" SelectionChanged="EpisodeBox_SelectionChanged" >
                             <ListView.ItemTemplate>
                                 <DataTemplate>

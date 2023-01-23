@@ -2,17 +2,9 @@
 using LibVLCSharp.Shared;
 using System;
 using System.Diagnostics;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Shapes;
 using System.Windows.Threading;
 
 namespace LVP_WPF.Windows
@@ -272,9 +264,9 @@ namespace LVP_WPF.Windows
         {
             tvShowWindow.Dispatcher.Invoke(() =>
             {
-                for (int i = 0; i < tvShowWindow.EpisodeBox.Items.Count; i++)
+                for (int i = 0; i < tvShowWindow.EpisodeListView.Items.Count; i++)
                 {
-                    EpisodeWindowBox epBox = (EpisodeWindowBox)tvShowWindow.EpisodeBox.Items[i];
+                    EpisodeWindowBox epBox = (EpisodeWindowBox)tvShowWindow.EpisodeListView.Items[i];
                     if (epBox.Id == episode.Id)
                     {
                         epBox.Progress = (int)episode.SavedTime;

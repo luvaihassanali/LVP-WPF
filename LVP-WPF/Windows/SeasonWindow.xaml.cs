@@ -1,24 +1,12 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace LVP_WPF.Windows
 {
     /// <summary>
     /// Interaction logic for SeasonWindow.xaml
     /// </summary>
-    
+
     public partial class SeasonWindow : Window
     {
         private static int seasonIndex = 0;
@@ -45,7 +33,7 @@ namespace LVP_WPF.Windows
                     Image = Cache.LoadImage(img, 150)
                 };
             }
-            seasonWindow.SeasonBox.ItemsSource = seasonBoxes;
+            seasonWindow.SeasonListView.ItemsSource = seasonBoxes;
             seasonWindow.ShowDialog();
             return seasonIndex;
         }
