@@ -158,8 +158,9 @@ namespace LVP_WPF.Windows
         private void SeasonButton_Click(object sender, RoutedEventArgs e)
         {
             mainGrid.Opacity = 0.1;
+            int prevIndex = tvShow.CurrSeason;
             int seasonIndex = SeasonWindow.Show(tvShow);
-            if (seasonIndex != 0) Update(seasonIndex);
+            if (seasonIndex != 0 && seasonIndex != prevIndex) Update(seasonIndex);
             mainGrid.Opacity = 1.0;
         }
 

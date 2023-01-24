@@ -39,7 +39,7 @@ namespace LVP_WPF
             progressBar.Visibility = Visibility.Collapsed;
             coffeeGif.Source = null;
 
-            inactivityTimer = new InactivityTimer(TimeSpan.FromSeconds(5));//(TimeSpan.FromMinutes(5));
+            inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
         }
 

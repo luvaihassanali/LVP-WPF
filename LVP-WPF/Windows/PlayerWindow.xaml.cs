@@ -68,7 +68,7 @@ namespace LVP_WPF.Windows
             pollingTimer.Interval = TimeSpan.FromSeconds(3);
             pollingTimer.Tick += PollingTimer_Tick;
 
-            inactivityTimer = new InactivityTimer(TimeSpan.FromSeconds(10));//(TimeSpan.FromMinutes(5));
+            inactivityTimer = new InactivityTimer(TimeSpan.FromHours(2)); //(TimeSpan.FromSeconds(10));
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);

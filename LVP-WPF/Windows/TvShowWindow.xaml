@@ -55,7 +55,7 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <Image Margin="0,3,0,3" Width="300" Height="169" Panel.ZIndex="2" Opacity="{Binding Opacity}" Source="{Binding Overlay}"/>
-                                        <Image Margin="0,3,0,3" Stretch="Fill" Width="300" Height="169" Source="{Binding Image}"/>
+                                        <Image Margin="0,3,0,3" Width="300" Height="169" Source="{Binding Image}"/>
                                         <ProgressBar Margin="0,164,0,0" Name="progressBar" Value="{Binding Progress}" Maximum="{Binding Total}" Width="300" Height= "5" IsIndeterminate="False" HorizontalAlignment="Center" VerticalAlignment="Center" Background="Transparent" Foreground="red" BorderBrush="Transparent"/>
                                         <Grid Grid.Column="1">
                                             <Grid.RowDefinitions>
