@@ -5,18 +5,20 @@
 |  Control  |     1 TV     |   2 LVP   |  3 Laptop   |      4 Audio      |
 +-----------+--------------+-----------+-------------+-------------------+
 | Button 1  | -            | -         | -           | -                 |
-| Button 2  | Enter        | Click     | D. Click    | Mute              |
+| Button 2  | Enter        | Click     | Click       | Mute              |
 | Button 3  | Home         | Scroll    | R. Click    | Input             |
-| Button 4  | Sound script | Reset     | x           | Reset             |
+| Button 4  | Sound script | Reset     | Reset       | Reset             |
 | Button 5  | Power        | x         | x           | Power             |
 | Button 6  | -            | -         | -           | -                 |
 | J. Button | Enter        | Click     | D. Click    | Power             |
 | J. Stick  | Direction    | Direction | Direction   | Up(+)/down(-) vol |
 +-----------+--------------+-----------+-------------+-------------------+
+- B1 TV <-> Audio
+- B6 ESP <-> Audio
 - J. Stick Up/Down + Button 2 = TV Volume
-- J. Stick Left + Button 2 = TV Back
-- J. Stick Right + Button 2 = TV Play/Pause
-- Button 2 + Button 3 = Laptop Taskmgr
+- J. Stick Left + Button 2 = LVP Back
+- J. Stick Right + Button 2 = LVP Play/Pause
+- Button 2 + Button 3 = Taskmgr
 */
 
 void ControlHandler();

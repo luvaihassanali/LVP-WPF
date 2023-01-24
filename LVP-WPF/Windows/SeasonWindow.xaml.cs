@@ -21,11 +21,11 @@ namespace LVP_WPF.Windows
                 string img;
                 if (tvShow.Seasons[i].Id == -1)
                 {
-                    img = "Resources/extras.png";
+                    img = "Resources\\extras.png";
                 }
                 else
                 {
-                    img = tvShow.Seasons[i].Poster == null ? "Resources/noPrev.png" : tvShow.Seasons[i].Poster;
+                    img = tvShow.Seasons[i].Poster == null ? "Resources\\noPrev.png" : tvShow.Seasons[i].Poster;
                 }
                 seasonBoxes[i] = new SeasonWindowBox
                 {

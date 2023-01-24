@@ -26,7 +26,7 @@ namespace LVP_WPF
                     Id = Int32.Parse(info[1][i])
                 };
             }
-            dialog.OptionBox.ItemsSource = entries;
+            dialog.OptionListView.ItemsSource = entries;
             dialog.ShowDialog();
             return returnId;
         }
@@ -51,8 +51,8 @@ namespace LVP_WPF
 
         private void ContinueButton_Click(object sender, RoutedEventArgs e)
         {
-            if (OptionBox.SelectedIndex == -1) return;
-            OptionWindowBox o = (OptionWindowBox)OptionBox.SelectedItem;
+            if (OptionListView.SelectedIndex == -1) return;
+            OptionWindowBox o = (OptionWindowBox)OptionListView.SelectedItem;
             returnId = o.Id;
             this.Close();
         }

@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Media.Imaging;
 
@@ -17,6 +18,7 @@ namespace LVP_WPF
         ObservableCollection<MainWindowBox> tvShows;
         [ObservableProperty]
         ObservableCollection<MainWindowBox> cartoons;
+        private Dictionary<int, Media> mediaDict;
 
         public GuiModel()
         {
@@ -25,6 +27,13 @@ namespace LVP_WPF
             movies = new ObservableCollection<MainWindowBox>();
             tvShows = new ObservableCollection<MainWindowBox>();
             cartoons = new ObservableCollection<MainWindowBox>();
+            mediaDict = new Dictionary<int, Media>();
+        }
+
+        public Dictionary<int, Media> MediaDict
+        {
+            get => mediaDict;
+            set => mediaDict = value;
         }
     }
 
@@ -58,17 +67,16 @@ namespace LVP_WPF
         private int id;
         private string description;
         private string name;
+        public string Description
+        {
+            get { return description; }
+            set { description = value; }
+        }
 
         public string Name
         {
             get { return name; }
             set { name = value; }
-        }
-
-        public string Description
-        {
-            get { return description; }
-            set { description = value; }
         }
 
         public int Id
@@ -96,12 +104,13 @@ namespace LVP_WPF
         }
     }
 
+
     [ObservableObject]
     public partial class EpisodeWindowBox
     {
         private int id;
-        private string name;
         private string description;
+        private string name;
         private BitmapImage image;
         private BitmapImage overlay;
         [ObservableProperty]
@@ -116,16 +125,17 @@ namespace LVP_WPF
             get { return id; }
             set { id = value; }
         }
-        public string Name
-        {
-            get { return name; }
-            set { name = value; }
-        }
 
         public string Description
         {
             get { return description; }
             set { description = value; }
+        }
+
+        public string Name
+        {
+            get { return name; }
+            set { name = value; }
         }
 
         public BitmapImage Image

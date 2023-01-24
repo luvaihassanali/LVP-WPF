@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LVP_WPF.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -30,11 +31,11 @@ namespace LVP_WPF.Windows
             TvShowWindow window = new TvShowWindow();
             window.ShowName = tvShow.Name + " (" + tvShow.Date.GetValueOrDefault().Year + ")";
             window.Description = tvShow.Overview.Length > 377 ? tvShow.Overview.Substring(0, 377) + "..." : tvShow.Overview;
-            string img = tvShow.Backdrop == null ? "Resources/noPrevWide.png" : tvShow.Backdrop;
+            string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);
             window.seasonButton.Content = "Season " + tvShow.CurrSeason.ToString();
             Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
-            window.Overlay = Cache.LoadImage("Resources/play.png", 960);
+            window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
             window.EpisodeListView.ItemsSource = CreateEpisodeListItems(episodes);
             window.ShowDialog();
         }
@@ -127,7 +128,7 @@ namespace LVP_WPF.Windows
             EpisodeWindowBox[] episodeBoxes = new EpisodeWindowBox[episodes.Length];
             for (int i = 0; i < episodes.Length; i++)
             {
-                string img = episodes[i].Backdrop == null ? "Resources/noPrevWide.png" : episodes[i].Backdrop;
+                string img = episodes[i].Backdrop == null ? "Resources\\noPrevWide.png" : episodes[i].Backdrop;
                 string description;
                 if (episodes[i].Overview != null)
                 {
@@ -147,7 +148,7 @@ namespace LVP_WPF.Windows
                     Image = Cache.LoadImage(img, 300),
                     Progress = (int)episodes[i].SavedTime,
                     Total = (int)total,
-                    Overlay = Cache.LoadImage("Resources/play.png", 960),
+                    Overlay = Cache.LoadImage("Resources\\play.png", 960),
                     Opacity = 0
                 };
             }
@@ -217,6 +218,76 @@ namespace LVP_WPF.Windows
             rndVal = rnd.Next(rndSeason.Episodes.Length);
             rndEpisode = rndSeason.Episodes[rndVal];
             return rndEpisode;
+        }
+
+        private void ShowNameLabel_Click(object sender, MouseButtonEventArgs e)
+        {
+            int[] seasons = ResetSeasonDialog.Show(tvShow);
+            if (seasons.Length == 0) return;
+            ResetSeasons(tvShow, seasons) {
+
+            } 
+        }
+
+        private void ResetSeasons(TvShow tvShow, int[] seasons)
+        {
+            bool fill = false;
+            if (seasons[seasons.Length - 1] == Int32.MaxValue) // fill
+            {
+                fill = true;
+            }
+            if (seasons[1] == 0)
+            {
+                tvShow.LastEpisode = null;
+                for (int j = 0; j < tvShow.Seasons.Length; j++)
+                {
+                    Season currSeason = tvShow.Seasons[j];
+                    for (int k = 0; k < currSeason.Episodes.Length; k++)
+                    {
+                        Episode currEpisode = currSeason.Episodes[k];
+                        if (fill)
+                        {
+                            currEpisode.SavedTime = tvShow.RunningTime * 60000;
+                        }
+                        else
+                        {
+                            currEpisode.SavedTime = 0;
+                        }
+                    }
+                }
+                tvShow.CurrSeason = 1;
+                tvShow.LastEpisode = null;
+            }
+            else
+            {
+                for (int i = 1; i < seasons.Length; i++)
+                {
+                    int seasonIndex = seasons[i] - 1;
+                    Season currSeason = tvShow.Seasons[seasonIndex];
+                    for (int j = 0; j < currSeason.Episodes.Length; j++)
+                    {
+                        Episode currEpisode = currSeason.Episodes[j];
+                        if (fill)
+                        {
+                            if (currEpisode.Length != 0)
+                            {
+                                currEpisode.SavedTime = currEpisode.Length;
+                            }
+                            else
+                            {
+                                currEpisode.SavedTime = tvShow.RunningTime * 60000;
+                            }
+                        }
+                        else
+                        {
+                            currEpisode.SavedTime = 0;
+                        }
+                    }
+                }
+                tvShow.CurrSeason = fill ? seasons[1] + 1 : seasons[seasons.Length - 1];
+                tvShow.LastEpisode = fill ? tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0] : tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0];
+            }
+            Update(tvShow.CurrSeason);
         }
     }
 }

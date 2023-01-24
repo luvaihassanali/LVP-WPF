@@ -386,7 +386,11 @@ namespace MouseMoverClient
 #else
                         path = path.Replace("Utilities\\MouseHub\\MouseHub\\bin\\Release\\", "\\bin\\Release\\net6.0-windows\\LVP-WPF.exe");
 #endif
-                        System.Diagnostics.Process.Start(path);
+                        System.Diagnostics.Process p = new System.Diagnostics.Process();
+                        p.StartInfo = new System.Diagnostics.ProcessStartInfo();
+                        p.StartInfo.FileName = path;
+                        p.StartInfo.WorkingDirectory = path.Replace("LVP-WPF.exe", "");
+                        p.Start();
                         break;
                     default:
                         Log("Unknown msg received: " + msg);

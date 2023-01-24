@@ -29,7 +29,7 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <Label Margin="10,0,0,0" FontWeight="Bold" Content="{Binding Caption}" Foreground="White"/>
+            <Label Margin="10,0,0,0" FontWeight="Bold" Content="{Binding MovieName}" Foreground="White"/>
             <Label Grid.Row="1" Margin="10,0,0,0" Content="{Binding RunningTime}" FontSize="24" Foreground="White"/>
             <TextBlock Grid.Row="2" Margin="15,20,15,0" Foreground="White" FontSize="20" Text="{Binding Description}" TextWrapping="Wrap"/>
         </Grid>

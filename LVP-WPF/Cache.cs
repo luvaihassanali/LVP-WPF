@@ -70,12 +70,12 @@ namespace LVP_WPF
             
             for (int i = 0; i < MainWindow.model.Movies.Length; i++)
             {
-                MainWindow.model.MediaDict.Add(MainWindow.model.Movies[i].Id, MainWindow.model.Movies[i]);
+                MainWindow.gui.MediaDict.Add(MainWindow.model.Movies[i].Id, MainWindow.model.Movies[i]);
             }
 
             for (int i = 0; i < MainWindow.model.TvShows.Length; i++)
             {
-                MainWindow.model.MediaDict.Add(MainWindow.model.TvShows[i].Id, MainWindow.model.TvShows[i]);
+                MainWindow.gui.MediaDict.Add(MainWindow.model.TvShows[i].Id, MainWindow.model.TvShows[i]);
             }
         }
 
@@ -474,14 +474,15 @@ namespace LVP_WPF
             CancellationTokenSource source = new CancellationTokenSource();
             CancellationToken token = source.Token;
 
+            string path = AppDomain.CurrentDomain.BaseDirectory;
             if (isMovie)
             {
-                dirPath = "cache\\movies\\" + name;
+                dirPath = path + "cache\\movies\\" + name;
                 filePath = dirPath + imagePath.Replace("/", "\\");
             }
             else
             {
-                dirPath = "cache\\tv\\" + name;
+                dirPath = path + "cache\\tv\\" + name;
                 filePath = dirPath + imagePath.Replace("/", "\\");
             }
 
@@ -709,10 +710,11 @@ namespace LVP_WPF
         {
             //To-do: resize images to see if helps memory
             string path = AppDomain.CurrentDomain.BaseDirectory;
+            if (filename.Contains("Resources\\")) filename = path + filename;
             BitmapImage image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
-            image.UriSource = new Uri(path + filename);
+            image.UriSource = new Uri(filename);
             image.DecodePixelWidth = pixelWidth;
             image.EndInit();
             image.Freeze();
@@ -721,7 +723,6 @@ namespace LVP_WPF
 
         internal static void SaveData()
         {
-            MainWindow.model.MediaDict = null;
             string jsonString = JsonConvert.SerializeObject(MainWindow.model);
             File.WriteAllText(jsonFile, jsonString);
         }

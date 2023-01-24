@@ -44,7 +44,7 @@ namespace LVP_WPF
             MainWindowBox item = (MainWindowBox)(sender as ListView).SelectedItem;
             if (item != null)
             {
-                var mediaItem = model.MediaDict[item.Id];
+                var mediaItem = gui.MediaDict[item.Id];
                 if (mediaItem is Movie)
                 {
                     MovieWindow.Show((Movie)mediaItem);
@@ -61,7 +61,7 @@ namespace LVP_WPF
         {
             for (int i = 0; i < model.Movies.Length; i++)
             {
-                string img = model.Movies[i].Poster == null ? "Resources/noPrev.png" : model.Movies[i].Poster;
+                string img = model.Movies[i].Poster == null ? "Resources\\noPrev.png" : model.Movies[i].Poster;
                 MovieListView.Dispatcher.Invoke(() =>
                 {
                     gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = Cache.LoadImage(img, 300) });
@@ -72,7 +72,7 @@ namespace LVP_WPF
             {
                 if (model.TvShows[i].Cartoon)
                 {
-                    string img = model.TvShows[i].Poster == null ? "Resources/noPrev.png" : model.TvShows[i].Poster;
+                    string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
                     CartoonsListView.Dispatcher.Invoke(() =>
                     {
                         gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
@@ -81,7 +81,7 @@ namespace LVP_WPF
                 }
                 else
                 {
-                    string img = model.TvShows[i].Poster == null ? "Resources/noPrev.png" : model.TvShows[i].Poster;
+                    string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
                     TvShowListView.Dispatcher.Invoke(() =>
                     {
                         gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });

@@ -9,6 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Utilities\**" />
+    <EmbeddedResource Remove="Utilities\**" />
+    <None Remove="Utilities\**" />
+    <Page Remove="Utilities\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Resources\coffee.gif" />
     <None Remove="Resources\extras.png" />
     <None Remove="Resources\noPrev.png" />

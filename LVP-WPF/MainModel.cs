@@ -8,13 +8,11 @@ namespace LVP_WPF
     {
         private Movie[] movies;
         private TvShow[] tvShows;
-        private Dictionary<int, Media> mediaDict;
 
         public MainModel(int m, int s)
         {
             movies = new Movie[m];
             tvShows = new TvShow[s];
-            mediaDict = new Dictionary<int, Media>();
         }
 
         public Movie[] Movies
@@ -27,12 +25,6 @@ namespace LVP_WPF
         {
             get => tvShows;
             set => tvShows = value;
-        }
-
-        public Dictionary <int, Media> MediaDict
-        {
-            get => mediaDict;
-            set => mediaDict = value;
         }
 
         internal bool Compare(MainModel prevMedia)
