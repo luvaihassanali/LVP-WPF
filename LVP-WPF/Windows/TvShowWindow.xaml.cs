@@ -224,9 +224,7 @@ namespace LVP_WPF.Windows
         {
             int[] seasons = ResetSeasonDialog.Show(tvShow);
             if (seasons.Length == 0) return;
-            ResetSeasons(tvShow, seasons) {
-
-            } 
+            ResetSeasons(tvShow, seasons); 
         }
 
         private void ResetSeasons(TvShow tvShow, int[] seasons)
@@ -236,7 +234,7 @@ namespace LVP_WPF.Windows
             {
                 fill = true;
             }
-            if (seasons[1] == 0)
+            if (seasons[0] == 0)
             {
                 tvShow.LastEpisode = null;
                 for (int j = 0; j < tvShow.Seasons.Length; j++)
@@ -260,7 +258,7 @@ namespace LVP_WPF.Windows
             }
             else
             {
-                for (int i = 1; i < seasons.Length; i++)
+                for (int i = 0; i < seasons.Length - 1; i++)
                 {
                     int seasonIndex = seasons[i] - 1;
                     Season currSeason = tvShow.Seasons[seasonIndex];
@@ -284,8 +282,8 @@ namespace LVP_WPF.Windows
                         }
                     }
                 }
-                tvShow.CurrSeason = fill ? seasons[1] + 1 : seasons[seasons.Length - 1];
-                tvShow.LastEpisode = fill ? tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0] : tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0];
+                tvShow.CurrSeason = fill ? seasons[0] + 1 : seasons[seasons.Length - 2];
+                tvShow.LastEpisode = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0];
             }
             Update(tvShow.CurrSeason);
         }

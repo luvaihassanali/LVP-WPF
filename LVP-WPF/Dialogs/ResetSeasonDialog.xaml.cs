@@ -26,6 +26,7 @@ namespace LVP_WPF.Dialogs
 
         public static int[] Show(TvShow tvShow)
         {
+            results.Clear();
             ResetSeasonDialog resetDialog = new ResetSeasonDialog();
             string epString = tvShow.LastEpisode == null ? "" : "E" + tvShow.LastEpisode.Id.ToString();
             resetDialog.Header = tvShow.Name + " (" + "S" + tvShow.CurrSeason + epString + ")";
@@ -79,7 +80,7 @@ namespace LVP_WPF.Dialogs
             CheckBox c = (CheckBox)sender;
             bool selected = (bool)c.IsChecked;
             string name = c.Content.ToString();
-            if (name.Equals("All"))
+            if (name.Equals("  All"))
             {
                 if (selected)
                 {
@@ -103,6 +104,7 @@ namespace LVP_WPF.Dialogs
             }
             else
             {
+                name = name.Replace("Season ", "");
                 if (selected)
                 {
                     results.Add(Int32.Parse(name));

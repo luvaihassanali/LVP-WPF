@@ -12,6 +12,7 @@ namespace LVP_WPF
         static public MainModel model;
         static public GuiModel gui;
         static private bool mouseHubKilled;
+        private InactivityTimer inactivityTimer;
 
         public MainWindow()
         {
@@ -27,6 +28,7 @@ namespace LVP_WPF
             }
             //worker = new MouseWorker(this);
             //worker.Start();
+
         }
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
@@ -36,6 +38,15 @@ namespace LVP_WPF
             Panel.SetZIndex(loadGrid, -1);
             progressBar.Visibility = Visibility.Collapsed;
             coffeeGif.Source = null;
+
+            inactivityTimer = new InactivityTimer(TimeSpan.FromSeconds(5));//(TimeSpan.FromMinutes(5));
+            inactivityTimer.Inactivity += InactivityDetected;
+        }
+
+        private void InactivityDetected(object sender, EventArgs e)
+        {
+            if (gui.IsPlaying) return;
+            this.Close();
         }
 
         private void ListView_Click(object sender, RoutedEventArgs e)
@@ -120,6 +131,8 @@ namespace LVP_WPF
 
         private void Window_Closed(object sender, EventArgs e)
         {
+            inactivityTimer.Dispose();
+
             if (mouseHubKilled)
             {
                 string path = AppDomain.CurrentDomain.BaseDirectory;

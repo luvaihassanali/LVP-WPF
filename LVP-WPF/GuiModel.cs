@@ -19,6 +19,7 @@ namespace LVP_WPF
         [ObservableProperty]
         ObservableCollection<MainWindowBox> cartoons;
         private Dictionary<int, Media> mediaDict;
+        private bool isPlaying;
 
         public GuiModel()
         {
@@ -27,7 +28,14 @@ namespace LVP_WPF
             movies = new ObservableCollection<MainWindowBox>();
             tvShows = new ObservableCollection<MainWindowBox>();
             cartoons = new ObservableCollection<MainWindowBox>();
-            mediaDict = new Dictionary<int, Media>();
+            MediaDict = new Dictionary<int, Media>();
+            IsPlaying = false;
+        }
+
+        public bool IsPlaying
+        {
+            get { return isPlaying; }
+            set { isPlaying = value; }
         }
 
         public Dictionary<int, Media> MediaDict

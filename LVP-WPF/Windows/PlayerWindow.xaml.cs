@@ -21,6 +21,8 @@ namespace LVP_WPF.Windows
         private LibVLC libVLC;
         private MediaPlayer mediaPlayer;
         private DispatcherTimer pollingTimer;
+        //private Timer idleTimer = null;
+        InactivityTimer inactivityTimer;
         private bool skipClosing = false;
         private bool sliderMouseDown = false;
 
@@ -29,7 +31,9 @@ namespace LVP_WPF.Windows
             PlayerWindow window = new PlayerWindow();
             currMedia = m;
             tvShowWindow = tw;
+            MainWindow.gui.IsPlaying = true;
             window.ShowDialog();
+            MainWindow.gui.IsPlaying = false;
         }
 
         [ObservableProperty]
@@ -63,6 +67,9 @@ namespace LVP_WPF.Windows
             pollingTimer = new DispatcherTimer();
             pollingTimer.Interval = TimeSpan.FromSeconds(3);
             pollingTimer.Tick += PollingTimer_Tick;
+
+            inactivityTimer = new InactivityTimer(TimeSpan.FromSeconds(10));//(TimeSpan.FromMinutes(5));
+            inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
             Trace.WriteLine("Play: " + currMedia.Path);
@@ -212,6 +219,8 @@ namespace LVP_WPF.Windows
                 pollingTimer.IsEnabled = false;
                 pollingTimer = null;
             }
+
+            inactivityTimer.Dispose();
 
             if (!TvShowWindow.cartoonShuffle && !skipClosing)
             {
@@ -373,6 +382,12 @@ namespace LVP_WPF.Windows
         internal void Pause()
         {
 
+        }
+
+        private void InactivityDetected(object sender, EventArgs e)
+        {
+            if (mediaPlayer.IsPlaying) return;
+            this.Close();
         }
 
         private void InitializeIdleTimer()
