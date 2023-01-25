@@ -13,8 +13,6 @@ namespace MouseMoverClient
 {
     class Program
     {
-        #region Dll Import 
-
         [DllImport("user32.dll")]
         static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
@@ -32,7 +30,7 @@ namespace MouseMoverClient
         [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
         public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
 
-        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, CallingConvention = System.Runtime.InteropServices.CallingConvention.StdCall)]
+        [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
 
         private const int MOUSEEVENTF_LEFTDOWN = 0x02;
@@ -44,14 +42,12 @@ namespace MouseMoverClient
         private const int WS_EX_LAYERED = 0x80000;
         private const uint LWA_ALPHA = 0x2;
 
-        #endregion
-
         static bool connectionEstablished = true;
+        static string esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
+        static int esp8266ServerPort = 3000;
         static int joystickX;
         static int joystickY;
-        static int serverPort = 3000;
-        static string serverIp = ConfigurationManager.AppSettings["espIp"];
-        static TcpClient client;
+        static TcpClient tcpClient;
         static SerialPort serialPort;
         static System.Timers.Timer pollingTimer;
 
@@ -78,10 +74,10 @@ namespace MouseMoverClient
             pollingTimer.Elapsed += OnTimedEvent;
             pollingTimer.AutoReset = false;
 
-            if (client != null)
+            if (tcpClient != null)
             {
-                client.Close();
-                client.Dispose();
+                tcpClient.Close();
+                tcpClient.Dispose();
             }
 
             if (pollingTimer != null)
@@ -111,7 +107,7 @@ namespace MouseMoverClient
                     PingReply reply = null;
                     try
                     {
-                        reply = pingSender.Send(serverIp, timeout, buffer, options);
+                        reply = pingSender.Send(esp8266ServerIp, timeout, buffer, options);
                     }
                     catch
                     { }
@@ -157,11 +153,11 @@ namespace MouseMoverClient
             Log("Initializing TCP connection");
             try
             {
-                client = new TcpClient();
+                tcpClient = new TcpClient();
                 bool success = false;
                 IAsyncResult result = null;
 
-                result = client.BeginConnect(serverIp, serverPort, null, null);
+                result = tcpClient.BeginConnect(esp8266ServerIp, esp8266ServerPort, null, null);
                 success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(1));
 
                 while (!success)
@@ -175,7 +171,7 @@ namespace MouseMoverClient
 
                 try
                 {
-                    stream = client.GetStream();
+                    stream = tcpClient.GetStream();
                     Log("Connected.");
                 }
                 catch (InvalidOperationException)
@@ -213,7 +209,7 @@ namespace MouseMoverClient
                             StopTimer();
                             Log("Sending ack");
                             data = Encoding.ASCII.GetBytes("ack");
-                            stream = client.GetStream();
+                            stream = tcpClient.GetStream();
                             stream.Write(data, 0, data.Length);
                             StartTimer();
                         }
@@ -226,8 +222,8 @@ namespace MouseMoverClient
 
                     Log("Stream end. Press any key");
                     stream.Close();
-                    client.EndConnect(result);
-                    client.Close();
+                    tcpClient.EndConnect(result);
+                    tcpClient.Close();
                 }
             }
             catch (Exception e)
@@ -236,10 +232,10 @@ namespace MouseMoverClient
             }
             finally
             {
-                if (client != null)
+                if (tcpClient != null)
                 {
-                    client.Close();
-                    client.Dispose();
+                    tcpClient.Close();
+                    tcpClient.Dispose();
                 }
             }
         }
@@ -280,6 +276,7 @@ namespace MouseMoverClient
 
         static async void DoMouseMove()
         {
+            //joystickX = -joystickX;
             joystickY = -joystickY;
             int divisor = 20;
             if ((joystickX > 0 && joystickX < 150) || (joystickX < 0 && joystickX > -150))
@@ -338,7 +335,7 @@ namespace MouseMoverClient
         static public void InitializeSerialPort()
         {
             serialPort = new SerialPort();
-            string portNumber = ConfigurationManager.AppSettings["comPort"];
+            string portNumber = ConfigurationManager.AppSettings["SerialPort"];
             serialPort.PortName = "COM" + portNumber;
             serialPort.BaudRate = 9600;
             serialPort.DataBits = 8;
@@ -395,6 +392,7 @@ namespace MouseMoverClient
                     default:
                         Log("Unknown msg received: " + msg);
                         break;
+                    //To-do: Add restart case
                 }
             }
         }

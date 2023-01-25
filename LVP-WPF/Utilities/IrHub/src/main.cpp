@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include "constants.h"
 
-const bool DEBUG = true;
+const bool DEBUG = false;
 
 void setup()
 {
@@ -99,13 +99,19 @@ void ParseIrValue(uint32_t rawData)
     case SAMSUNG_STOP:
         SendSerialData("stop");
         break;
-    case FORWARD:
-    case SAMSUNG_FORWARD:
-        SendSerialData("forward");
+    case FAST_FORWARD:
+    case SAMSUNG_FAST_FORWARD:
+        SendSerialData("fastforward");
         break;
     case REWIND:
     case SAMSUNG_REWIND:
         SendSerialData("rewind");
+        break;
+    case FORWARD:
+        SendSerialData("forward");
+        break;
+    case BACKWARD:
+        SendSerialData("backward");
         break;
     case SOUNDBAR_INPUT:
         Log("sound bar input");

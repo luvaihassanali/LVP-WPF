@@ -72,7 +72,7 @@ namespace LVP_WPF.Windows
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
-            Trace.WriteLine("Play: " + currMedia.Path);
+            GuiModel.Log("Play: " + currMedia.Path);
             bool res = mediaPlayer.Play(currVLCMedia);
             if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
 
@@ -101,7 +101,7 @@ namespace LVP_WPF.Windows
 
                 currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                Trace.WriteLine("Play: " + currMedia.Path);
+                GuiModel.Log("Play: " + currMedia.Path);
                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                 return;
             }
@@ -137,12 +137,12 @@ namespace LVP_WPF.Windows
                                 }
                                 else
                                 {
-                                    Trace.WriteLine(tvShow.Name + " season change from " + (i) + " to " + (i + 1));
+                                    GuiModel.Log(tvShow.Name + " season change from " + (i) + " to " + (i + 1));
                                     season = tvShow.Seasons[i + 1];
                                     tvShow.CurrSeason = season.Id;
                                     currMedia = season.Episodes[0];
                                     LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                    Trace.WriteLine("Play: " + currMedia.Path);
+                                    GuiModel.Log("Play: " + currMedia.Path);
                                     ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                                     tvShowWindow.Dispatcher.Invoke(() =>
                                     {
@@ -155,7 +155,7 @@ namespace LVP_WPF.Windows
                             {
                                 currMedia = season.Episodes[j + 1];
                                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                Trace.WriteLine("Play: " + currMedia.Path);
+                                GuiModel.Log("Play: " + currMedia.Path);
                                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                                 return;
                             }

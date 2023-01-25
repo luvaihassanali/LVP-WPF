@@ -1,6 +1,10 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Configuration;
+using System.Diagnostics;
+using System.IO;
 using System.Windows.Media.Imaging;
 
 namespace LVP_WPF
@@ -20,6 +24,8 @@ namespace LVP_WPF
         ObservableCollection<MainWindowBox> cartoons;
         private Dictionary<int, Media> mediaDict;
         private bool isPlaying;
+        private static bool loggingEnabled;
+        private static string logPath;
 
         public GuiModel()
         {
@@ -30,6 +36,8 @@ namespace LVP_WPF
             cartoons = new ObservableCollection<MainWindowBox>();
             MediaDict = new Dictionary<int, Media>();
             IsPlaying = false;
+            loggingEnabled = bool.Parse(ConfigurationManager.AppSettings["LoggingEnabled"]);
+            logPath = ConfigurationManager.AppSettings["LogPath"];
         }
 
         public bool IsPlaying
@@ -42,6 +50,18 @@ namespace LVP_WPF
         {
             get => mediaDict;
             set => mediaDict = value;
+        }
+
+        public static void Log(string message)
+        {
+            if (loggingEnabled)
+            {
+                using (StreamWriter sw = File.AppendText(logPath))
+                {
+                    sw.WriteLine("{0} - {1}: {2}", DateTime.Now.ToString("dd-MM-yy HH:mm:ss.fff"), (new StackTrace()).GetFrame(1).GetMethod().Name, message);
+                    Debug.WriteLine("{0} - {1}: {2}", DateTime.Now.ToString("dd-MM-yy HH:mm:ss.fff"), (new StackTrace()).GetFrame(1).GetMethod().Name, message);
+                }
+            }
         }
     }
 

@@ -13,6 +13,7 @@ namespace LVP_WPF
         static public GuiModel gui;
         static private bool mouseHubKilled;
         private InactivityTimer inactivityTimer;
+        private TcpSerialListener worker = null;
 
         public MainWindow()
         {
@@ -26,8 +27,6 @@ namespace LVP_WPF
                 mouseHubProcess[0].Kill();
                 mouseHubKilled = true;
             }
-            //worker = new MouseWorker(this);
-            //worker.Start();
 
         }
 
@@ -41,6 +40,9 @@ namespace LVP_WPF
 
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
+
+            worker = new TcpSerialListener();
+            worker.StartThread();
         }
 
         private void InactivityDetected(object sender, EventArgs e)
