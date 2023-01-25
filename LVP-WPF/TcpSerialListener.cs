@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LVP_WPF.Windows;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO.Ports;
@@ -37,15 +38,18 @@ namespace LVP_WPF
         private bool esp8266HideCursor = bool.Parse(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
         private int joystickX;
         private int joystickY;
-        //private Layout 
+        private GuiModel gui;
+        private LayoutPoint layoutPosition; 
         private DispatcherTimer pollingTimer;
         private SerialPort serialPort;
         private bool serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
         private TcpClient tcpClient;
         private Thread workerThread = null;
 
-        public TcpSerialListener()
+        public TcpSerialListener(GuiModel g)
         {
+            gui = g;
+            layoutPosition = new LayoutPoint(g);
             // Cursor hide
         }
 
@@ -58,7 +62,7 @@ namespace LVP_WPF
                 {
                     workerThread = new Thread(new ThreadStart(this.StartListener));
                     workerThread.IsBackground = true;
-                    workerThread.Name = "LocalVideoPlayer mouse thread";
+                    workerThread.Name = "LVP_WPF TcpSerialListener thread";
                     workerThreadRunning = true;
                     workerThread.Start();
                 }
@@ -83,7 +87,7 @@ namespace LVP_WPF
 
         private void PollConnections()
         {
-            DebugLog("Pinging server...");
+            if (esp8266Enabled) DebugLog("Pinging server...");
             connectionEstablished = false;
 
             Ping pingSender = new Ping();
@@ -376,20 +380,17 @@ namespace LVP_WPF
                         //layoutController.CloseCurrentForm();
                         break;
                     case "play":
-                        break;
                     case "pause":
+                        gui.PlayerWindow.PlayPause_TcpSerialListener();
                         break;
                     case "stop":
+                        gui.PlayerWindow.Stop_TcpSerialListener();
                         break;
                     case "fastforward":
+                        gui.PlayerWindow.Seek_TcpSerialListener(false);
                         break;
                     case "rewind":
-                        break;
-                    case "forward":
-                        break;
-                    case "backward":
-                        break;
-                    default:
+                        gui.PlayerWindow.Seek_TcpSerialListener(true);
                         break;
                 }
             }

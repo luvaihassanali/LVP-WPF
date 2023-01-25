@@ -41,7 +41,7 @@ namespace LVP_WPF
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
 
-            worker = new TcpSerialListener();
+            worker = new TcpSerialListener(gui);
             worker.StartThread();
         }
 

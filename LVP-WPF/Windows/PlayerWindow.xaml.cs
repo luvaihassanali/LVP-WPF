@@ -16,12 +16,11 @@ namespace LVP_WPF.Windows
     [ObservableObject]
     public partial class PlayerWindow : Window
     {
-        static private TvShowWindow? tvShowWindow;
         static private Media currMedia;
+        static private TvShowWindow? tvShowWindow;
         private LibVLC libVLC;
         private MediaPlayer mediaPlayer;
         private DispatcherTimer pollingTimer;
-        //private Timer idleTimer = null;
         InactivityTimer inactivityTimer;
         private bool skipClosing = false;
         private bool sliderMouseDown = false;
@@ -32,8 +31,10 @@ namespace LVP_WPF.Windows
             currMedia = m;
             tvShowWindow = tw;
             MainWindow.gui.IsPlaying = true;
+            MainWindow.gui.PlayerWindow = window;
             window.ShowDialog();
             MainWindow.gui.IsPlaying = false;
+            MainWindow.gui.PlayerWindow = null;
         }
 
         [ObservableProperty]
@@ -213,6 +214,7 @@ namespace LVP_WPF.Windows
 
         private void Window_Closed(object sender, EventArgs e)
         {
+            timelineSlider.ValueChanged -= Slider_ValueChanged;
             if (pollingTimer != null)
             {
                 if (pollingTimer.IsEnabled) pollingTimer.Stop();
@@ -326,19 +328,32 @@ namespace LVP_WPF.Windows
         {
             if (mediaPlayer.IsPlaying)
             {
-                buttonText.Text = "❚❚";
-                buttonText.Margin = new Thickness(1, -3, 0, 0);
-                buttonText.FontSize = 28;
+                PlayButton_SetSymbol(0);
                 mediaPlayer.Pause();
                 pollingTimer.Stop();
             }
             else
             {
-                buttonText.Text = "▶️";
-                buttonText.Margin = new Thickness(6, -4, 0, 0);
-                buttonText.FontSize = 30;
+                PlayButton_SetSymbol(1);
                 mediaPlayer.Play();
                 pollingTimer.Start();
+            }
+        }
+
+        private void PlayButton_SetSymbol(int symbol)
+        {
+            switch (symbol)
+            {
+                case 0:
+                    buttonText.Text = "❚❚";
+                    buttonText.Margin = new Thickness(1, -3, 0, 0);
+                    buttonText.FontSize = 28;
+                    break;
+                case 1:
+                    buttonText.Text = "▶️";
+                    buttonText.Margin = new Thickness(6, -4, 0, 0);
+                    buttonText.FontSize = 30;
+                    break;
             }
         }
 
@@ -358,56 +373,98 @@ namespace LVP_WPF.Windows
         {
             if (mediaPlayer != null)
             {
-                TimeSpan lengthTime = TimeSpan.FromMilliseconds(mediaPlayer.Length);
-                TimeSpan currTime = TimeSpan.FromMilliseconds(mediaPlayer.Time);
+                try
+                {
+                    TimeSpan lengthTime = TimeSpan.FromMilliseconds(mediaPlayer.Length);
+                    TimeSpan currTime = TimeSpan.FromMilliseconds(mediaPlayer.Time);
 
-                if (lengthTime.TotalMilliseconds > 3600000) // 1 hour
-                {
-                    TimeLabel = currTime.ToString(@"hh\:mm\:ss") + "/" + lengthTime.ToString(@"hh\:mm\:ss");
-                }
-                else
-                {
-                    TimeLabel = currTime.ToString(@"mm\:ss") + "/" + lengthTime.ToString(@"mm\:ss");
-                }
+                    if (lengthTime.TotalMilliseconds > 3600000) // 1 hour
+                    {
+                        TimeLabel = currTime.ToString(@"hh\:mm\:ss") + "/" + lengthTime.ToString(@"hh\:mm\:ss");
+                    }
+                    else
+                    {
+                        TimeLabel = currTime.ToString(@"mm\:ss") + "/" + lengthTime.ToString(@"mm\:ss");
+                    }
 
-                if (sliderMouseDown)
+                    if (sliderMouseDown)
+                    {
+                        TimeSpan seekTime = TimeSpan.FromMilliseconds(SliderValue);
+                        if (seekTime.TotalMilliseconds > lengthTime.TotalMilliseconds) SliderValue = lengthTime.TotalMilliseconds;
+                        mediaPlayer.SeekTo(seekTime);
+                    }
+                }
+                catch (Exception ex)
                 {
-                    TimeSpan seekTime = TimeSpan.FromMilliseconds(SliderValue);
-                    if (seekTime.TotalMilliseconds > lengthTime.TotalMilliseconds) SliderValue = lengthTime.TotalMilliseconds;
-                    mediaPlayer.SeekTo(seekTime);
+                    GuiModel.Log("Slider_ValueChanged: " + ex.Message);
                 }
             }
         }
 
-        internal void Pause()
+        internal void PlayPause_TcpSerialListener()
         {
+            if (mediaPlayer != null)
+            {
+                if (mediaPlayer.IsPlaying)
+                {
+                    overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Visible; });
+                    buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(0); });
+                    mediaPlayer.Pause();
+                }
+                else
+                {
+                    overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Hidden; });
+                    buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(1); });
+                    mediaPlayer.Play();
+                }
+            }
+        }
 
+        internal void Stop_TcpSerialListener()
+        {
+            if (mediaPlayer != null)
+            {
+                this.Dispatcher.Invoke(() => { this.Close(); });
+            }
+        }
+
+        internal void Seek_TcpSerialListener(bool rewind)
+        {
+            if (mediaPlayer != null)
+            {
+                TimeSpan lengthTime = TimeSpan.FromMilliseconds(mediaPlayer.Length);
+                TimeSpan currTime = TimeSpan.FromMilliseconds(mediaPlayer.Time);
+                long thirtyMs = 300000;
+
+                if (rewind)
+                {
+                    if (currTime.TotalMilliseconds < thirtyMs)
+                    {
+                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(0));
+                    }
+                    else
+                    {
+                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Time + thirtyMs));
+                    }
+                }
+                else
+                {
+                    if (currTime.TotalMilliseconds + thirtyMs > lengthTime.TotalMilliseconds)
+                    {
+                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(lengthTime.TotalMilliseconds));
+                    }
+                    else
+                    {
+                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Time - thirtyMs));
+                    }
+                }
+            }
         }
 
         private void InactivityDetected(object sender, EventArgs e)
         {
             if (mediaPlayer.IsPlaying) return;
             this.Close();
-        }
-
-        private void InitializeIdleTimer()
-        {
-            /*idleTimer = new System.Threading.Timer(mt_ =>
-            {
-                if (mediaPlayer.IsPlaying)
-                {
-                    return;
-                }
-                TimeSpan t = TimeSpan.FromHours(2); //TimeSpan.FromSeconds(10);
-                if (MainForm.GetIdleTime() > t.TotalMilliseconds)
-                {
-                    MainForm.Log("Reached 2 hours of idle player time");
-                    this.Invoke(new MethodInvoker(delegate
-                    {
-                        this.Close();
-                    }));
-                }
-            }, null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));  //TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));*/
         }
     }
 }

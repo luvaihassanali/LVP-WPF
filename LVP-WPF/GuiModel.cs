@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LVP_WPF.Windows;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,10 +23,12 @@ namespace LVP_WPF
         ObservableCollection<MainWindowBox> tvShows;
         [ObservableProperty]
         ObservableCollection<MainWindowBox> cartoons;
+
         private Dictionary<int, Media> mediaDict;
         private bool isPlaying;
-        private static bool loggingEnabled;
-        private static string logPath;
+        static private bool loggingEnabled;
+        static private string logPath;
+        private PlayerWindow playerWindow = null;
 
         public GuiModel()
         {
@@ -37,7 +40,11 @@ namespace LVP_WPF
             MediaDict = new Dictionary<int, Media>();
             IsPlaying = false;
             loggingEnabled = bool.Parse(ConfigurationManager.AppSettings["LoggingEnabled"]);
-            logPath = ConfigurationManager.AppSettings["LogPath"];
+            logPath = ConfigurationManager.AppSettings["LogPath"] + "LVP-WPF.log";
+            if (logPath.Contains("%USERPROFILE%"))
+            {
+                logPath = logPath.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
+            }
         }
 
         public bool IsPlaying
@@ -50,6 +57,12 @@ namespace LVP_WPF
         {
             get => mediaDict;
             set => mediaDict = value;
+        }
+
+        public PlayerWindow PlayerWindow
+        {
+            get { return playerWindow; }
+            set { playerWindow = value; }
         }
 
         public static void Log(string message)
