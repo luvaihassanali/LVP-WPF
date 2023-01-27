@@ -17,16 +17,17 @@ namespace LVP_WPF.Windows
 
         public static void Show(Movie m)
         {
+            movie = m;
             MovieWindow window = new MovieWindow();
-            window.MovieName = m.Name;
-            TimeSpan temp = TimeSpan.FromMinutes(m.RunningTime);
+            window.MovieName = movie.Name;
+            TimeSpan temp = TimeSpan.FromMinutes(movie.RunningTime);
             string hour = temp.Hours > 1 ? "hours " : "hour ";
             window.RunningTime = "Running time: " + temp.Hours + " " + hour + temp.Minutes + " minutes";
-            window.Description = m.Overview.Length > 1011 ? m.Overview.Substring(0, 1011) + "..." : m.Overview;
-            string img = m.Backdrop == null ? "Resources\\noPrevWide.png" : m.Backdrop;
+            window.Description = movie.Overview.Length > 1011 ? movie.Overview.Substring(0, 1011) + "..." : movie.Overview;
+            string img = movie.Backdrop == null ? "Resources\\noPrevWide.png" : movie.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);
             window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
-            movie = m;
+            MainWindow.gui.CloseButtons[1] = window.closeButton;
             window.ShowDialog();
         }
 

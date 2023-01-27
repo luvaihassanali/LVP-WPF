@@ -30,7 +30,7 @@ namespace LVP_WPF
 
         }
 
-        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             await Cache.Initialize(progressBar);
             await Task.Run(() => { AssignControlContext(); });
@@ -40,7 +40,9 @@ namespace LVP_WPF
 
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
-
+            
+            gui.CloseButtons[0] = this.closeButton;
+            gui.MainGrid = this.mainGrid;
             worker = new TcpSerialListener(gui);
             worker.StartThread();
         }
@@ -131,7 +133,7 @@ namespace LVP_WPF
             TvShowWindow.PlayRandomCartoons();
         }
 
-        private void Window_Closed(object sender, EventArgs e)
+        private void MainWindow_Closed(object sender, EventArgs e)
         {
             inactivityTimer.Dispose();
 

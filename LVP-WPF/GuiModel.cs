@@ -6,6 +6,9 @@ using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace LVP_WPF
@@ -24,11 +27,13 @@ namespace LVP_WPF
         [ObservableProperty]
         ObservableCollection<MainWindowBox> cartoons;
 
-        private Dictionary<int, Media> mediaDict;
         private bool isPlaying;
         static private bool loggingEnabled;
         static private string logPath;
-        private PlayerWindow playerWindow = null;
+        private Button[] closeButtons;
+        private Dictionary<int, Media> mediaDict;
+        private Grid mainGrid;
+        private PlayerWindow playerWindow;
 
         public GuiModel()
         {
@@ -37,14 +42,17 @@ namespace LVP_WPF
             movies = new ObservableCollection<MainWindowBox>();
             tvShows = new ObservableCollection<MainWindowBox>();
             cartoons = new ObservableCollection<MainWindowBox>();
-            MediaDict = new Dictionary<int, Media>();
-            IsPlaying = false;
+
             loggingEnabled = bool.Parse(ConfigurationManager.AppSettings["LoggingEnabled"]);
             logPath = ConfigurationManager.AppSettings["LogPath"] + "LVP-WPF.log";
             if (logPath.Contains("%USERPROFILE%"))
             {
                 logPath = logPath.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
             }
+
+            CloseButtons = new Button[3];
+            MediaDict = new Dictionary<int, Media>();
+            IsPlaying = false;
         }
 
         public bool IsPlaying
@@ -59,10 +67,22 @@ namespace LVP_WPF
             set => mediaDict = value;
         }
 
+        public Grid MainGrid
+        {
+            get => mainGrid;
+            set => mainGrid = value;
+        }
+
         public PlayerWindow PlayerWindow
         {
             get { return playerWindow; }
             set { playerWindow = value; }
+        }
+
+        public Button[] CloseButtons
+        {
+            get { return closeButtons; }
+            set { closeButtons = value; }
         }
 
         public static void Log(string message)

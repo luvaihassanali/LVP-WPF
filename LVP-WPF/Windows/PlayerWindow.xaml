@@ -6,7 +6,7 @@
         xmlns:wpf="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
-        Title="PlayerWindow" Height="1050" Width="1920" Loaded="Window_Loaded" Closed="Window_Closed" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
+        Title="PlayerWindow" Height="1050" Width="1920" Loaded="PlayerWindow_Loaded" Closed="PlayerWindow_Closed" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
         RenderOptions.BitmapScalingMode="HighQuality" WindowState="Maximized" FontSize="42" FontFamily="Segoe UI">
     <Grid>
         <wpf:VideoView x:Name="videoView" MouseMove="VideoView_MouseMove" Background="Black">

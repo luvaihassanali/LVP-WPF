@@ -83,6 +83,7 @@
   <ItemGroup>
     <None Update="App.config">
       <TransformOnBuild>true</TransformOnBuild>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="App.Debug.config">
       <IsTransformFile>true</IsTransformFile>

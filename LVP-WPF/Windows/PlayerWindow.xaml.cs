@@ -32,9 +32,11 @@ namespace LVP_WPF.Windows
             tvShowWindow = tw;
             MainWindow.gui.IsPlaying = true;
             MainWindow.gui.PlayerWindow = window;
+            MainWindow.gui.CloseButtons[2] = window.closeButton;
             window.ShowDialog();
             MainWindow.gui.IsPlaying = false;
             MainWindow.gui.PlayerWindow = null;
+            MainWindow.gui.CloseButtons[2] = null;
         }
 
         [ObservableProperty]
@@ -56,7 +58,7 @@ namespace LVP_WPF.Windows
             SliderMax = 1;
         }
 
-        private void Window_Loaded(object sender, RoutedEventArgs e)
+        private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
         {
             mediaPlayer.TimeChanged += MediaPlayer_TimeChanged;
             mediaPlayer.LengthChanged += MediaPlayer_LengthChanged;
@@ -102,7 +104,7 @@ namespace LVP_WPF.Windows
 
                 currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                GuiModel.Log("Play: " + currMedia.Path);
+                GuiModel.Log("Playing " + currMedia.Path);
                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                 return;
             }
@@ -212,7 +214,7 @@ namespace LVP_WPF.Windows
             return media;
         }
 
-        private void Window_Closed(object sender, EventArgs e)
+        private void PlayerWindow_Closed(object sender, EventArgs e)
         {
             timelineSlider.ValueChanged -= Slider_ValueChanged;
             if (pollingTimer != null)

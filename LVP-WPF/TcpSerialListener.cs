@@ -19,7 +19,7 @@ namespace LVP_WPF
     internal class TcpSerialListener
     {
         [DllImport("User32.dll")]
-        private static extern bool SetCursorPos(int X, int Y);
+        public static extern bool SetCursorPos(int X, int Y);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
@@ -50,7 +50,7 @@ namespace LVP_WPF
         {
             gui = g;
             layoutPosition = new LayoutPoint(g);
-            // Cursor hide
+            //To-do: Cursor hide
         }
 
         public void StartThread()
@@ -333,11 +333,11 @@ namespace LVP_WPF
                 try
                 {
                     serialPort.Open();
-                    GuiModel.Log("Connected to COM port");
+                    GuiModel.Log("Connected");
                 }
                 catch
                 {
-                    GuiModel.Log("No device connected to COM port");
+                    GuiModel.Log("No device connected");
                 }
             }
         }
@@ -349,7 +349,7 @@ namespace LVP_WPF
             {
                 string msg = serialPort.ReadLine();
                 msg = msg.Replace("\r", "");
-                GuiModel.Log("Serial port: " + msg);
+                GuiModel.Log(msg);
                 // Cursor hide
                 switch (msg)
                 {
@@ -407,11 +407,11 @@ namespace LVP_WPF
                         try
                         {
                             serialPort.Open();
-                            GuiModel.Log("Reconnected to serial port");
+                            GuiModel.Log("Connected");
                         }
                         catch
                         {
-                            GuiModel.Log("Serial port disconnected");
+                            GuiModel.Log("No device connected");
                         }
                     }
                 }

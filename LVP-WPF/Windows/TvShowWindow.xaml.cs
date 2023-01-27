@@ -37,6 +37,7 @@ namespace LVP_WPF.Windows
             Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
             window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
             window.EpisodeListView.ItemsSource = CreateEpisodeListItems(episodes);
+            MainWindow.gui.CloseButtons[1] = window.closeButton;
             window.ShowDialog();
         }
 
