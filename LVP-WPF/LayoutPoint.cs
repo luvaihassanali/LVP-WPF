@@ -25,7 +25,7 @@ namespace LVP_WPF.Windows
 
         private List<int[]> mainWindowGrid = new List<int[]>();
         private List<Image[]> mainWindowControlGrid = new List<Image[]>();
-        private Image currentMainWindowControl = null;
+        private object currentMainWindowControl = null;
 
         public (int x, int y) up = (-1, 0);
         public (int x, int y) down = (1, 0);
@@ -37,10 +37,39 @@ namespace LVP_WPF.Windows
             gui = g;
             BuildMainWindowGrid();
             PrintGrid();
-            TcpSerialListener.SetCursorPos(10, 10);
+            TcpSerialListener.SetCursorPos(20, 20);
             TcpSerialListener.DoMouseClick();
-            //To-do: support for 0
-            currentMainWindowControl = mainWindowControlGrid[0][0];
+            currentMainWindowControl = mainWindowControlGrid.Count != 0 ? mainWindowControlGrid[0][0] : gui.CloseButtons[0];
+            CenterMouseOverControl(currentMainWindowControl);
+        }
+
+        private void CenterMouseOverControl(object control)
+        {
+            if (control as Button != null)
+            {
+                Button button = (Button)control;
+                CenterMouseOverButton(button);
+            }
+            else
+            {
+                Image image = (Image)control;
+                CenterMouseOverImage(image);
+            }
+            
+        }
+
+        private void CenterMouseOverImage(Image image)
+        {
+            Point target = image.PointToScreen(new Point(0, 0));
+            target.X += image.Width / 2;
+            target.Y += image.Height / 2;
+            TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+        }
+
+        private void CenterMouseOverButton(Button button)
+        {
+            Point target = button.PointToScreen(new Point(0, 0));
+            TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
         }
 
         private void BuildMainWindowGrid()
