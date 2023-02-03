@@ -11,21 +11,29 @@ using System.Windows.Media;
 
 namespace LVP_WPF.Windows
 {
-    internal class LayoutPoint
+    public class LayoutPoint
     {
-        private GuiModel gui;
+        public GuiModel gui;
         public bool mainWindowActive = true;
-        private bool movieWindowActive = false;
-        private bool tvShowWindowActive = false;
-        private bool seasonWindowActive = false;
-        private bool playerWindowActive = false;
-        private (int x, int y) currentPoint = (0, 0);
-        private (int x, int y) returnPointA = (0, 0);
-        private (int x, int y) returnPointB = (0, 0);
+        public bool movieWindowActive = false;
+        public bool tvShowWindowActive = false;
+        public bool seasonWindowActive = false;
+        public bool playerWindowActive = false;
+        public (int x, int y) currPoint = (0, 0);
+        public (int x, int y) returnPointA = (0, 0);
+        public (int x, int y) returnPointB = (0, 0);
 
-        private List<int[]> mainWindowGrid = new List<int[]>();
-        private List<Image[]> mainWindowControlGrid = new List<Image[]>();
-        private object currentMainWindowControl = null;
+        public object currControl = null;
+        public List<int[]> mainWindowGrid = new List<int[]>();
+        public List<Image[]> mainWindowControlGrid = new List<Image[]>();
+        public Image movieBackdrop = null;
+
+        public int tvIndex = 0;
+        public int seasonIndex = 0;
+        public List<object> tvControlList = new List<object>();
+        public List<Image> seasonControlList = new List<Image>();
+        public List<int[]> seasonWindowGrid = new List<int[]>();
+        public List<Image[]> seasonWindowControlGrid = new List<Image[]>();
 
         public (int x, int y) up = (-1, 0);
         public (int x, int y) down = (1, 0);
@@ -36,40 +44,409 @@ namespace LVP_WPF.Windows
         {
             gui = g;
             BuildMainWindowGrid();
-            PrintGrid();
             TcpSerialListener.SetCursorPos(20, 20);
             TcpSerialListener.DoMouseClick();
-            currentMainWindowControl = mainWindowControlGrid.Count != 0 ? mainWindowControlGrid[0][0] : gui.CloseButtons[0];
-            CenterMouseOverControl(currentMainWindowControl);
+            currControl = mainWindowControlGrid.Count != 0 ? mainWindowControlGrid[0][0] : gui.mainCloseButton;
+            CenterMouseOverControl(currControl, 0);
         }
 
-        private void CenterMouseOverControl(object control)
+        public void Move((int x, int y) pos)
         {
-            if (control as Button != null)
+            if (playerWindowActive) return;
+            if (seasonWindowActive)
             {
-                Button button = (Button)control;
-                CenterMouseOverButton(button);
+                MoveSeasonPoint((pos.x, pos.y));
+            }
+            else if (tvShowWindowActive)
+            {
+                MoveTvPoint(pos.x);
+            }
+            else if (mainWindowActive)
+            {
+                MovePoint((pos.x, pos.y));
+            }
+        }
+
+        public void Select(string controlName, bool isMovie = false)
+        {
+            if (TvShowWindow.cartoonShuffle) return;
+            if (mainWindowActive)
+            {
+                mainWindowActive = false;
+                returnPointA = currPoint;
+                if (isMovie)
+                {
+                    movieWindowActive = true;
+                    currControl = movieBackdrop;
+                    CenterMouseOverControl(currControl);
+                }
+                else
+                {
+                    tvShowWindowActive = true;
+                    currPoint = (tvIndex, -1);
+                    currControl = tvControlList[currPoint.x];
+                    CenterMouseOverControl(currControl);
+                    return;
+                }
+            }
+
+            if (seasonWindowActive)
+            {
+                seasonWindowActive = false;
+                seasonWindowGrid.Clear();
+                seasonWindowControlGrid.Clear();
+                currPoint = returnPointB;
+                currControl = tvControlList[currPoint.x];
+                CenterMouseOverControl(currControl);
+            }
+            else if (tvShowWindowActive)
+            {
+                returnPointB = currPoint;
+                if (controlName.Equals("SeasonWindow"))
+                {
+                    seasonWindowActive = true;
+                    BuildSeasonGrid();
+                    currPoint = GetCurrSeasonPoint(seasonIndex);
+                }
+                if (controlName.Equals("PlayerWindow")) { playerWindowActive = true; }
+            }
+            else if (movieWindowActive)
+            {
+                returnPointB = currPoint;
+                if (controlName.Equals("PlayerWindow")) { playerWindowActive = true; }
+            }
+        }
+
+        internal void CloseCurrWindow()
+        {
+            try
+            {
+                if (mainWindowActive)
+                {
+                    // To-do: scrolling ?
+                    CenterMouseOverControl(gui.mainCloseButton);
+                    TcpSerialListener.DoMouseClick();
+                }
+
+                if (playerWindowActive)
+                {
+                    playerWindowActive = false;
+                    CenterMouseOverControl(gui.playerCloseButton);
+                    TcpSerialListener.DoMouseClick();
+
+                    if (movieWindowActive)
+                    {
+                        movieWindowActive = false;
+                        mainWindowActive = true;
+                        currPoint = returnPointA;
+                        currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
+                        CenterMouseOverControl(currControl);
+                    }
+                    else if (tvShowWindowActive)
+                    {
+                        currPoint = returnPointB;
+                        currControl = tvControlList[currPoint.x];
+                        CenterMouseOverControl(currControl);
+                    }
+                    return;
+                }
+
+                if (seasonWindowActive)
+                {
+                    TcpSerialListener.DoMouseClick();
+                    seasonWindowActive = false;
+                    seasonControlList.Clear();
+                    seasonWindowGrid.Clear();
+                    seasonWindowControlGrid.Clear();
+                    currPoint = returnPointB;
+                    currControl = tvControlList[currPoint.x];
+                    CenterMouseOverControl(currControl);
+                    return;
+                } 
+                else if (tvShowWindowActive)
+                {
+                    tvControlList.Clear();
+                    tvIndex = 0;
+                    tvShowWindowActive = false;
+                    mainWindowActive = true;
+
+                    /*tvWindowMainPanel.Invoke(new MethodInvoker(delegate
+                    {
+                        tvWindowMainPanel.AutoScrollPosition = new Point(0, 0);
+                        AdjustScrollBar();
+                        tvWindowClose.Visible = true;
+                    }));*/
+
+                    CenterMouseOverControl(gui.tvMovieCloseButton);
+                    TcpSerialListener.DoMouseClick();
+                    currPoint = returnPointA;
+                    currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
+                    CenterMouseOverControl(currControl);
+                }
+                else if (movieWindowActive)
+                {
+                    movieWindowActive = false;
+                    movieWindowActive = true;
+                    CenterMouseOverControl(gui.tvMovieCloseButton);
+                    TcpSerialListener.DoMouseClick();
+                    currPoint = returnPointA;
+                    currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
+                    CenterMouseOverControl(currControl);
+                }
+            }
+            catch (Exception ex)
+            {
+                GuiModel.Log(ex.Message);
+            }
+        }
+
+        private void MoveTvPoint(int rX)
+        {
+            int newIndex;
+            if (currPoint.x == 0 && rX == 1)
+            {
+                newIndex = 2;
+            }
+            else if (currPoint.x == 2 && rX == -1)
+            {
+                newIndex = 0;
             }
             else
             {
-                Image image = (Image)control;
-                CenterMouseOverImage(image);
+                newIndex = currPoint.x + rX;
             }
-            
+
+            if (newIndex < 0 || newIndex >= tvControlList.Count) return;
+
+            currPoint = (newIndex, currPoint.y);
+            currControl = tvControlList[newIndex];
+            // To-do: scrolling ?
+            CenterMouseOverControl(currControl);
         }
 
-        private void CenterMouseOverImage(Image image)
+        private (int x, int y) GetCurrSeasonPoint(int seasonFormIndex)
         {
-            Point target = image.PointToScreen(new Point(0, 0));
-            target.X += image.Width / 2;
-            target.Y += image.Height / 2;
-            TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+            int count = 0;
+            (int x, int y) point = (0, 0);
+            while (seasonFormIndex > 0)
+            {
+                seasonFormIndex--;
+                if (count == 2)
+                {
+                    count = 0;
+                    point = (point.x + 1, 0);
+                    if (seasonFormIndex == 0) break;
+                }
+                else
+                {
+                    point = (point.x, point.y + 1);
+                    count++;
+                }
+            }
+            seasonWindowGrid[point.x][point.y] = 2;
+            return point;
         }
 
-        private void CenterMouseOverButton(Button button)
+        public void MoveSeasonPoint((int x, int y) movePoint)
         {
-            Point target = button.PointToScreen(new Point(0, 0));
-            TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+            (int x, int y) newPoint = (currPoint.x + movePoint.x, currPoint.y + movePoint.y);
+            if (OutOfSeasonGridRange(newPoint)) return;
+
+            if (seasonWindowControlGrid[newPoint.x][newPoint.y] == null)
+            {
+                (int x, int y) candidatePoint = ClosestSeasonGridPoint(newPoint);
+                if (candidatePoint.x != -1)
+                {
+                    newPoint = candidatePoint;
+                }
+                else
+                {
+                    newPoint = NextSeasonGridPoint(newPoint, movePoint);
+                    if (newPoint.x == -1) return;
+                }
+            }
+
+            seasonWindowGrid[newPoint.x][newPoint.y] = 2;
+            seasonWindowGrid[currPoint.x][currPoint.y] = 1;
+            currPoint = newPoint;
+            currControl = seasonWindowControlGrid[currPoint.x][currPoint.y];
+            // To-do: scrolling ?
+            CenterMouseOverControl(currControl);
+            //PrintGrid(); PrintControlGrid();
+        }
+
+        public (int x, int y) NextSeasonGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
+        {
+            (int x, int y) nextPoint = (currentPoint.x + movePoint.x, currentPoint.y + movePoint.y);
+            if (OutOfSeasonGridRange(nextPoint)) return (-1, -1);
+            if (seasonWindowControlGrid[nextPoint.x][nextPoint.y] == null)
+            {
+                NextSeasonGridPoint(nextPoint, movePoint);
+            }
+            else
+            {
+                return nextPoint;
+            }
+            return (-1, -1);
+        }
+
+        private (int x, int y) ClosestSeasonGridPoint((int x, int y) nextPoint)
+        {
+            int low = nextPoint.y - 1;
+            int high = nextPoint.y + 1;
+            while (low >= 0 || high > 3)
+            {
+                if (low >= 0)
+                {
+                    if (seasonWindowControlGrid[nextPoint.x][low] != null) return (nextPoint.x, low);
+                }
+
+                if (high < 3)
+                {
+                    if (seasonWindowControlGrid[nextPoint.x][high] != null) return (nextPoint.x, high);
+                }
+                low--;
+                high++;
+            }
+            return (-1, -1);
+        }
+
+        private bool OutOfSeasonGridRange((int x, int y) testPoint)
+        {
+            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 3 || testPoint.x >= seasonWindowGrid.Count) return true;
+            return false;
+        }
+
+        private void BuildSeasonGrid()
+        {
+            int seasonCount = seasonControlList.Count;
+            int count = 0;
+            int[] currRow = null;
+            Image[] currControlRow = null;
+            for (int i = 0; i < seasonCount; i++)
+            {
+                if (count == 3) count = 0;
+                if (count == 0)
+                {
+                    currRow = new int[3];
+                    currControlRow = new Image[3];
+                    seasonWindowGrid.Add(currRow);
+                    seasonWindowControlGrid.Add(currControlRow);
+                    currRow[count] = 1;
+                    currControlRow[count] = null;
+                }
+                currRow[count] = 1; ;
+                currControlRow[count] = null;
+                count++;
+            }
+            BuildSeasonControlGrid();
+        }
+
+
+        private void BuildSeasonControlGrid()
+        {
+            int seasonCount = seasonControlList.Count;
+            int count = 0;
+            int rowIndex = 0;
+            int controlIndex = 0;
+
+            for (int i = 0; i < seasonCount; i++)
+            {
+                if (count == 3)
+                {
+                    rowIndex++;
+                    count = 0;
+                }
+
+                if (seasonWindowGrid[rowIndex][count] == 0)
+                {
+                    seasonWindowControlGrid[rowIndex][count] = null;
+                }
+                else
+                {
+                    seasonWindowControlGrid[rowIndex][count] = seasonControlList[controlIndex];
+                    controlIndex++;
+                }
+                count++;
+            }
+        }
+
+        public void MovePoint((int x, int y) movePoint)
+        {
+            (int x, int y) newPoint = (currPoint.x + movePoint.x, currPoint.y + movePoint.y);
+            if (newPoint.x == -1)
+            {
+                newPoint.x = mainWindowGrid.Count - 1;
+            }
+            if (newPoint.x == mainWindowGrid.Count)
+            {
+                newPoint.x = 0;
+            }
+
+            if (OutOfMainGridRange(newPoint)) return;
+
+            if (mainWindowControlGrid[newPoint.x][newPoint.y] == null)
+            {
+                (int x, int y) candidatePoint = ClosestMainGridPoint(newPoint);
+                if (candidatePoint.x != -1)
+                {
+                    newPoint = candidatePoint;
+                }
+                else
+                {
+                    newPoint = NextMainGridPoint(newPoint, movePoint);
+                    if (newPoint.x == -1) return;
+                }
+            }
+
+            mainWindowGrid[newPoint.x][newPoint.y] = 2;
+            mainWindowGrid[currPoint.x][currPoint.y] = 1;
+            currPoint = newPoint;
+            currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
+            CenterMouseOverControl(currControl, currPoint.x);
+            PrintGrid();
+        }
+
+        public (int x, int y) NextMainGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
+        {
+            (int x, int y) nextPoint = (currentPoint.x + movePoint.x, currentPoint.y + movePoint.y);
+            if (OutOfMainGridRange(nextPoint)) return (-1, -1);
+            if (mainWindowControlGrid[nextPoint.x][nextPoint.y] == null)
+            {
+                NextMainGridPoint(nextPoint, movePoint);
+            }
+            else
+            {
+                return nextPoint;
+            }
+            return (-1, -1);
+        }
+
+        private (int x, int y) ClosestMainGridPoint((int x, int y) nextPoint)
+        {
+            int low = nextPoint.y - 1;
+            int high = nextPoint.y + 1;
+            while (low >= 0 || high > 6)
+            {
+                if (low >= 0)
+                {
+                    if (mainWindowControlGrid[nextPoint.x][low] != null) return (nextPoint.x, low);
+                }
+
+                if (high < 6)
+                {
+                    if (mainWindowControlGrid[nextPoint.x][high] != null) return (nextPoint.x, high);
+                }
+                low--;
+                high++;
+            }
+            return (-1, -1);
+        }
+
+        private bool OutOfMainGridRange((int x, int y) testPoint)
+        {
+            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 6 || testPoint.x >= mainWindowGrid.Count) return true;
+            return false;
         }
 
         private void BuildMainWindowGrid()
@@ -82,12 +459,9 @@ namespace LVP_WPF.Windows
                 Image[] currControlRow = null;
                 for (int j = 0; j < count; j++)
                 {
-                    if (i == 0 && j == count - gui.Cartoons.Count)
-                    {
-                        rowIndex = 0;
-                    }
-                    
+                    if (i == 0 && j == count - gui.Cartoons.Count) rowIndex = 0;
                     if (rowIndex == 6) rowIndex = 0;
+
                     if (rowIndex == 0)
                     {
                         currGridRow = new int[6];
@@ -112,14 +486,17 @@ namespace LVP_WPF.Windows
             int rowIndex = 0;
             int controlIndex = gui.Movies.Count;
             List<Image> mainWindowControlList = new List<Image>();
-            ListView[] mainWindowLists = new ListView[]{ (ListView)gui.MainGrid.Children[6],
-                                                         (ListView)gui.MainGrid.Children[2],
-                                                         (ListView)gui.MainGrid.Children[4] };
+            ListView[] mainWindowLists = new ListView[]
+            {
+                (ListView)gui.mainGrid.Children[6],
+                (ListView)gui.mainGrid.Children[2],
+                (ListView)gui.mainGrid.Children[4]
+            };
 
             for (int i = 0; i < 3; i++)
             {
                 ItemContainerGenerator generator = mainWindowLists[i].ItemContainerGenerator;
-                switch(i)
+                switch (i)
                 {
                     case 0:
                         for (int j = 0; j < gui.Movies.Count; j++)
@@ -202,9 +579,68 @@ namespace LVP_WPF.Windows
             }
         }
 
+        private void CenterMouseOverControl(object control, int row = -1)
+        {
+            if (control as Button != null)
+            {
+                Button button = (Button)control;
+                CenterMouseOverButton(button);
+            }
+            else if (control as Image != null)
+            {
+                Image image = (Image)control;
+                CenterMouseOverImage(image, row);
+            }
+        }
+
+        private void CenterMouseOverImage(Image image, int row = -1)
+        {
+            image.Dispatcher.Invoke(() =>
+            {
+                if (row == 0)
+                {
+                    gui.mainScrollViewer.ScrollToHome();
+                } 
+                else if (row == mainWindowGrid.Count - 1)
+                {
+                    gui.mainScrollViewer.ScrollToBottom();
+                } 
+                else
+                {
+                    gui.mainScrollViewerAdjust = true;
+                    image.BringIntoView();
+                    //gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToVerticalOffset(gui.mainScrollViewerVOffset + 300); });
+                }
+                DoEvents();
+
+                Point target = image.PointToScreen(new Point(0, 0));
+                target.X += image.Width / 2;
+                target.Y += image.Height / 2; 
+                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+            });
+        }
+
+        public static void DoEvents()
+        {
+            Application.Current.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background,
+                                                  new Action(delegate { }));
+        }
+
+        private void CenterMouseOverButton(Button button)
+        {
+            button.Dispatcher.Invoke(() =>
+            {
+                Point target = button.PointToScreen(new Point(0, 0));
+                target.X += button.Width / 2;
+                target.Y += button.Height / 2;
+                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+            });
+        }
+
         private void PrintGrid()
         {
-            foreach (int[] row in mainWindowGrid)
+            List<int[]> ctrl = seasonWindowActive ? seasonWindowGrid : mainWindowGrid;
+            foreach (int[] row in ctrl)
             {
                 Trace.Write("[ ");
                 for (int i = 0; i < row.Length; i++)
@@ -218,11 +654,11 @@ namespace LVP_WPF.Windows
                 Trace.WriteLine(" ]");
             }
             Trace.WriteLine(Environment.NewLine);
-            PrintControlGrid();
         }
 
         private void PrintControlGrid()
         {
+            List<Image[]> ctrl = seasonWindowActive ? seasonWindowControlGrid : mainWindowControlGrid;
             foreach (Image[] row in mainWindowControlGrid)
             {
                 Trace.Write("[ ");

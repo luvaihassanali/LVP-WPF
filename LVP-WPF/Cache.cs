@@ -72,12 +72,12 @@ namespace LVP_WPF
 
             for (int i = 0; i < MainWindow.model.Movies.Length; i++)
             {
-                MainWindow.gui.MediaDict.Add(MainWindow.model.Movies[i].Id, MainWindow.model.Movies[i]);
+                MainWindow.gui.mediaDict.Add(MainWindow.model.Movies[i].Id, MainWindow.model.Movies[i]);
             }
 
             for (int i = 0; i < MainWindow.model.TvShows.Length; i++)
             {
-                MainWindow.gui.MediaDict.Add(MainWindow.model.TvShows[i].Id, MainWindow.model.TvShows[i]);
+                MainWindow.gui.mediaDict.Add(MainWindow.model.TvShows[i].Id, MainWindow.model.TvShows[i]);
             }
         }
 

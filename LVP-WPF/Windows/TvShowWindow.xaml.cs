@@ -36,8 +36,14 @@ namespace LVP_WPF.Windows
             window.seasonButton.Content = "Season " + tvShow.CurrSeason.ToString();
             Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
             window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
+
+            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(window.Backdrop);
             window.EpisodeListView.ItemsSource = CreateEpisodeListItems(episodes);
-            MainWindow.gui.CloseButtons[1] = window.closeButton;
+            MainWindow.tcpWorker.layoutPoint.tvControlList.Insert(1, window.Description);
+            MainWindow.tcpWorker.layoutPoint.tvControlList.Insert(2, window.seasonButton);
+
+            MainWindow.tcpWorker.layoutPoint.Select("TvShowWindow");
+            MainWindow.gui.tvMovieCloseButton = window.closeButton;
             window.ShowDialog();
         }
 
@@ -152,6 +158,8 @@ namespace LVP_WPF.Windows
                     Overlay = Cache.LoadImage("Resources\\play.png", 960),
                     Opacity = 0
                 };
+                MainWindow.tcpWorker.layoutPoint.tvControlList.Add(episodeBoxes[i].Image);
+                
             }
             return episodeBoxes;
         }

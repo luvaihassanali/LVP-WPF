@@ -34,6 +34,7 @@ namespace LVP_WPF.Windows
                 };
             }
             seasonWindow.SeasonListView.ItemsSource = seasonBoxes;
+            MainWindow.tcpWorker.layoutPoint.Select("SeasonWindow");
             seasonWindow.ShowDialog();
             return seasonIndex;
         }

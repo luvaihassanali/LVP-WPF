@@ -11,9 +11,9 @@ namespace LVP_WPF
     {
         static public MainModel model;
         static public GuiModel gui;
+        static public TcpSerialListener tcpWorker;
         static private bool mouseHubKilled;
         private InactivityTimer inactivityTimer;
-        private TcpSerialListener worker = null;
 
         public MainWindow()
         {
@@ -28,6 +28,12 @@ namespace LVP_WPF
                 mouseHubKilled = true;
             }
 
+#if RELEASE
+            this.Height = 1050;
+            this.Width = 1920;
+#else
+            this.WindowStyle = WindowStyle.None; 
+#endif
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -41,15 +47,16 @@ namespace LVP_WPF
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
             
-            gui.CloseButtons[0] = this.closeButton;
-            gui.MainGrid = this.mainGrid;
-            worker = new TcpSerialListener(gui);
-            worker.StartThread();
+            gui.mainCloseButton = this.closeButton;
+            gui.mainScrollViewer = this.scrollViewer;
+            gui.mainGrid = this.mainGrid;
+            tcpWorker = new TcpSerialListener(gui);
+            tcpWorker.StartThread();
         }
 
         private void InactivityDetected(object sender, EventArgs e)
         {
-            if (gui.IsPlaying) return;
+            if (gui.isPlaying) return;
             this.Close();
         }
 
@@ -59,7 +66,7 @@ namespace LVP_WPF
             MainWindowBox item = (MainWindowBox)(sender as ListView).SelectedItem;
             if (item != null)
             {
-                var mediaItem = gui.MediaDict[item.Id];
+                var mediaItem = gui.mediaDict[item.Id];
                 if (mediaItem is Movie)
                 {
                     MovieWindow.Show((Movie)mediaItem);
@@ -117,7 +124,6 @@ namespace LVP_WPF
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            //To-do: change to only on mouse over
             if (e.VerticalOffset == 0)
             {
                 closeButton.Visibility = Visibility.Visible;
@@ -125,6 +131,13 @@ namespace LVP_WPF
             else
             {
                 closeButton.Visibility = Visibility.Hidden;
+            }
+            
+            if (gui.mainScrollViewerAdjust)
+            {
+                gui.mainScrollViewerAdjust = false;
+                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
+                scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
             }
         }
 

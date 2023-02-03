@@ -30,13 +30,12 @@ namespace LVP_WPF.Windows
             PlayerWindow window = new PlayerWindow();
             currMedia = m;
             tvShowWindow = tw;
-            MainWindow.gui.IsPlaying = true;
-            MainWindow.gui.PlayerWindow = window;
-            MainWindow.gui.CloseButtons[2] = window.closeButton;
+            MainWindow.tcpWorker.layoutPoint.Select("PlayerWindow");
+            MainWindow.gui.isPlaying = true;
+            MainWindow.gui.playerWindow = window;
+            MainWindow.gui.playerCloseButton = window.closeButton;
             window.ShowDialog();
-            MainWindow.gui.IsPlaying = false;
-            MainWindow.gui.PlayerWindow = null;
-            MainWindow.gui.CloseButtons[2] = null;
+            MainWindow.gui.isPlaying = false;
         }
 
         [ObservableProperty]

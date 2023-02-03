@@ -16,8 +16,11 @@ using System.Windows.Threading;
 
 namespace LVP_WPF
 {
-    internal class TcpSerialListener
+    public class TcpSerialListener
     {
+        [DllImport("user32.dll")]
+        public static extern bool GetCursorPos(out POINT lpPoint);
+
         [DllImport("User32.dll")]
         public static extern bool SetCursorPos(int X, int Y);
 
@@ -39,7 +42,7 @@ namespace LVP_WPF
         private int joystickX;
         private int joystickY;
         private GuiModel gui;
-        private LayoutPoint layoutPosition; 
+        public LayoutPoint layoutPoint;
         private DispatcherTimer pollingTimer;
         private SerialPort serialPort;
         private bool serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
@@ -49,7 +52,7 @@ namespace LVP_WPF
         public TcpSerialListener(GuiModel g)
         {
             gui = g;
-            layoutPosition = new LayoutPoint(g);
+            layoutPoint = new LayoutPoint(g);
             //To-do: Cursor hide
         }
 
@@ -102,12 +105,8 @@ namespace LVP_WPF
                 if (esp8266Enabled)
                 {
                     PingReply reply = null;
-                    try
-                    {
-                        reply = pingSender.Send(esp8266ServerIp, timeout, buffer, options);
-                    }
-                    catch
-                    { }
+                    try { reply = pingSender.Send(esp8266ServerIp, timeout, buffer, options); }
+                    catch { }
 
                     if (reply != null && reply.Status == IPStatus.Success)
                     {
@@ -138,7 +137,6 @@ namespace LVP_WPF
 
                 result = tcpClient.BeginConnect(esp8266ServerIp, esp8266ServerPort, null, null);
                 success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(1));
-
                 while (!success)
                 {
                     DebugLog("Cannot connect to server. Trying again");
@@ -147,7 +145,6 @@ namespace LVP_WPF
 
                 byte[] data = Encoding.ASCII.GetBytes("zzzz");
                 NetworkStream stream = null;
-
                 try
                 {
                     stream = tcpClient.GetStream();
@@ -162,7 +159,6 @@ namespace LVP_WPF
                 stream.Write(data, 0, data.Length);
                 DebugLog("Sent init");
                 StartTimer();
-
                 while (true)
                 {
                     int i;
@@ -177,6 +173,7 @@ namespace LVP_WPF
                         if (buffer.Contains("initack"))
                         {
                             DebugLog("initack received");
+                            //To-do:
                             /*if (MainForm.hideCursor)
                             {
                                 mainForm.Invoke(new MethodInvoker(delegate
@@ -230,6 +227,7 @@ namespace LVP_WPF
 
         private void ParseTcpDataIn(string data)
         {
+            //To-do:
             /*if (MainForm.cursorCount != 0)
             {
                 mainForm.Invoke(new MethodInvoker(delegate
@@ -301,7 +299,8 @@ namespace LVP_WPF
 
         static public void DoMouseClick()
         {
-            Point currPos = Mouse.GetPosition(Application.Current.MainWindow);
+            POINT currPos;
+            GetCursorPos(out currPos);
             uint X = (uint)currPos.X;
             uint Y = (uint)currPos.Y;
             mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, X, Y, 0, 0);
@@ -309,16 +308,27 @@ namespace LVP_WPF
 
         static public void DoMouseRightClick()
         {
-            Point currPos = Mouse.GetPosition(Application.Current.MainWindow);
+            POINT currPos;
+            GetCursorPos(out currPos);
             uint X = (uint)currPos.X;
             uint Y = (uint)currPos.Y;
             mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, X, Y, 0, 0);
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT
+        {
+            public int X;
+            public int Y;
+
+            public static implicit operator Point(POINT point)
+            {
+                return new Point(point.X, point.Y);
+            }
+        }
 
         public void InitializeSerialPort()
         {
-            //this.layoutController = lc;
             string portNumber = ConfigurationManager.AppSettings["SerialPort"];
             serialPort = new SerialPort();
             serialPort.PortName = "COM" + portNumber;
@@ -350,47 +360,47 @@ namespace LVP_WPF
                 string msg = serialPort.ReadLine();
                 msg = msg.Replace("\r", "");
                 GuiModel.Log(msg);
-                // Cursor hide
+                //To-do: Cursor hide
                 switch (msg)
                 {
                     case "left":
-                        //layoutController.MovePointPosition(layoutController.left);
+                        layoutPoint.Move(layoutPoint.left);
                         break;
                     case "right":
-                        //layoutController.MovePointPosition(layoutController.right);
+                        layoutPoint.Move(layoutPoint.right);
                         break;
                     case "up":
-                        //layoutController.MovePointPosition(layoutController.up);
+                        layoutPoint.Move(layoutPoint.up);
                         break;
                     case "down":
-                        //layoutController.MovePointPosition(layoutController.down);
+                        layoutPoint.Move(layoutPoint.down);
                         break;
                     case "enter":
-                        //if (layoutController.onMainForm)
+                        if (layoutPoint.mainWindowActive)
                         {
                             DoMouseClick();
                         }
-                        //else
+                        else
                         {
                             DoMouseClick();
-                            //layoutController.Select(String.Empty);
+                            layoutPoint.Select(String.Empty);
                         }
                         break;
                     case "return":
-                        //layoutController.CloseCurrentForm();
+                        layoutPoint.CloseCurrWindow();
                         break;
                     case "play":
                     case "pause":
-                        gui.PlayerWindow.PlayPause_TcpSerialListener();
+                        gui.playerWindow.PlayPause_TcpSerialListener();
                         break;
                     case "stop":
-                        gui.PlayerWindow.Stop_TcpSerialListener();
+                        gui.playerWindow.Stop_TcpSerialListener();
                         break;
                     case "fastforward":
-                        gui.PlayerWindow.Seek_TcpSerialListener(false);
+                        gui.playerWindow.Seek_TcpSerialListener(false);
                         break;
                     case "rewind":
-                        gui.PlayerWindow.Seek_TcpSerialListener(true);
+                        gui.playerWindow.Seek_TcpSerialListener(true);
                         break;
                 }
             }

@@ -27,13 +27,17 @@ namespace LVP_WPF
         [ObservableProperty]
         ObservableCollection<MainWindowBox> cartoons;
 
-        private bool isPlaying;
         static private bool loggingEnabled;
         static private string logPath;
-        private Button[] closeButtons;
-        private Dictionary<int, Media> mediaDict;
-        private Grid mainGrid;
-        private PlayerWindow playerWindow;
+        public bool isPlaying;
+        public Button mainCloseButton;
+        public Button tvMovieCloseButton;
+        public Button playerCloseButton;
+        public Dictionary<int, Media> mediaDict;
+        public Grid mainGrid;
+        public ScrollViewer mainScrollViewer;
+        public bool mainScrollViewerAdjust = false;
+        public PlayerWindow playerWindow;
 
         public GuiModel()
         {
@@ -50,39 +54,8 @@ namespace LVP_WPF
                 logPath = logPath.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
             }
 
-            CloseButtons = new Button[3];
-            MediaDict = new Dictionary<int, Media>();
-            IsPlaying = false;
-        }
-
-        public bool IsPlaying
-        {
-            get { return isPlaying; }
-            set { isPlaying = value; }
-        }
-
-        public Dictionary<int, Media> MediaDict
-        {
-            get => mediaDict;
-            set => mediaDict = value;
-        }
-
-        public Grid MainGrid
-        {
-            get => mainGrid;
-            set => mainGrid = value;
-        }
-
-        public PlayerWindow PlayerWindow
-        {
-            get { return playerWindow; }
-            set { playerWindow = value; }
-        }
-
-        public Button[] CloseButtons
-        {
-            get { return closeButtons; }
-            set { closeButtons = value; }
+            mediaDict = new Dictionary<int, Media>();
+            isPlaying = false;
         }
 
         public static void Log(string message)

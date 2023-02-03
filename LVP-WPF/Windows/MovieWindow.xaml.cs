@@ -27,7 +27,8 @@ namespace LVP_WPF.Windows
             string img = movie.Backdrop == null ? "Resources\\noPrevWide.png" : movie.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);
             window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
-            MainWindow.gui.CloseButtons[1] = window.closeButton;
+            MainWindow.tcpWorker.layoutPoint.Select("MovieWindow");
+            MainWindow.gui.tvMovieCloseButton = window.closeButton;
             window.ShowDialog();
         }
 
