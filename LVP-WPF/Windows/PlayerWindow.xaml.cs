@@ -66,14 +66,13 @@ namespace LVP_WPF.Windows
             pollingTimer = new DispatcherTimer();
             pollingTimer.Interval = TimeSpan.FromSeconds(3);
             pollingTimer.Tick += PollingTimer_Tick;
-
             inactivityTimer = new InactivityTimer(TimeSpan.FromHours(2)); //(TimeSpan.FromSeconds(10));
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
             GuiModel.Log("Play: " + currMedia.Path);
-            //bool res = mediaPlayer.Play(currVLCMedia);
-            //if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
+            bool res = mediaPlayer.Play(currVLCMedia);
+            if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
 
             if (currMedia as Episode != null)
             {
@@ -90,131 +89,6 @@ namespace LVP_WPF.Windows
             MainWindow.tcpWorker.layoutPoint.Select("PlayerWindow");
         }
 
-        private void MediaPlayer_EndReached(object? sender, EventArgs e)
-        {
-            SliderValue = 0;
-
-            if (TvShowWindow.cartoonShuffle)
-            {
-                TvShowWindow.cartoonIndex++;
-                if (TvShowWindow.cartoonIndex == TvShowWindow.cartoonLimit)
-                {
-                    skipClosing = true;
-                    this.Close();
-                }
-
-                currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
-                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                GuiModel.Log("Playing " + currMedia.Path);
-                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                return;
-            }
-
-            if (currMedia as Episode != null)
-            {
-                Episode episode = (Episode)currMedia;
-                episode.SavedTime = episode.Length;
-                UpdateProgressBar(episode);
-
-                if (episode.Id == -1)
-                {
-                    skipClosing = true;
-                    this.Close();
-                }
-
-                TvShow tvShow = TvShowWindow.tvShow;
-                for (int i = 0; i < tvShow.Seasons.Length; i++)
-                {
-                    Season season = tvShow.Seasons[i];
-                    for (int j = 0; j < season.Episodes.Length; j++)
-                    {
-                        if (episode.Name.Equals(season.Episodes[j].Name))
-                        {
-                            if (j == season.Episodes.Length - 1)
-                            {
-                                // if last season (check for extras)
-                                if (i == tvShow.Seasons.Length - 2 && tvShow.Seasons[tvShow.Seasons.Length - 1].Id == -1 ||
-                                    i == tvShow.Seasons.Length - 1)
-                                {
-                                    skipClosing = true;
-                                    this.Close();
-                                }
-                                else
-                                {
-                                    GuiModel.Log(tvShow.Name + " season change from " + (i) + " to " + (i + 1));
-                                    season = tvShow.Seasons[i + 1];
-                                    tvShow.CurrSeason = season.Id;
-                                    currMedia = season.Episodes[0];
-                                    LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                    GuiModel.Log("Play: " + currMedia.Path);
-                                    ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                    tvShowWindow.Dispatcher.Invoke(() =>
-                                    {
-                                        tvShowWindow.Update(tvShow.CurrSeason);
-                                    });
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                currMedia = season.Episodes[j + 1];
-                                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                GuiModel.Log("Play: " + currMedia.Path);
-                                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                return;
-                            }
-                        }
-                    }
-                }
-
-            }
-            else //if Movie
-            {
-                skipClosing = true;
-                this.Close();
-            }
-        }
-
-        private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
-        {
-            //To-do: logging
-            throw new NotImplementedException();
-        }
-
-        private void MediaPlayer_LengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e)
-        {
-            SliderMax = mediaPlayer.Length;
-            if (currMedia as Episode != null)
-            {
-                Episode episode = (Episode)currMedia;
-                episode.Length = mediaPlayer.Length;
-            }
-        }
-
-        private void MediaPlayer_TimeChanged(object? sender, MediaPlayerTimeChangedEventArgs e)
-        {
-            SliderValue = mediaPlayer.Time;
-        }
-
-        private LibVLCSharp.Shared.Media CreateMedia(Media m)
-        {
-            //To-do: Add application and vlc .exe to Graphics Settings with High Performance NVIDIA GPU preference
-            LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(libVLC, m.Path, FromType.FromPath);
-            media.AddOption(":avcodec-hw=auto");
-            media.AddOption(":no-mkv-preload-local-dir");
-            string subtitleTrackOption = String.Format(":sub-track-id={0}", Int32.MaxValue);
-            if (m as Movie != null)
-            {
-                Movie movie = (Movie)m;
-                if (movie.Subtitles)
-                {
-                    subtitleTrackOption = String.Format(":sub-track-id={0}", movie.SubtitleTrack);
-                }
-            }
-            media.AddOption(subtitleTrackOption);
-            return media;
-        }
-
         private void PlayerWindow_Closed(object sender, EventArgs e)
         {
             timelineSlider.ValueChanged -= Slider_ValueChanged;
@@ -224,7 +98,6 @@ namespace LVP_WPF.Windows
                 pollingTimer.IsEnabled = false;
                 pollingTimer = null;
             }
-
             inactivityTimer.Dispose();
 
             if (!TvShowWindow.cartoonShuffle && !skipClosing)
@@ -268,12 +141,11 @@ namespace LVP_WPF.Windows
                     UpdateProgressBar(episode);
                 }
             }
-
             if (mediaPlayer.IsPlaying) mediaPlayer.Stop();
             mediaPlayer.Dispose();
             libVLC.Dispose();
         }
-
+       
         private void UpdateProgressBar(Episode episode)
         {
             tvShowWindow.Dispatcher.Invoke(() =>
@@ -291,24 +163,124 @@ namespace LVP_WPF.Windows
             });
         }
 
-        private void PollingTimer_Tick(object? sender, EventArgs e)
+        private void MediaPlayer_EndReached(object? sender, EventArgs e)
         {
-            overlayGrid.Visibility = Visibility.Hidden;
-            pollingTimer.Stop();
+            SliderValue = 0;
+            if (TvShowWindow.cartoonShuffle)
+            {
+                TvShowWindow.cartoonIndex++;
+                if (TvShowWindow.cartoonIndex == TvShowWindow.cartoonLimit)
+                {
+                    skipClosing = true;
+                    MainWindow.tcpWorker.layoutPoint.CloseCurrWindow();
+                }
+
+                currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
+                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
+                GuiModel.Log("Playing " + currMedia.Path);
+                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+                return;
+            }
+
+            if (currMedia as Episode != null)
+            {
+                Episode episode = (Episode)currMedia;
+                episode.SavedTime = episode.Length;
+                UpdateProgressBar(episode);
+
+                if (episode.Id == -1)
+                {
+                    skipClosing = true;
+                    MainWindow.tcpWorker.layoutPoint.CloseCurrWindow();
+                }
+
+                TvShow tvShow = TvShowWindow.tvShow;
+                for (int i = 0; i < tvShow.Seasons.Length; i++)
+                {
+                    Season season = tvShow.Seasons[i];
+                    for (int j = 0; j < season.Episodes.Length; j++)
+                    {
+                        if (episode.Name.Equals(season.Episodes[j].Name))
+                        {
+                            if (j == season.Episodes.Length - 1)
+                            {
+                                // if last season (check for extras)
+                                if (i == tvShow.Seasons.Length - 2 && tvShow.Seasons[tvShow.Seasons.Length - 1].Id == -1 || i == tvShow.Seasons.Length - 1)
+                                {
+                                    skipClosing = true;
+                                    MainWindow.tcpWorker.layoutPoint.CloseCurrWindow();
+                                }
+                                else
+                                {
+                                    GuiModel.Log(tvShow.Name + " season change from " + (i) + " to " + (i + 1));
+                                    season = tvShow.Seasons[i + 1];
+                                    tvShow.CurrSeason = season.Id;
+                                    currMedia = season.Episodes[0];
+                                    LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
+                                    GuiModel.Log("Play: " + currMedia.Path);
+                                    ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+                                    tvShowWindow.Dispatcher.Invoke(() => { tvShowWindow.Update(tvShow.CurrSeason); });
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                currMedia = season.Episodes[j + 1];
+                                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
+                                GuiModel.Log("Play: " + currMedia.Path);
+                                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+                                return;
+                            }
+                        }
+                    }
+                }
+
+            }
+            else //if Movie
+            {
+                skipClosing = true;
+                MainWindow.tcpWorker.layoutPoint.CloseCurrWindow();
+            }
         }
 
-        private void VideoView_MouseMove(object sender, MouseEventArgs e)
+        private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
         {
-            Point p = Mouse.GetPosition(this);
-            if (p.Y > this.Height - 100 || p.Y < 100)
+            //To-do: logging
+            throw new NotImplementedException();
+        }
+
+        private void MediaPlayer_LengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e)
+        {
+            SliderMax = mediaPlayer.Length;
+            if (currMedia as Episode != null)
             {
-                if (!pollingTimer.IsEnabled)
-                {
-                    pollingTimer.IsEnabled = true;
-                    pollingTimer.Start();
-                }
-                overlayGrid.Visibility = Visibility.Visible;
+                Episode episode = (Episode)currMedia;
+                episode.Length = mediaPlayer.Length;
             }
+        }
+
+        private void MediaPlayer_TimeChanged(object? sender, MediaPlayerTimeChangedEventArgs e)
+        {
+            SliderValue = mediaPlayer.Time;
+        }
+
+        private LibVLCSharp.Shared.Media CreateMedia(Media m)
+        {
+            //To-do: Add application and vlc .exe to Graphics Settings with High Performance NVIDIA GPU preference
+            LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(libVLC, m.Path, FromType.FromPath);
+            media.AddOption(":avcodec-hw=auto");
+            media.AddOption(":no-mkv-preload-local-dir");
+            string subtitleTrackOption = String.Format(":sub-track-id={0}", Int32.MaxValue);
+            if (m as Movie != null)
+            {
+                Movie movie = (Movie)m;
+                if (movie.Subtitles)
+                {
+                    subtitleTrackOption = String.Format(":sub-track-id={0}", movie.SubtitleTrack);
+                }
+            }
+            media.AddOption(subtitleTrackOption);
+            return media;
         }
 
         private void Control_MouseEnter(object sender, EventArgs e)
@@ -462,6 +434,26 @@ namespace LVP_WPF.Windows
                     }
                 }
             }
+        }
+
+        private void VideoView_MouseMove(object sender, MouseEventArgs e)
+        {
+            Point p = Mouse.GetPosition(this);
+            if (p.Y > this.Height - 100 || p.Y < 100)
+            {
+                if (!pollingTimer.IsEnabled)
+                {
+                    pollingTimer.IsEnabled = true;
+                    pollingTimer.Start();
+                }
+                overlayGrid.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void PollingTimer_Tick(object? sender, EventArgs e)
+        {
+            overlayGrid.Visibility = Visibility.Hidden;
+            pollingTimer.Stop();
         }
 
         private void InactivityDetected(object sender, EventArgs e)

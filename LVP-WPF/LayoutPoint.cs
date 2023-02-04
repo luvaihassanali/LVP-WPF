@@ -109,7 +109,6 @@ namespace LVP_WPF.Windows
                     BuildSeasonGrid();
                     currPoint = GetCurrSeasonPoint(seasonIndex);
                     currControl = seasonWindowControlGrid[currPoint.x][currPoint.y];
-                    PrintGrid(); PrintControlGrid();
                     CenterMouseOverControl(currControl);
                 }
                 if (controlName.Equals("PlayerWindow")) { playerWindowActive = true; }
@@ -127,7 +126,7 @@ namespace LVP_WPF.Windows
             {
                 if (mainWindowActive)
                 {
-                    // To-do: scrolling ?
+                    gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToHome(); });
                     CenterMouseOverControl(gui.mainCloseButton);
                     TcpSerialListener.DoMouseClick();
                 }
@@ -135,17 +134,16 @@ namespace LVP_WPF.Windows
                 if (playerWindowActive)
                 {
                     playerWindowActive = false;
-                    //gui.playerWindow.overlayGrid.Visibility = Visibility.Visible;
                     CenterMouseOverControl(gui.playerCloseButton);
+                    GuiModel.DoEvents();
+
+                    await Task.Delay(50);
                     TcpSerialListener.DoMouseClick();
-                    await Task.Delay(500);
+                    await Task.Delay(50);
 
                     if (movieWindowActive)
                     {
-                        movieWindowActive = false;
-                        mainWindowActive = true;
-                        currPoint = returnPointA;
-                        currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
+                        currControl = movieBackdrop;
                         CenterMouseOverControl(currControl);
                     }
                     else if (tvShowWindowActive)
@@ -168,7 +166,7 @@ namespace LVP_WPF.Windows
                     currControl = tvControlList[currPoint.x];
                     CenterMouseOverControl(currControl);
                     return;
-                } 
+                }
                 else if (tvShowWindowActive)
                 {
                     tvControlList.Clear();
@@ -176,15 +174,11 @@ namespace LVP_WPF.Windows
                     tvShowWindowActive = false;
                     mainWindowActive = true;
 
-                    /*tvWindowMainPanel.Invoke(new MethodInvoker(delegate
-                    {
-                        tvWindowMainPanel.AutoScrollPosition = new Point(0, 0);
-                        AdjustScrollBar();
-                        tvWindowClose.Visible = true;
-                    }));*/
-
+                    gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
+                    GuiModel.DoEvents();
                     CenterMouseOverControl(gui.tvMovieCloseButton);
                     TcpSerialListener.DoMouseClick();
+
                     currPoint = returnPointA;
                     currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
                     CenterMouseOverControl(currControl);
@@ -192,7 +186,7 @@ namespace LVP_WPF.Windows
                 else if (movieWindowActive)
                 {
                     movieWindowActive = false;
-                    movieWindowActive = true;
+                    mainWindowActive = true;
                     CenterMouseOverControl(gui.tvMovieCloseButton);
                     TcpSerialListener.DoMouseClick();
                     currPoint = returnPointA;
@@ -286,15 +280,8 @@ namespace LVP_WPF.Windows
             int high = nextPoint.y + 1;
             while (low >= 0 || high > 3)
             {
-                if (low >= 0)
-                {
-                    if (seasonWindowControlGrid[nextPoint.x][low] != null) return (nextPoint.x, low);
-                }
-
-                if (high < 3)
-                {
-                    if (seasonWindowControlGrid[nextPoint.x][high] != null) return (nextPoint.x, high);
-                }
+                if (low >= 0) if (seasonWindowControlGrid[nextPoint.x][low] != null) return (nextPoint.x, low);
+                if (high < 3) if (seasonWindowControlGrid[nextPoint.x][high] != null) return (nextPoint.x, high);
                 low--;
                 high++;
             }
@@ -372,7 +359,6 @@ namespace LVP_WPF.Windows
             {
                 newPoint.x = 0;
             }
-
             if (OutOfMainGridRange(newPoint)) return;
 
             if (mainWindowControlGrid[newPoint.x][newPoint.y] == null)
@@ -394,13 +380,13 @@ namespace LVP_WPF.Windows
             currPoint = newPoint;
             currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
             CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.mainScrollViewer);
-            PrintGrid();
         }
 
         public (int x, int y) NextMainGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
         {
             (int x, int y) nextPoint = (currentPoint.x + movePoint.x, currentPoint.y + movePoint.y);
             if (OutOfMainGridRange(nextPoint)) return (-1, -1);
+
             if (mainWindowControlGrid[nextPoint.x][nextPoint.y] == null)
             {
                 NextMainGridPoint(nextPoint, movePoint);
@@ -518,10 +504,7 @@ namespace LVP_WPF.Windows
             int totalTvShows = gui.TvShows.Count + gui.Cartoons.Count;
             for (int i = 0; i < totalTvShows; i++)
             {
-                if (i == totalTvShows - gui.Cartoons.Count)
-                {
-                    count = 6;
-                }
+                if (i == totalTvShows - gui.Cartoons.Count) count = 6;
 
                 if (count == 6)
                 {
@@ -607,11 +590,10 @@ namespace LVP_WPF.Windows
 
                 Point target = image.PointToScreen(new Point(0, 0));
                 target.X += image.ActualWidth / 2;
-                target.Y += image.ActualHeight / 2; 
+                target.Y += image.ActualHeight / 2;
                 TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
-
 
         private void CenterMouseOverButton(Button button)
         {

@@ -60,12 +60,10 @@ namespace MouseMoverClient
             Console.BackgroundColor = ConsoleColor.Blue;
             Console.Clear();
 
-            SetWindowPos(MyConsole, 0, 625, 10, 0, 0, SWP_NOSIZE);
             ConsoleHelper.SetCurrentFont("Cascadia Code", 32);
-            // https://stackoverflow.com/questions/24110600/transparent-console-dllimport
-            SetWindowLong(MyConsole, GWL_EXSTYLE, GetWindowLong(MyConsole, GWL_EXSTYLE) | WS_EX_LAYERED);
-            // Opacity = 0.5 = (255/2) = 128
-            SetLayeredWindowAttributes(MyConsole, 0, 128, LWA_ALPHA);
+            SetWindowPos(MyConsole, 0, 625, 10, 0, 0, SWP_NOSIZE);
+            SetWindowLong(MyConsole, GWL_EXSTYLE, GetWindowLong(MyConsole, GWL_EXSTYLE) | WS_EX_LAYERED); // https://stackoverflow.com/questions/24110600/transparent-console-dllimport
+            SetLayeredWindowAttributes(MyConsole, 0, 128, LWA_ALPHA); // Opacity = 0.5 = (255/2) = 128
 
             InitializeSerialPort();
             StartListener();

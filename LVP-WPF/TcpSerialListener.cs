@@ -76,6 +76,29 @@ namespace LVP_WPF
             }
         }
 
+        public void StopThread()
+        {
+            if (pollingTimer != null)
+            {
+                if (pollingTimer.IsEnabled) pollingTimer.Stop();
+                pollingTimer.IsEnabled = false;
+                pollingTimer = null;
+            }
+
+            if (tcpClient != null)
+            {
+                tcpClient.Close();
+                tcpClient.Dispose();
+            }
+
+            if (workerThread != null)
+            {
+                workerThread.Abort();
+                workerThread.Join();
+                workerThread = null;
+            }
+        }
+
         private void StartListener()
         {
             pollingTimer = new DispatcherTimer();
@@ -246,6 +269,7 @@ namespace LVP_WPF
                 DebugLog("Error. Message incorrect format: " + data);
                 return;
             }
+
             joystickX = Int32.Parse(dataSplit[0]);
             joystickY = Int32.Parse(dataSplit[1]);
             int joystickBtnState = Int32.Parse(dataSplit[2]);
@@ -452,29 +476,6 @@ namespace LVP_WPF
 
             StopThread();
             StartThread();
-        }
-
-        public void StopThread()
-        {
-            if (pollingTimer != null)
-            {
-                if (pollingTimer.IsEnabled) pollingTimer.Stop();
-                pollingTimer.IsEnabled = false;
-                pollingTimer = null;
-            }
-
-            if (tcpClient != null)
-            {
-                tcpClient.Close();
-                tcpClient.Dispose();
-            }
-
-            if (workerThread != null)
-            {
-                workerThread.Abort();
-                workerThread.Join();
-                workerThread = null;
-            }
         }
 
         public void DebugLog(string message)

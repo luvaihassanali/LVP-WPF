@@ -76,73 +76,6 @@ namespace LVP_WPF.Windows
             MainWindow.tcpWorker.layoutPoint.Select("TvShowWindow");
         }
 
-        private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
-        {
-            this.PlayOverlay.Opacity = 1.0;
-        }
-
-        private void Backdrop_MouseLeave(object sender, MouseEventArgs e)
-        {
-            this.PlayOverlay.Opacity = 0;
-        }
-
-        private void Play_Click(object sender, MouseButtonEventArgs e)
-        {
-            if (tvShow.LastEpisode == null)
-            {
-                PlayerWindow.Show(tvShow.Seasons[0].Episodes[0], this);
-            }
-            else
-            {
-                PlayerWindow.Show(tvShow.LastEpisode, this);
-            }
-        }
-
-        private void EpisodeListView_MouseMove(object sender, MouseEventArgs e)
-        {
-            HitTestResult hitTestResult = VisualTreeHelper.HitTest(EpisodeListView, Mouse.GetPosition(EpisodeListView));
-            if (hitTestResult == null) return;
-            DependencyObject item = hitTestResult.VisualHit;
-            while (item != null && !(item is ListViewItem))
-            {
-                item = VisualTreeHelper.GetParent(item);
-            }
-
-            EpisodeWindowBox episodeWindowBox = null;
-            if (item != null)
-            {
-                ListBoxItem listItem = (ListBoxItem)item;
-                episodeWindowBox = (EpisodeWindowBox)listItem.DataContext;
-                episodeWindowBox.Opacity = 1.0;
-            }
-
-            for (int i = 0; i < EpisodeListView.Items.Count; i++)
-            {
-                EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeListView.Items[i];
-                if (ep == episodeWindowBox) continue;
-                ep.Opacity = 0.0;
-            }
-        }
-
-        internal void Update(int seasonIndex)
-        {
-            scrollViewer.ScrollToHome();
-            this.EpisodeListView.ItemsSource = null;
-            Episode[] episodes;
-            if (seasonIndex == -1)
-            {
-                this.seasonButton.Content = "Extras";
-                episodes = tvShow.Seasons[tvShow.Seasons.Length - 1].Episodes;
-            }
-            else
-            {
-                this.seasonButton.Content = "Season " + seasonIndex.ToString();
-                episodes = tvShow.Seasons[seasonIndex - 1].Episodes;
-            }
-            TvShowWindow.episodes = CreateEpisodeListItems(episodes);
-            this.EpisodeListView.ItemsSource = TvShowWindow.episodes;
-        }
-
         static private EpisodeWindowBox[] CreateEpisodeListItems(Episode[] episodes)
         {
             EpisodeWindowBox[] episodeBoxes = new EpisodeWindowBox[episodes.Length];
@@ -175,13 +108,30 @@ namespace LVP_WPF.Windows
             return episodeBoxes;
         }
 
-        private void SeasonButton_Click(object sender, RoutedEventArgs e)
+        private void EpisodeListView_MouseMove(object sender, MouseEventArgs e)
         {
-            mainGrid.Opacity = 0.1;
-            int prevIndex = tvShow.CurrSeason;
-            int seasonIndex = SeasonWindow.Show(tvShow);
-            if (seasonIndex != 0 && seasonIndex != prevIndex) Update(seasonIndex);
-            mainGrid.Opacity = 1.0;
+            HitTestResult hitTestResult = VisualTreeHelper.HitTest(EpisodeListView, Mouse.GetPosition(EpisodeListView));
+            if (hitTestResult == null) return;
+            DependencyObject item = hitTestResult.VisualHit;
+            while (item != null && !(item is ListViewItem))
+            {
+                item = VisualTreeHelper.GetParent(item);
+            }
+
+            EpisodeWindowBox episodeWindowBox = null;
+            if (item != null)
+            {
+                ListBoxItem listItem = (ListBoxItem)item;
+                episodeWindowBox = (EpisodeWindowBox)listItem.DataContext;
+                episodeWindowBox.Opacity = 1.0;
+            }
+
+            for (int i = 0; i < EpisodeListView.Items.Count; i++)
+            {
+                EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeListView.Items[i];
+                if (ep == episodeWindowBox) continue;
+                ep.Opacity = 0.0;
+            }
         }
 
         private void EpisodeListView_MouseLeave(object sender, MouseEventArgs e)
@@ -191,11 +141,6 @@ namespace LVP_WPF.Windows
                 EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeListView.Items[i];
                 ep.Opacity = 0.0;
             }
-        }
-
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            this.Close();
         }
 
         private void EpisodeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -212,6 +157,63 @@ namespace LVP_WPF.Windows
                     return;
                 }
             }
+        }
+
+        private void SeasonButton_Click(object sender, RoutedEventArgs e)
+        {
+            mainGrid.Opacity = 0.1;
+            int prevIndex = tvShow.CurrSeason;
+            int seasonIndex = SeasonWindow.Show(tvShow);
+            if (seasonIndex != 0 && seasonIndex != prevIndex) Update(seasonIndex);
+            mainGrid.Opacity = 1.0;
+        }
+
+        internal void Update(int seasonIndex)
+        {
+            scrollViewer.ScrollToHome();
+            this.EpisodeListView.ItemsSource = null;
+            Episode[] episodes;
+
+            if (seasonIndex == -1)
+            {
+                this.seasonButton.Content = "Extras";
+                episodes = tvShow.Seasons[tvShow.Seasons.Length - 1].Episodes;
+            }
+            else
+            {
+                this.seasonButton.Content = "Season " + seasonIndex.ToString();
+                episodes = tvShow.Seasons[seasonIndex - 1].Episodes;
+            }
+
+            TvShowWindow.episodes = CreateEpisodeListItems(episodes);
+            this.EpisodeListView.ItemsSource = TvShowWindow.episodes;
+        }
+
+        private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
+        {
+            this.PlayOverlay.Opacity = 1.0;
+        }
+
+        private void Backdrop_MouseLeave(object sender, MouseEventArgs e)
+        {
+            this.PlayOverlay.Opacity = 0;
+        }
+
+        private void Play_Click(object sender, MouseButtonEventArgs e)
+        {
+            if (tvShow.LastEpisode == null)
+            {
+                PlayerWindow.Show(tvShow.Seasons[0].Episodes[0], this);
+            }
+            else
+            {
+                PlayerWindow.Show(tvShow.LastEpisode, this);
+            }
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
         }
 
         internal static void PlayRandomCartoons()
@@ -255,6 +257,7 @@ namespace LVP_WPF.Windows
             {
                 fill = true;
             }
+
             if (seasons[0] == 0)
             {
                 tvShow.LastEpisode = null;

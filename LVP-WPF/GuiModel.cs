@@ -17,53 +17,40 @@ namespace LVP_WPF
     public partial class GuiModel
     {
         [ObservableProperty]
-        private int progressBarValue;
+        private int progressBarValue = 5;
         [ObservableProperty]
-        private int progressBarMax;
+        private int progressBarMax = 100;
         [ObservableProperty]
-        ObservableCollection<MainWindowBox> movies;
+        ObservableCollection<MainWindowBox> movies = new ObservableCollection<MainWindowBox>();
         [ObservableProperty]
-        ObservableCollection<MainWindowBox> tvShows;
+        ObservableCollection<MainWindowBox> tvShows = new ObservableCollection<MainWindowBox>();
         [ObservableProperty]
-        ObservableCollection<MainWindowBox> cartoons;
+        ObservableCollection<MainWindowBox> cartoons = new ObservableCollection<MainWindowBox>();
 
         static private bool loggingEnabled;
         static private string logPath;
-        public bool isPlaying;
+        public bool isPlaying = false;
+        public bool scrollViewerAdjust = false;
         public Button mainCloseButton;
         public Button tvMovieCloseButton;
         public Button playerCloseButton;
-        public Dictionary<int, Media> mediaDict;
+        public Dictionary<int, Media> mediaDict = new Dictionary<int, Media>();
         public Grid mainGrid;
+        public PlayerWindow playerWindow;
         public ScrollViewer mainScrollViewer;
         public ScrollViewer episodeScrollViewer;
         public ScrollViewer seasonScrollViewer;
-        public bool scrollViewerAdjust = false;
-        public PlayerWindow playerWindow;
 
         public GuiModel()
         {
-            progressBarValue = 5;
-            progressBarMax = 100;
-            movies = new ObservableCollection<MainWindowBox>();
-            tvShows = new ObservableCollection<MainWindowBox>();
-            cartoons = new ObservableCollection<MainWindowBox>();
-
             loggingEnabled = bool.Parse(ConfigurationManager.AppSettings["LoggingEnabled"]);
             logPath = ConfigurationManager.AppSettings["LogPath"] + "LVP-WPF.log";
-            if (logPath.Contains("%USERPROFILE%"))
-            {
-                logPath = logPath.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
-            }
-
-            mediaDict = new Dictionary<int, Media>();
-            isPlaying = false;
+            if (logPath.Contains("%USERPROFILE%")) { logPath = logPath.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
         }
 
         public static void DoEvents()
         {
-            Application.Current.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background,
-                                                  new Action(delegate { }));
+            Application.Current.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background, new Action(delegate { }));
         }
 
         // https://stackoverflow.com/questions/37247724/find-controls-placed-inside-listview-wpf
@@ -81,9 +68,13 @@ namespace LVP_WPF
                     }
                 }
             }
+
             Visual foundElement = null;
             if (visualElement is FrameworkElement)
+            {
                 (visualElement as FrameworkElement).ApplyTemplate();
+            }
+
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(visualElement); i++)
             {
                 Visual visual = VisualTreeHelper.GetChild(visualElement, i) as Visual;
@@ -96,22 +87,13 @@ namespace LVP_WPF
 
         public static DependencyObject GetScrollViewer(DependencyObject o)
         {
-            if (o is ScrollViewer)
-            { return o; }
-
+            if (o is ScrollViewer) return o;
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(o); i++)
             {
-                var child = VisualTreeHelper.GetChild(o, i);
-
-                var result = GetScrollViewer(child);
-                if (result == null)
-                {
-                    continue;
-                }
-                else
-                {
-                    return result;
-                }
+                DependencyObject? child = VisualTreeHelper.GetChild(o, i);
+                DependencyObject? result = GetScrollViewer(child);
+                if (result == null) continue;
+                else return result;
             }
             return null;
         }
@@ -159,6 +141,7 @@ namespace LVP_WPF
         private int id;
         private string description;
         private string name;
+
         public string Description
         {
             get { return description; }
@@ -205,6 +188,7 @@ namespace LVP_WPF
         private string name;
         private BitmapImage image;
         private BitmapImage overlay;
+
         [ObservableProperty]
         private int progress;
         [ObservableProperty]

@@ -30,15 +30,13 @@ namespace LVP_WPF
         private static List<string> tvPathList = new List<string>();
         private static List<string> moviePathList = new List<string>();
         private static int mediaCount = 0;
+        public static bool update;
 
         internal static async Task Initialize(ProgressBar p)
         {
             string driveString = ConfigurationManager.AppSettings["Drives"];
             string[] drives = driveString.Split(';');
-            foreach (string drive in drives)
-            {
-                ProcessRootDirectory(drive);
-            }
+            foreach (string drive in drives) { ProcessRootDirectory(drive); }
 
             MainWindow.model = new MainModel(moviePathList.Count, tvPathList.Count);
             for (int i = 0; i < moviePathList.Count; i++)
@@ -53,9 +51,10 @@ namespace LVP_WPF
             }
 
             MainWindow.gui.ProgressBarMax = mediaCount;
-            bool update = CheckForUpdates();
+            update = CheckForUpdates();
             if (update)
             {
+                //To-do: file extension changes
                 await BuildCache();
             } 
             else
@@ -203,7 +202,6 @@ namespace LVP_WPF
                     tvShow.Poster = await DownloadImage(tvShow.Poster, tvShow.Name, false);
                 }
             }
-
             await BuildSeasonCache(tvShow, client);
         }
 
@@ -461,10 +459,7 @@ namespace LVP_WPF
         internal static string ReplaceFirst(string text, string search, string replace)
         {
             int pos = text.IndexOf(search);
-            if (pos < 0)
-            {
-                return text;
-            }
+            if (pos < 0) return text;
             return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
         }
 
@@ -488,10 +483,7 @@ namespace LVP_WPF
                 filePath = dirPath + imagePath.Replace("/", "\\");
             }
 
-            if (!Directory.Exists(dirPath))
-            {
-                Directory.CreateDirectory(dirPath);
-            }
+            if (!Directory.Exists(dirPath)) Directory.CreateDirectory(dirPath);
 
             if (!File.Exists(filePath))
             {
@@ -531,10 +523,7 @@ namespace LVP_WPF
                 prevMedia = JsonConvert.DeserializeObject<MainModel>(jsonString);
             }
 
-            if (prevMedia == null)
-            {
-                return true;
-            }
+            if (prevMedia == null) return true;
 
             bool result = !MainWindow.model.Compare(prevMedia);
             if (!result)
@@ -620,6 +609,7 @@ namespace LVP_WPF
                 string[] episodeNameNumber = namePath[namePath.Length - 1].Split('%');
                 int fileSuffixIndex;
                 string episodeName;
+
                 if (episodeNameNumber.Length == 1)
                 {
                     fileSuffixIndex = episodeNameNumber[0].LastIndexOf('.');
@@ -634,6 +624,7 @@ namespace LVP_WPF
                 Episode ep = new Episode(-1, episodeName, entry);
                 extras.Add(ep);
             }
+
             string[] subDirs = Directory.GetDirectories(targetDir);
             foreach (string subDir in subDirs)
             {
@@ -730,6 +721,7 @@ namespace LVP_WPF
         }
     }
 }
+
 public static class StringExtension
 {
     private const string targetSingleQuoteSymbol = "'";
