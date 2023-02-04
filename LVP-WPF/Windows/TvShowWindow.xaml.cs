@@ -24,6 +24,7 @@ namespace LVP_WPF.Windows
         static internal int cartoonLimit = 20;
         static internal List<TvShow> cartoons = new List<TvShow>();
         static internal List<Episode> cartoonShuffleList = new List<Episode>();
+        static internal EpisodeWindowBox[] episodes;
 
         public static void Show(TvShow t)
         {
@@ -36,14 +37,8 @@ namespace LVP_WPF.Windows
             window.seasonButton.Content = "Season " + tvShow.CurrSeason.ToString();
             Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
             window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
-
-            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(window.Backdrop);
-            window.EpisodeListView.ItemsSource = CreateEpisodeListItems(episodes);
-            MainWindow.tcpWorker.layoutPoint.tvControlList.Insert(1, window.Description);
-            MainWindow.tcpWorker.layoutPoint.tvControlList.Insert(2, window.seasonButton);
-
-            MainWindow.tcpWorker.layoutPoint.Select("TvShowWindow");
-            MainWindow.gui.tvMovieCloseButton = window.closeButton;
+            TvShowWindow.episodes = CreateEpisodeListItems(episodes);
+            window.EpisodeListView.ItemsSource = TvShowWindow.episodes;
             window.ShowDialog();
         }
 
@@ -62,6 +57,23 @@ namespace LVP_WPF.Windows
         {
             DataContext = this;
             InitializeComponent();
+        }
+
+        private void TvShowWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(this.tvBackdrop);
+            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(this.seasonButton);
+            MainWindow.gui.episodeScrollViewer = this.scrollViewer;
+            MainWindow.gui.tvMovieCloseButton = this.closeButton;
+
+            ItemContainerGenerator generator = EpisodeListView.ItemContainerGenerator;
+            for (int j = 0; j < episodes.Length; j++)
+            {
+                ListViewItem container = (ListViewItem)generator.ContainerFromItem(episodes[j]);
+                Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
+                MainWindow.tcpWorker.layoutPoint.tvControlList.Add(img);
+            }
+            MainWindow.tcpWorker.layoutPoint.Select("TvShowWindow");
         }
 
         private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
@@ -114,7 +126,7 @@ namespace LVP_WPF.Windows
 
         internal void Update(int seasonIndex)
         {
-            scrollView.ScrollToHome();
+            scrollViewer.ScrollToHome();
             this.EpisodeListView.ItemsSource = null;
             Episode[] episodes;
             if (seasonIndex == -1)
@@ -127,7 +139,8 @@ namespace LVP_WPF.Windows
                 this.seasonButton.Content = "Season " + seasonIndex.ToString();
                 episodes = tvShow.Seasons[seasonIndex - 1].Episodes;
             }
-            this.EpisodeListView.ItemsSource = CreateEpisodeListItems(episodes);
+            TvShowWindow.episodes = CreateEpisodeListItems(episodes);
+            this.EpisodeListView.ItemsSource = TvShowWindow.episodes;
         }
 
         static private EpisodeWindowBox[] CreateEpisodeListItems(Episode[] episodes)
@@ -158,8 +171,6 @@ namespace LVP_WPF.Windows
                     Overlay = Cache.LoadImage("Resources\\play.png", 960),
                     Opacity = 0
                 };
-                MainWindow.tcpWorker.layoutPoint.tvControlList.Add(episodeBoxes[i].Image);
-                
             }
             return episodeBoxes;
         }
@@ -234,7 +245,7 @@ namespace LVP_WPF.Windows
         {
             int[] seasons = ResetSeasonDialog.Show(tvShow);
             if (seasons.Length == 0) return;
-            ResetSeasons(tvShow, seasons); 
+            ResetSeasons(tvShow, seasons);
         }
 
         private void ResetSeasons(TvShow tvShow, int[] seasons)
@@ -296,6 +307,26 @@ namespace LVP_WPF.Windows
                 tvShow.LastEpisode = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0];
             }
             Update(tvShow.CurrSeason);
+        }
+
+        private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            //To-do: show close button on hover if e.VerticalOffset != 0
+            if (e.VerticalOffset == 0)
+            {
+                closeButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                closeButton.Visibility = Visibility.Hidden;
+            }
+
+            if (MainWindow.gui.scrollViewerAdjust)
+            {
+                MainWindow.gui.scrollViewerAdjust = false;
+                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
+                scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
+            }
         }
     }
 }

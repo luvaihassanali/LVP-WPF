@@ -27,8 +27,6 @@ namespace LVP_WPF.Windows
             string img = movie.Backdrop == null ? "Resources\\noPrevWide.png" : movie.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);
             window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
-            MainWindow.tcpWorker.layoutPoint.Select("MovieWindow");
-            MainWindow.gui.tvMovieCloseButton = window.closeButton;
             window.ShowDialog();
         }
 
@@ -67,6 +65,13 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
+        }
+
+        private void MovieWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            MainWindow.gui.tvMovieCloseButton = this.closeButton;
+            MainWindow.tcpWorker.layoutPoint.movieBackdrop = this.movieBackdrop;
+            MainWindow.tcpWorker.layoutPoint.Select("MovieWindow", true);
         }
     }
 }

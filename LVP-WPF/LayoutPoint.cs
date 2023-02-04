@@ -86,13 +86,14 @@ namespace LVP_WPF.Windows
                     currPoint = (tvIndex, -1);
                     currControl = tvControlList[currPoint.x];
                     CenterMouseOverControl(currControl);
-                    return;
                 }
+                return;
             }
 
             if (seasonWindowActive)
             {
                 seasonWindowActive = false;
+                seasonControlList.Clear();
                 seasonWindowGrid.Clear();
                 seasonWindowControlGrid.Clear();
                 currPoint = returnPointB;
@@ -107,6 +108,9 @@ namespace LVP_WPF.Windows
                     seasonWindowActive = true;
                     BuildSeasonGrid();
                     currPoint = GetCurrSeasonPoint(seasonIndex);
+                    currControl = seasonWindowControlGrid[currPoint.x][currPoint.y];
+                    PrintGrid(); PrintControlGrid();
+                    CenterMouseOverControl(currControl);
                 }
                 if (controlName.Equals("PlayerWindow")) { playerWindowActive = true; }
             }
@@ -117,7 +121,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        internal void CloseCurrWindow()
+        internal async void CloseCurrWindow()
         {
             try
             {
@@ -131,8 +135,10 @@ namespace LVP_WPF.Windows
                 if (playerWindowActive)
                 {
                     playerWindowActive = false;
+                    //gui.playerWindow.overlayGrid.Visibility = Visibility.Visible;
                     CenterMouseOverControl(gui.playerCloseButton);
                     TcpSerialListener.DoMouseClick();
+                    await Task.Delay(500);
 
                     if (movieWindowActive)
                     {
@@ -200,28 +206,14 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void MoveTvPoint(int rX)
+        private void MoveTvPoint(int x)
         {
-            int newIndex;
-            if (currPoint.x == 0 && rX == 1)
-            {
-                newIndex = 2;
-            }
-            else if (currPoint.x == 2 && rX == -1)
-            {
-                newIndex = 0;
-            }
-            else
-            {
-                newIndex = currPoint.x + rX;
-            }
-
+            int newIndex = currPoint.x + x;
             if (newIndex < 0 || newIndex >= tvControlList.Count) return;
 
             currPoint = (newIndex, currPoint.y);
             currControl = tvControlList[newIndex];
-            // To-do: scrolling ?
-            CenterMouseOverControl(currControl);
+            CenterMouseOverControl(currControl, newIndex, MainWindow.gui.episodeScrollViewer);
         }
 
         private (int x, int y) GetCurrSeasonPoint(int seasonFormIndex)
@@ -270,9 +262,7 @@ namespace LVP_WPF.Windows
             seasonWindowGrid[currPoint.x][currPoint.y] = 1;
             currPoint = newPoint;
             currControl = seasonWindowControlGrid[currPoint.x][currPoint.y];
-            // To-do: scrolling ?
-            CenterMouseOverControl(currControl);
-            //PrintGrid(); PrintControlGrid();
+            CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.seasonScrollViewer);
         }
 
         public (int x, int y) NextSeasonGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
@@ -403,7 +393,7 @@ namespace LVP_WPF.Windows
             mainWindowGrid[currPoint.x][currPoint.y] = 1;
             currPoint = newPoint;
             currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
-            CenterMouseOverControl(currControl, currPoint.x);
+            CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.mainScrollViewer);
             PrintGrid();
         }
 
@@ -502,7 +492,7 @@ namespace LVP_WPF.Windows
                         for (int j = 0; j < gui.Movies.Count; j++)
                         {
                             ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.Movies[j]);
-                            Image img = GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
+                            Image img = GuiModel.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
                             mainWindowControlList.Add(img);
                         }
                         break;
@@ -510,7 +500,7 @@ namespace LVP_WPF.Windows
                         for (int j = 0; j < gui.TvShows.Count; j++)
                         {
                             ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.TvShows[j]);
-                            Image img = GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
+                            Image img = GuiModel.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
                             mainWindowControlList.Add(img);
                         }
                         break;
@@ -518,7 +508,7 @@ namespace LVP_WPF.Windows
                         for (int j = 0; j < gui.Cartoons.Count; j++)
                         {
                             ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.Cartoons[j]);
-                            Image img = GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
+                            Image img = GuiModel.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
                             mainWindowControlList.Add(img);
                         }
                         break;
@@ -579,7 +569,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void CenterMouseOverControl(object control, int row = -1)
+        private void CenterMouseOverControl(object control, int row = -1, ScrollViewer scrollViewer = null)
         {
             if (control as Button != null)
             {
@@ -589,50 +579,47 @@ namespace LVP_WPF.Windows
             else if (control as Image != null)
             {
                 Image image = (Image)control;
-                CenterMouseOverImage(image, row);
+                CenterMouseOverImage(image, row, scrollViewer);
             }
         }
 
-        private void CenterMouseOverImage(Image image, int row = -1)
+        private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null)
         {
             image.Dispatcher.Invoke(() =>
             {
-                if (row == 0)
+                if (scrollViewer != null)
                 {
-                    gui.mainScrollViewer.ScrollToHome();
-                } 
-                else if (row == mainWindowGrid.Count - 1)
-                {
-                    gui.mainScrollViewer.ScrollToBottom();
-                } 
-                else
-                {
-                    gui.mainScrollViewerAdjust = true;
-                    image.BringIntoView();
-                    //gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToVerticalOffset(gui.mainScrollViewerVOffset + 300); });
+                    if (row == 0)
+                    {
+                        scrollViewer.ScrollToHome();
+                    }
+                    else if (row == mainWindowGrid.Count - 1)
+                    {
+                        scrollViewer.ScrollToBottom();
+                    }
+                    else
+                    {
+                        gui.scrollViewerAdjust = true;
+                        image.BringIntoView();
+                    }
+                    GuiModel.DoEvents();
                 }
-                DoEvents();
 
                 Point target = image.PointToScreen(new Point(0, 0));
-                target.X += image.Width / 2;
-                target.Y += image.Height / 2; 
+                target.X += image.ActualWidth / 2;
+                target.Y += image.ActualHeight / 2; 
                 TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
 
-        public static void DoEvents()
-        {
-            Application.Current.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background,
-                                                  new Action(delegate { }));
-        }
 
         private void CenterMouseOverButton(Button button)
         {
             button.Dispatcher.Invoke(() =>
             {
                 Point target = button.PointToScreen(new Point(0, 0));
-                target.X += button.Width / 2;
-                target.Y += button.Height / 2;
+                target.X += button.ActualWidth / 2;
+                target.Y += button.ActualHeight / 2;
                 TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
@@ -659,7 +646,7 @@ namespace LVP_WPF.Windows
         private void PrintControlGrid()
         {
             List<Image[]> ctrl = seasonWindowActive ? seasonWindowControlGrid : mainWindowControlGrid;
-            foreach (Image[] row in mainWindowControlGrid)
+            foreach (Image[] row in ctrl)
             {
                 Trace.Write("[ ");
                 for (int i = 0; i < row.Length; i++)
@@ -686,32 +673,5 @@ namespace LVP_WPF.Windows
             Trace.WriteLine(Environment.NewLine);
         }
 
-        // https://stackoverflow.com/questions/37247724/find-controls-placed-inside-listview-wpf
-        public static Visual GetChildrenByType(Visual visualElement, Type typeElement, string nameElement)
-        {
-            if (visualElement == null) return null;
-            if (visualElement.GetType() == typeElement)
-            {
-                FrameworkElement fe = visualElement as FrameworkElement;
-                if (fe != null)
-                {
-                    if (fe.Name == nameElement)
-                    {
-                        return fe;
-                    }
-                }
-            }
-            Visual foundElement = null;
-            if (visualElement is FrameworkElement)
-                (visualElement as FrameworkElement).ApplyTemplate();
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(visualElement); i++)
-            {
-                Visual visual = VisualTreeHelper.GetChild(visualElement, i) as Visual;
-                foundElement = GetChildrenByType(visual, typeElement, nameElement);
-                if (foundElement != null)
-                    break;
-            }
-            return foundElement;
-        }
     }
 }

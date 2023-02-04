@@ -64,7 +64,7 @@
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Vertical">
-                                <Image Name="mainGridImage" Margin="0,3,0,3" Width="300" Height="450" Source="{Binding Image}" Stretch="Fill" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Image Name="mainGridImage" Margin="0,3,0,3" Width="300" Height="450" Source="{Binding Image}" Stretch="Fill"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListView.ItemTemplate>

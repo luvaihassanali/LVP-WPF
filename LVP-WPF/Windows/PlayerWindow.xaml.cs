@@ -30,10 +30,7 @@ namespace LVP_WPF.Windows
             PlayerWindow window = new PlayerWindow();
             currMedia = m;
             tvShowWindow = tw;
-            MainWindow.tcpWorker.layoutPoint.Select("PlayerWindow");
             MainWindow.gui.isPlaying = true;
-            MainWindow.gui.playerWindow = window;
-            MainWindow.gui.playerCloseButton = window.closeButton;
             window.ShowDialog();
             MainWindow.gui.isPlaying = false;
         }
@@ -75,8 +72,8 @@ namespace LVP_WPF.Windows
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
             GuiModel.Log("Play: " + currMedia.Path);
-            bool res = mediaPlayer.Play(currVLCMedia);
-            if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
+            //bool res = mediaPlayer.Play(currVLCMedia);
+            //if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
 
             if (currMedia as Episode != null)
             {
@@ -86,6 +83,11 @@ namespace LVP_WPF.Windows
                     mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(episode.SavedTime));
                 }
             }
+
+            MainWindow.gui.playerWindow = this;
+            MainWindow.gui.playerCloseButton = this.closeButton;
+            TcpSerialListener.SetCursorPos(500, (int)(this.Height * 4));
+            MainWindow.tcpWorker.layoutPoint.Select("PlayerWindow");
         }
 
         private void MediaPlayer_EndReached(object? sender, EventArgs e)

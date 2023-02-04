@@ -28,7 +28,8 @@ namespace LVP_WPF
                 mouseHubKilled = true;
             }
 
-#if RELEASE
+#if DEBUG
+            this.WindowStyle = WindowStyle.None;
             this.Height = 1050;
             this.Width = 1920;
 #else
@@ -124,6 +125,7 @@ namespace LVP_WPF
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
+            //To-do: show close button on hover if e.VerticalOffset != 0
             if (e.VerticalOffset == 0)
             {
                 closeButton.Visibility = Visibility.Visible;
@@ -133,9 +135,9 @@ namespace LVP_WPF
                 closeButton.Visibility = Visibility.Hidden;
             }
             
-            if (gui.mainScrollViewerAdjust)
+            if (gui.scrollViewerAdjust)
             {
-                gui.mainScrollViewerAdjust = false;
+                gui.scrollViewerAdjust = false;
                 double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
                 scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
             }

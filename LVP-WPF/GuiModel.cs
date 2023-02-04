@@ -36,7 +36,9 @@ namespace LVP_WPF
         public Dictionary<int, Media> mediaDict;
         public Grid mainGrid;
         public ScrollViewer mainScrollViewer;
-        public bool mainScrollViewerAdjust = false;
+        public ScrollViewer episodeScrollViewer;
+        public ScrollViewer seasonScrollViewer;
+        public bool scrollViewerAdjust = false;
         public PlayerWindow playerWindow;
 
         public GuiModel()
@@ -56,6 +58,62 @@ namespace LVP_WPF
 
             mediaDict = new Dictionary<int, Media>();
             isPlaying = false;
+        }
+
+        public static void DoEvents()
+        {
+            Application.Current.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.Background,
+                                                  new Action(delegate { }));
+        }
+
+        // https://stackoverflow.com/questions/37247724/find-controls-placed-inside-listview-wpf
+        public static Visual GetChildrenByType(Visual visualElement, Type typeElement, string nameElement)
+        {
+            if (visualElement == null) return null;
+            if (visualElement.GetType() == typeElement)
+            {
+                FrameworkElement fe = visualElement as FrameworkElement;
+                if (fe != null)
+                {
+                    if (fe.Name == nameElement)
+                    {
+                        return fe;
+                    }
+                }
+            }
+            Visual foundElement = null;
+            if (visualElement is FrameworkElement)
+                (visualElement as FrameworkElement).ApplyTemplate();
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(visualElement); i++)
+            {
+                Visual visual = VisualTreeHelper.GetChild(visualElement, i) as Visual;
+                foundElement = GetChildrenByType(visual, typeElement, nameElement);
+                if (foundElement != null)
+                    break;
+            }
+            return foundElement;
+        }
+
+        public static DependencyObject GetScrollViewer(DependencyObject o)
+        {
+            if (o is ScrollViewer)
+            { return o; }
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(o); i++)
+            {
+                var child = VisualTreeHelper.GetChild(o, i);
+
+                var result = GetScrollViewer(child);
+                if (result == null)
+                {
+                    continue;
+                }
+                else
+                {
+                    return result;
+                }
+            }
+            return null;
         }
 
         public static void Log(string message)

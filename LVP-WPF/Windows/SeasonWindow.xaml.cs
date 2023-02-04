@@ -10,6 +10,8 @@ namespace LVP_WPF.Windows
     public partial class SeasonWindow : Window
     {
         private static int seasonIndex = 0;
+        private static SeasonWindowBox[] seasons;
+        private static ScrollViewer scrollViewer;
 
         public static int Show(TvShow tvShow)
         {
@@ -33,8 +35,8 @@ namespace LVP_WPF.Windows
                     Image = Cache.LoadImage(img, 150)
                 };
             }
-            seasonWindow.SeasonListView.ItemsSource = seasonBoxes;
-            MainWindow.tcpWorker.layoutPoint.Select("SeasonWindow");
+            seasons = seasonBoxes;
+            seasonWindow.SeasonListView.ItemsSource = seasons;
             seasonWindow.ShowDialog();
             return seasonIndex;
         }
@@ -54,8 +56,27 @@ namespace LVP_WPF.Windows
 
         private void SeasonWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            //layoutController.Select("seasonButton");
-            //Loading Cursor?
+            ItemContainerGenerator generator = SeasonListView.ItemContainerGenerator;
+            for (int j = 0; j < seasons.Length; j++)
+            {
+                ListViewItem container = (ListViewItem)generator.ContainerFromItem(seasons[j]);
+                Image img = GuiModel.GetChildrenByType(container, typeof(Image), "seasonImage") as Image;
+                MainWindow.tcpWorker.layoutPoint.seasonControlList.Add(img);
+            }
+            scrollViewer = (ScrollViewer)GuiModel.GetScrollViewer(SeasonListView);
+            scrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
+            MainWindow.gui.seasonScrollViewer = scrollViewer;
+            MainWindow.tcpWorker.layoutPoint.Select("SeasonWindow");
+        }
+
+        private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (MainWindow.gui.scrollViewerAdjust)
+            {
+                MainWindow.gui.scrollViewerAdjust = false;
+                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
+                scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
+            }
         }
     }
 }

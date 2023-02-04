@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
         Title="MovieWindow" Background="Black" Height="1050" Width="1152" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI" FontSize="42">
+        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI" FontSize="42" Loaded="MovieWindow_Loaded">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="648"/>
@@ -22,7 +22,7 @@
             </Button.Resources>
         </Button>
         <Image Name="PlayOverlay" Panel.ZIndex="2" Opacity="0" PreviewMouseLeftButtonDown="Play_Click" MouseEnter="Backdrop_MouseEnter" MouseLeave="Backdrop_MouseLeave" Source="{Binding Overlay}"/>
-        <Image Source="{Binding Backdrop}"/>
+        <Image Name="movieBackdrop" Source="{Binding Backdrop}"/>
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>

@@ -376,7 +376,11 @@ namespace LVP_WPF
                         layoutPoint.Move(layoutPoint.down);
                         break;
                     case "enter":
-                        if (layoutPoint.mainWindowActive)
+                        if (layoutPoint.playerWindowActive)
+                        {
+                            gui.playerWindow.PlayPause_TcpSerialListener();
+                        }
+                        else if (layoutPoint.mainWindowActive)
                         {
                             DoMouseClick();
                         }
