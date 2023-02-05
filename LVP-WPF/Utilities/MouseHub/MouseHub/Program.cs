@@ -65,12 +65,12 @@ namespace MouseMoverClient
             SetWindowLong(MyConsole, GWL_EXSTYLE, GetWindowLong(MyConsole, GWL_EXSTYLE) | WS_EX_LAYERED); // https://stackoverflow.com/questions/24110600/transparent-console-dllimport
             SetLayeredWindowAttributes(MyConsole, 0, 128, LWA_ALPHA); // Opacity = 0.5 = (255/2) = 128
 
-            InitializeSerialPort();
-            StartListener();
-
             pollingTimer = new System.Timers.Timer(6000); // esp timeout is 5s
             pollingTimer.Elapsed += OnTimedEvent;
             pollingTimer.AutoReset = false;
+
+            InitializeSerialPort();
+            StartListener();
 
             if (tcpClient != null)
             {

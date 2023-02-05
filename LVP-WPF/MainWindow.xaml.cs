@@ -27,6 +27,10 @@ namespace LVP_WPF
                 mouseHubProcess[0].Kill();
                 mouseHubKilled = true;
             }
+#if DEBUG
+            this.WindowStyle = WindowStyle.SingleBorderWindow;
+#endif
+
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)

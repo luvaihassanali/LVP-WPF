@@ -43,7 +43,7 @@ namespace LVP_WPF
         private int joystickY;
         private GuiModel gui;
         public LayoutPoint layoutPoint;
-        private DispatcherTimer pollingTimer;
+        static System.Timers.Timer pollingTimer = null;
         private SerialPort serialPort;
         private bool serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
         private TcpClient tcpClient;
@@ -80,8 +80,8 @@ namespace LVP_WPF
         {
             if (pollingTimer != null)
             {
-                if (pollingTimer.IsEnabled) pollingTimer.Stop();
-                pollingTimer.IsEnabled = false;
+                pollingTimer.Stop();
+                pollingTimer.Dispose();
                 pollingTimer = null;
             }
 
@@ -93,7 +93,9 @@ namespace LVP_WPF
 
             if (workerThread != null)
             {
+#pragma warning disable SYSLIB0006 // Type or member is obsolete
                 workerThread.Abort();
+#pragma warning restore SYSLIB0006 // Type or member is obsolete
                 workerThread.Join();
                 workerThread = null;
             }
@@ -101,10 +103,6 @@ namespace LVP_WPF
 
         private void StartListener()
         {
-            pollingTimer = new DispatcherTimer();
-            pollingTimer.Interval = TimeSpan.FromSeconds(6);
-            pollingTimer.Tick += PollingTimer_Tick;
-
             while (workerThreadRunning && (esp8266Enabled || serialPortEnabled))
             {
                 PollConnections();
@@ -160,6 +158,7 @@ namespace LVP_WPF
 
                 result = tcpClient.BeginConnect(esp8266ServerIp, esp8266ServerPort, null, null);
                 success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(1));
+                
                 while (!success)
                 {
                     DebugLog("Cannot connect to server. Trying again");
@@ -182,6 +181,7 @@ namespace LVP_WPF
                 stream.Write(data, 0, data.Length);
                 DebugLog("Sent init");
                 StartTimer();
+
                 while (true)
                 {
                     int i;
@@ -314,7 +314,10 @@ namespace LVP_WPF
 
             for (int i = 0; i < 15; i++)
             {
-                Point currPos = Mouse.GetPosition(Application.Current.MainWindow);
+                POINT currPos;
+                GetCursorPos(out currPos);
+                uint X = (uint)currPos.X;
+                uint Y = (uint)currPos.Y;
                 SetCursorPos((int)currPos.X + joystickX / divisor, (int)currPos.Y + joystickY / divisor);
                 await Task.Delay(1);
             }
@@ -458,22 +461,27 @@ namespace LVP_WPF
 
         private void StartTimer()
         {
-            pollingTimer.IsEnabled = true;
+            if (pollingTimer == null)
+            {
+                pollingTimer = new System.Timers.Timer(6000); // esp timeout is 5s
+                pollingTimer.Elapsed += PollingTimer_Tick;
+                pollingTimer.AutoReset = false;
+            }
+            pollingTimer.Enabled = true;
             pollingTimer.Start();
         }
 
         private void StopTimer()
         {
-            pollingTimer.IsEnabled = false;
+            pollingTimer.Enabled = false;
             pollingTimer.Stop();
         }
 
-        private void PollingTimer_Tick(object? sender, EventArgs e)
+        private void PollingTimer_Tick(Object source, System.Timers.ElapsedEventArgs e)
         {
             DebugLog("Polling timer stopped");
-            pollingTimer.IsEnabled = false;
+            pollingTimer.Enabled = false;
             pollingTimer.Stop();
-
             StopThread();
             StartThread();
         }
