@@ -24,6 +24,9 @@ namespace LVP_WPF
         [DllImport("User32.dll")]
         public static extern bool SetCursorPos(int X, int Y);
 
+        [DllImport("user32.dll")]
+        private static extern int ShowCursor(bool show);
+
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
 
@@ -38,7 +41,7 @@ namespace LVP_WPF
         private int esp8266ServerPort = 3000;
         private bool esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
         private bool workerThreadRunning = false;
-        private bool esp8266HideCursor = bool.Parse(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
+        private bool hideCursor = bool.Parse(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
         private int joystickX;
         private int joystickY;
         private GuiModel gui;
@@ -53,7 +56,7 @@ namespace LVP_WPF
         {
             gui = g;
             layoutPoint = new LayoutPoint(g);
-            //To-do: Cursor hide
+            if (hideCursor) Mouse.OverrideCursor = Cursors.None;
         }
 
         public void StartThread()
@@ -64,6 +67,7 @@ namespace LVP_WPF
                 if (workerThread == null)
                 {
                     workerThread = new Thread(new ThreadStart(this.StartListener));
+                    workerThread.SetApartmentState(ApartmentState.STA);
                     workerThread.IsBackground = true;
                     workerThread.Name = "LVP_WPF TcpSerialListener thread";
                     workerThreadRunning = true;
@@ -196,18 +200,7 @@ namespace LVP_WPF
                         if (buffer.Contains("initack"))
                         {
                             DebugLog("initack received");
-                            //To-do:
-                            /*if (MainForm.hideCursor)
-                            {
-                                mainForm.Invoke(new MethodInvoker(delegate
-                                {
-                                    for (int j = 0; j < MainForm.cursorCount; j++)
-                                    {
-                                        Cursor.Show();
-                                    }
-                                    MainForm.cursorCount = 0;
-                                }));
-                            }*/
+                            if (hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
                             StopTimer();
                             StartTimer();
                         }
@@ -250,19 +243,8 @@ namespace LVP_WPF
 
         private void ParseTcpDataIn(string data)
         {
-            //To-do:
-            /*if (MainForm.cursorCount != 0)
-            {
-                mainForm.Invoke(new MethodInvoker(delegate
-                {
-                    for (int j = 0; j < MainForm.cursorCount; j++)
-                    {
-                        Cursor.Show();
-                    }
-                    MainForm.cursorCount = 0;
-                }));
-            }*/
-
+            if (hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
+            
             string[] dataSplit = data.Split(',');
             if (dataSplit.Length > 6)
             {
@@ -387,7 +369,7 @@ namespace LVP_WPF
                 string msg = serialPort.ReadLine();
                 msg = msg.Replace("\r", "");
                 GuiModel.Log(msg);
-                //To-do: Cursor hide
+                if (hideCursor) Mouse.OverrideCursor = Cursors.None;
                 switch (msg)
                 {
                     case "left":

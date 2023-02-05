@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -108,6 +109,16 @@ namespace LVP_WPF
                     Debug.WriteLine("{0} - {1}: {2}", DateTime.Now.ToString("dd-MM-yy HH:mm:ss.fff"), (new StackTrace()).GetFrame(1).GetMethod().Name, message);
                 }
             }
+        }
+
+        static public void ShowLoadingCursor()
+        {
+            Mouse.OverrideCursor = Cursors.Wait;
+        }
+
+        static public void HideLoadingCursor()
+        {
+            Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
         }
     }
 
