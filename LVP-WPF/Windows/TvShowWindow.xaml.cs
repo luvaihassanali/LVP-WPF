@@ -52,6 +52,7 @@ namespace LVP_WPF.Windows
         private BitmapImage backdrop;
         [ObservableProperty]
         private BitmapImage overlay;
+        private double scrollViewerOffset = 0;
 
         public TvShowWindow()
         {
@@ -314,7 +315,7 @@ namespace LVP_WPF.Windows
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            //To-do: show close button on hover if e.VerticalOffset != 0
+            scrollViewerOffset = e.VerticalOffset;
             if (e.VerticalOffset == 0)
             {
                 closeButton.Visibility = Visibility.Visible;
@@ -329,6 +330,19 @@ namespace LVP_WPF.Windows
                 MainWindow.gui.scrollViewerAdjust = false;
                 double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
                 scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
+            }
+        }
+
+        private void TvShowWindow_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            if (e.Delta > 0)
+            {
+                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset - 300);
+            }
+            else
+            {
+
+                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
             }
         }
     }

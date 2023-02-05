@@ -41,6 +41,8 @@ namespace LVP_WPF.Windows
             return seasonIndex;
         }
 
+        private double scrollViewerOffset = 0;
+
         public SeasonWindow()
         {
             DataContext = this;
@@ -71,11 +73,25 @@ namespace LVP_WPF.Windows
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
+            scrollViewerOffset = e.VerticalOffset;
             if (MainWindow.gui.scrollViewerAdjust)
             {
                 MainWindow.gui.scrollViewerAdjust = false;
                 double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
                 scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
+            }
+        }
+
+        private void Window_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (e.Delta > 0)
+            {
+                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset - 300);
+            }
+            else
+            {
+
+                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
             }
         }
     }

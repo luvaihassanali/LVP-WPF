@@ -50,18 +50,17 @@ namespace LVP_WPF
                 MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
             }
 
-            MainWindow.gui.ProgressBarMax = mediaCount;
             update = CheckForUpdates();
             if (update)
             {
-                //To-do: file extension changes
+                //To-do: Detect file extension changes
+                MainWindow.gui.ProgressBarMax = mediaCount;
                 await BuildCache();
             } 
             else
             {
 #if RELEASE
-                //To-do: make <= not mediaCount
-                for (int i = 0; i <= mediaCount; i++)
+                for (int i = 1; i <= 100; i++)
                 {
                     await Task.Delay(1);
                     MainWindow.gui.ProgressBarValue = i;
@@ -730,7 +729,7 @@ public static class StringExtension
     private const string closeSingleQuoteSymbol = "â€™";
     private const string frenchAccentAigu = "Ã©";
     private const string frenchAccentGrave = "Ã";
-    //To-do: look at that 70s show/other descriptions, might have missed
+
     public static string fixBrokenQuotes(this string str)
     {
         return str.Replace(genericSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(openSingleQuoteSymbol, targetSingleQuoteSymbol)

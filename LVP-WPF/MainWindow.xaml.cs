@@ -1,22 +1,35 @@
 ﻿using LVP_WPF.Windows;
+using Microsoft.Win32;
 using System;
 using System.Diagnostics;
+using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace LVP_WPF
 {
     public partial class MainWindow : Window
     {
+        [DllImport("user32.dll", EntryPoint = "SystemParametersInfo")]
+        public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, uint pvParam, uint fWinIni);
+        private const int SPI_SETCURSORS = 0x0057;
+        private const int SPIF_UPDATEINIFILE = 0x01;
+        private const int SPIF_SENDCHANGE = 0x02;
+
         static public MainModel model;
         static public GuiModel gui;
         static public TcpSerialListener tcpWorker;
         static private bool mouseHubKilled;
         private InactivityTimer inactivityTimer;
+        private double scrollViewerOffset = 0;
 
         public MainWindow()
         {
+            TcpSerialListener.SetCursorPos(500, 2000);
+            InitializeCustomCursor();
             InitializeComponent();
             gui = new GuiModel();
             DataContext = gui;
@@ -30,7 +43,6 @@ namespace LVP_WPF
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
 #endif
-
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -43,19 +55,35 @@ namespace LVP_WPF
             coffeeGif.Source = null;
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
-            
+
             gui.mainCloseButton = this.closeButton;
             gui.mainScrollViewer = this.scrollViewer;
             gui.mainGrid = this.mainGrid;
 
-            if (Cache.update) await Task.Delay(100);
+            if (Cache.update)
+            {
+                await Task.Delay(100);
+            }
+            else
+            {
+                await Task.Delay(10);
+            }
+
             tcpWorker = new TcpSerialListener(gui);
             tcpWorker.StartThread();
         }
 
         private void MainWindow_Closed(object sender, EventArgs e)
         {
+            Cache.SaveData();
+            RestoreSystemCursor();
             inactivityTimer.Dispose();
+
+            if (tcpWorker != null)
+            {
+                tcpWorker.StopThread();
+            }
+
             if (mouseHubKilled)
             {
                 string path = AppDomain.CurrentDomain.BaseDirectory;
@@ -143,7 +171,7 @@ namespace LVP_WPF
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            //To-do: show close button on hover if e.VerticalOffset != 0
+            scrollViewerOffset = e.VerticalOffset;
             if (e.VerticalOffset == 0)
             {
                 closeButton.Visibility = Visibility.Visible;
@@ -152,12 +180,50 @@ namespace LVP_WPF
             {
                 closeButton.Visibility = Visibility.Hidden;
             }
-            
+
             if (gui.scrollViewerAdjust)
             {
                 gui.scrollViewerAdjust = false;
                 double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
                 scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
+            }
+        }
+
+        private void RestoreSystemCursor()
+        {
+            string[] keys = Properties.Resources.keys_backup.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+            foreach (string key in keys)
+            {
+                string[] keyValuePair = key.Split('=');
+                Registry.SetValue(@"HKEY_CURRENT_USER\Control Panel\Cursors\", keyValuePair[0], keyValuePair[1]);
+            }
+            SystemParametersInfo(SPI_SETCURSORS, 0, 0, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+            SystemParametersInfo(0x2029, 0, 32, 0x01);
+        }
+
+        private void InitializeCustomCursor()
+        {
+            string cursorPath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
+            string[] keys = Properties.Resources.keys_custom.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+            foreach (string key in keys)
+            {
+                string[] keyValuePair = key.Split('=');
+                Registry.SetValue(@"HKEY_CURRENT_USER\Control Panel\Cursors\", keyValuePair[0], cursorPath + keyValuePair[1]);
+            }
+            SystemParametersInfo(SPI_SETCURSORS, 0, 0, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+            SystemParametersInfo(0x2029, 0, 128, 0x01);
+        }
+
+        private void MainWindow_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (e.Delta > 0)
+            {
+                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset - 300);
+            }
+            else
+            {
+
+                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
             }
         }
     }

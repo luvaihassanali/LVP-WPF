@@ -81,6 +81,65 @@ namespace LVP_WPF.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to AppStarting=C:\Windows\cursors\aero_working_xl.ani
+        ///Arrow=C:\Windows\cursors\aero_arrow_xl.cur
+        ///Hand=C:\Windows\cursors\aero_link_xl.cur
+        ///Help=C:\Windows\cursors\aero_helpsel_xl.cur
+        ///No=C:\Windows\cursors\aero_unavail_xl.cur
+        ///NWPen=C:\Windows\cursors\aero_pen_xl.cur
+        ///SizeAll=C:\Windows\cursors\aero_move_xl.cur
+        ///SizeNESW=C:\Windows\cursors\aero_nesw_xl.cur
+        ///SizeNS=C:\Windows\cursors\aero_ns_xl.cur
+        ///SizeNWSE=C:\Windows\cursors\aero_nwse_xl.cur
+        ///SizeWE=C:\Windows\cursors\aero_ew_xl.cur
+        ///UpArrow=C:\Windows\curs [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string keys_aero_xl {
+            get {
+                return ResourceManager.GetString("keys_aero_xl", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to AppStarting=C:\Windows\cursors\aero_working.ani
+        ///Arrow=C:\Windows\cursors\aero_arrow.cur
+        ///Hand=C:\Windows\cursors\aero_link.cur
+        ///Help=C:\Windows\cursors\aero_helpsel.cur
+        ///No=C:\Windows\cursors\aero_unavail.cur
+        ///NWPen=C:\Windows\cursors\aero_pen.cur
+        ///SizeAll=C:\Windows\cursors\aero_move.cur
+        ///SizeNESW=C:\Windows\cursors\aero_nesw.cur
+        ///SizeNS=C:\Windows\cursors\aero_ns.cur
+        ///SizeNWSE=C:\Windows\cursors\aero_nwse.cur
+        ///SizeWE=C:\Windows\cursors\aero_ew.cur
+        ///UpArrow=C:\Windows\cursors\aero_up.cur
+        ///Wait=C:\Windows\ [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string keys_backup {
+            get {
+                return ResourceManager.GetString("keys_backup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to AppStarting=\Resources\blue_cursors_xl\blue_working_xl_clean.ani
+        ///Arrow=\Resources\blue_cursors_xl\blue_arrow_xl.cur
+        ///Hand=\Resources\blue_cursors_xl\blue_link_xl.cur
+        ///Help=\Resources\blue_cursors_xl\blue_helpsel_xl.cur
+        ///No=\Resources\blue_cursors_xl\blue_unavail_xl.cur
+        ///NWPen=\Resources\blue_cursors_xl\blue_pen_xl.cur
+        ///SizeAll=\Resources\blue_cursors_xl\blue_move_xl.cur
+        ///SizeNESW=\Resources\blue_cursors_xl\blue_nesw_xl.cur
+        ///SizeNS=\Resources\blue_cursors_xl\blue_ns_xl.cur
+        ///SizeNWSE=\Resources\blue_cursors_ [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string keys_custom {
+            get {
+                return ResourceManager.GetString("keys_custom", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
         internal static byte[] noPrev {

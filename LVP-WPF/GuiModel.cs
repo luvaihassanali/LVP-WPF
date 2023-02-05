@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LVP_WPF.Windows;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -28,6 +29,7 @@ namespace LVP_WPF
         [ObservableProperty]
         ObservableCollection<MainWindowBox> cartoons = new ObservableCollection<MainWindowBox>();
 
+        static public bool hideCursor = true;
         static private bool loggingEnabled;
         static private string logPath;
         public bool isPlaying = false;
@@ -45,6 +47,7 @@ namespace LVP_WPF
         public GuiModel()
         {
             loggingEnabled = bool.Parse(ConfigurationManager.AppSettings["LoggingEnabled"]);
+            hideCursor = bool.Parse(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
             logPath = ConfigurationManager.AppSettings["LogPath"] + "LVP-WPF.log";
             if (logPath.Contains("%USERPROFILE%")) { logPath = logPath.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
         }

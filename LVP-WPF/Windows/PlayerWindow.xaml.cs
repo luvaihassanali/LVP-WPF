@@ -85,7 +85,7 @@ namespace LVP_WPF.Windows
 
             MainWindow.gui.playerWindow = this;
             MainWindow.gui.playerCloseButton = this.closeButton;
-            TcpSerialListener.SetCursorPos(500, (int)(this.Height * 4));
+            TcpSerialListener.SetCursorPos(500, 2000);
             MainWindow.tcpWorker.layoutPoint.Select("PlayerWindow");
         }
 
@@ -245,8 +245,7 @@ namespace LVP_WPF.Windows
 
         private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
         {
-            //To-do: logging
-            throw new NotImplementedException();
+            GuiModel.Log("VLC ERROR: " + e.ToString());
         }
 
         private void MediaPlayer_LengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e)

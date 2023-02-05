@@ -16,6 +16,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Resources\blue_cursors_xl\blue_arrow_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_busy_xl.ani" />
+    <None Remove="Resources\blue_cursors_xl\blue_ew_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_helpsel_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_link.ico" />
+    <None Remove="Resources\blue_cursors_xl\blue_link_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_move_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_nesw_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_ns_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_nwse_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_pen_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_unavail_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_up_xl.cur" />
+    <None Remove="Resources\blue_cursors_xl\blue_working_xl.ani" />
     <None Remove="Resources\coffee.gif" />
     <None Remove="Resources\extras.png" />
     <None Remove="Resources\noPrev.png" />
@@ -25,6 +39,48 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Resources\blue_cursors_xl\blue_arrow_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_busy_xl.ani">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_ew_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_helpsel_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_link.ico">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_link_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_move_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_nesw_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_ns_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_nwse_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_pen_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_unavail_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_up_xl.cur">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\blue_cursors_xl\blue_working_xl.ani">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\coffee.gif">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

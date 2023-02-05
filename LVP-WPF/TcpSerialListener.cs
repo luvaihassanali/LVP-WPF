@@ -1,7 +1,9 @@
 ﻿using LVP_WPF.Windows;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.IO.Ports;
 using System.Linq;
 using System.Net.NetworkInformation;
@@ -41,7 +43,6 @@ namespace LVP_WPF
         private int esp8266ServerPort = 3000;
         private bool esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
         private bool workerThreadRunning = false;
-        private bool hideCursor = bool.Parse(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
         private int joystickX;
         private int joystickY;
         private GuiModel gui;
@@ -56,7 +57,7 @@ namespace LVP_WPF
         {
             gui = g;
             layoutPoint = new LayoutPoint(g);
-            if (hideCursor) Mouse.OverrideCursor = Cursors.None;
+            if (GuiModel.hideCursor) Mouse.OverrideCursor = Cursors.None;
         }
 
         public void StartThread()
@@ -97,9 +98,8 @@ namespace LVP_WPF
 
             if (workerThread != null)
             {
-#pragma warning disable SYSLIB0006 // Type or member is obsolete
-                workerThread.Abort();
-#pragma warning restore SYSLIB0006 // Type or member is obsolete
+                workerThreadRunning = false;
+                workerThread.Interrupt();
                 workerThread.Join();
                 workerThread = null;
             }
@@ -125,7 +125,7 @@ namespace LVP_WPF
             byte[] buffer = Encoding.ASCII.GetBytes(data);
             int timeout = 120;
 
-            while (!connectionEstablished)
+            while (!connectionEstablished && workerThreadRunning)
             {
                 if (esp8266Enabled)
                 {
@@ -192,7 +192,7 @@ namespace LVP_WPF
                     byte[] bytes = new byte[256];
                     string buffer = null;
 
-                    while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+                    while ((i = stream.Read(bytes, 0, bytes.Length)) != 0 && workerThreadRunning)
                     {
                         buffer = Encoding.ASCII.GetString(bytes, 0, i);
                         DebugLog("Received: " + buffer.Replace("\r\n", ""));
@@ -200,7 +200,7 @@ namespace LVP_WPF
                         if (buffer.Contains("initack"))
                         {
                             DebugLog("initack received");
-                            if (hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
+                            if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
                             StopTimer();
                             StartTimer();
                         }
@@ -243,7 +243,7 @@ namespace LVP_WPF
 
         private void ParseTcpDataIn(string data)
         {
-            if (hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
+            if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
             
             string[] dataSplit = data.Split(',');
             if (dataSplit.Length > 6)
@@ -271,7 +271,7 @@ namespace LVP_WPF
 
             if (scrollBtnState == 0)
             {
-                joystickY = joystickY * 2;
+                joystickY = joystickY * 4;
                 mouse_event(MOUSEEVENTF_WHEEL, 0, 0, (uint)joystickY, 0);
             }
             else
@@ -369,7 +369,7 @@ namespace LVP_WPF
                 string msg = serialPort.ReadLine();
                 msg = msg.Replace("\r", "");
                 GuiModel.Log(msg);
-                if (hideCursor) Mouse.OverrideCursor = Cursors.None;
+                if (GuiModel.hideCursor) Mouse.OverrideCursor = Cursors.None;
                 switch (msg)
                 {
                     case "left":

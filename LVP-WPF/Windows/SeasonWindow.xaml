@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
         Title="SeasonWindow" Background="Black" Height="1050" Width="650" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" Loaded="SeasonWindow_Loaded">
+        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" Loaded="SeasonWindow_Loaded" PreviewMouseWheel="Window_PreviewMouseWheel">
     <Border BorderThickness="1">
         <Border.BorderBrush>
             <SolidColorBrush Color="White" Opacity="0.25"/>
