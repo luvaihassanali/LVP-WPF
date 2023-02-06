@@ -367,6 +367,16 @@ namespace MouseMoverClient
                         Cursor.Position = new System.Drawing.Point(960, 540);
                         DoMouseClick();
                         string launchMsg = @"
+
+
+
+
+
+
+
+
+
+
    ██╗      █████╗ ██╗   ██╗███╗   ██╗ ██████╗██╗  ██╗██╗
    ██║     ██╔══██╗██║   ██║████╗  ██║██╔════╝██║  ██║██║
    ██║     ███████║██║   ██║██╔██╗ ██║██║     ███████║██║

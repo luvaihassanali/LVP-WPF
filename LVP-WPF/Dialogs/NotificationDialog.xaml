@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
-        Title="NotificationDialog" Height="200" Width="900" ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
+        Title="NotificationDialog" Height="300" Width="900" ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
         FontFamily="Segoe UI" Background="Black" WindowStyle="None">
     <Border BorderThickness="1">
         <Border.BorderBrush>
