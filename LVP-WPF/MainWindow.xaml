@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
         Title="MainWindow" Background="Black" Loaded="MainWindow_Loaded" Closed="MainWindow_Closed" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" WindowState="Maximized" FontFamily="Segoe UI Black" FontSize="64" PreviewMouseWheel="MainWindow_PreviewMouseWheel">
+        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" WindowState="Maximized" FontFamily="Segoe UI Black" FontSize="64" PreviewMouseWheel="MainWindow_PreviewMouseWheel" Icon="/Resources/movie.ico">
     <Grid>
         <Grid Name="loadGrid" ZIndex="3" Background="Black">
             <MediaElement Name="coffeeGif" MediaEnded="Coffee_Gif_Ended" Source="Resources\coffee.gif" MaxWidth="498" MaxHeight="431" LoadedBehavior="Play" />

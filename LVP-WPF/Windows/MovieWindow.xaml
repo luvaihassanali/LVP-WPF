@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
         Title="MovieWindow" Background="Black" Height="1050" Width="1152" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI" FontSize="42" Loaded="MovieWindow_Loaded">
+        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI" FontSize="42" Loaded="MovieWindow_Loaded" Icon="/Resources/movie.ico">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="648"/>

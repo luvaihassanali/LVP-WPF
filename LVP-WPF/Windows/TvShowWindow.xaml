@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
         Title="TvShowWindow" Background="Black" Height="1050" Width="1152" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI" FontSize="42" Loaded="TvShowWindow_Loaded" PreviewMouseWheel="TvShowWindow_PreviewMouseWheel">
+        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" FontFamily="Segoe UI" FontSize="42" Loaded="TvShowWindow_Loaded" PreviewMouseWheel="TvShowWindow_PreviewMouseWheel" Icon="/Resources/movie.ico">
     <Grid>
         <Grid Name="loadGrid" ZIndex="-1" Background="Black"></Grid>
         <ScrollViewer Name="scrollViewer" VerticalScrollBarVisibility="Hidden" PanningMode="Both" ScrollChanged="ScrollViewer_ScrollChanged">

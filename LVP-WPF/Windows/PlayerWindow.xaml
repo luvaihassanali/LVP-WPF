@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
         Title="PlayerWindow" Height="1080" Width="1920" Loaded="PlayerWindow_Loaded" Closed="PlayerWindow_Closed" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" WindowState="Maximized" FontSize="42" FontFamily="Segoe UI" Background="Black">
+        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" WindowState="Maximized" FontSize="42" FontFamily="Segoe UI" Background="Black" Icon="/Resources/movie.ico">
     <Grid>
         <wpf:VideoView x:Name="videoView" MouseMove="VideoView_MouseMove" Background="Black">
             <Grid Name="overlayGrid" Visibility="Hidden">
