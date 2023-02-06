@@ -34,6 +34,7 @@
                                                 </MultiTrigger.Conditions>
                                                 <Setter TargetName="Bd" Property="BorderThickness" Value="3"/>
                                                 <Setter TargetName="Bd" Property="BorderBrush" Value="#FF26A0DA" />
+                                                <Setter Property="Cursor" Value="Hand" />
                                             </MultiTrigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>

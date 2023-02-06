@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 
 namespace LVP_WPF
 {
@@ -152,7 +153,7 @@ namespace LVP_WPF
 
         private void ListView_Click(object sender, RoutedEventArgs e)
         {
-            mainGrid.Opacity = 0.1;
+            MainWindow_Fade(0.1);
             MainWindowBox item = (MainWindowBox)(sender as ListView).SelectedItem;
             if (item != null)
             {
@@ -166,7 +167,26 @@ namespace LVP_WPF
                     TvShowWindow.Show((TvShow)mediaItem);
                 }
             }
-            mainGrid.Opacity = 1.0;
+            MainWindow_Fade(1.0);
+        }
+
+        private void MainWindow_Fade(double direction)
+        {
+            DoubleAnimation da = new DoubleAnimation();
+            if (direction == 0.1)
+            {
+                da.From = 1.0;
+                da.To = 0.1;
+            } 
+            else
+            {
+                da.From = 0.1;
+                da.To = 1.0;
+            }
+            da.Duration = new Duration(TimeSpan.FromMilliseconds(250));
+            da.AutoReverse = false;
+            da.RepeatBehavior = new RepeatBehavior(1);
+            mainGrid.BeginAnimation(OpacityProperty, da);
         }
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)

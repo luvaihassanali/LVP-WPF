@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 
 namespace LVP_WPF.Windows
@@ -162,11 +163,30 @@ namespace LVP_WPF.Windows
 
         private void SeasonButton_Click(object sender, RoutedEventArgs e)
         {
-            mainGrid.Opacity = 0.1;
+            TvShowWindow_Fade(0.1);
             int prevIndex = tvShow.CurrSeason;
             int seasonIndex = SeasonWindow.Show(tvShow);
             if (seasonIndex != 0 && seasonIndex != prevIndex) Update(seasonIndex);
-            mainGrid.Opacity = 1.0;
+            TvShowWindow_Fade(1.0);
+        }
+
+        private void TvShowWindow_Fade(double direction)
+        {
+            DoubleAnimation da = new DoubleAnimation();
+            if (direction == 0.1)
+            {
+                da.From = 1.0;
+                da.To = 0.1;
+            }
+            else
+            {
+                da.From = 0.1;
+                da.To = 1.0;
+            }
+            da.Duration = new Duration(TimeSpan.FromMilliseconds(250));
+            da.AutoReverse = false;
+            da.RepeatBehavior = new RepeatBehavior(1);
+            mainGrid.BeginAnimation(OpacityProperty, da);
         }
 
         internal void Update(int seasonIndex)
