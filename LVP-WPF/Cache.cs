@@ -271,7 +271,7 @@ namespace LVP_WPF
                     if (k > jEpisodes.Count - 1)
                     {
                         string message = "Episode index out of TMDB episodes range S" + seasonIndex.ToString() + "E" + (k + 1).ToString();
-                        NotificationDialog.Show("Warning: " + tvShow.Name, message);
+                        NotificationDialog.Show("Error: " + tvShow.Name, message);
                         continue;
                     }
                     Episode episode = episodes[k];
@@ -292,7 +292,8 @@ namespace LVP_WPF
                                 System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
                             {
                                 string message = "Multi episode name does not match retrieved data: Episode name: '" + currMultiEpisodeName + "', retrieved: '" + jCurrMultiEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
-                                NotificationDialog.Show("Warning: " + tvShow.Name, message);
+                                System.Windows.Clipboard.SetText(jCurrMultiEpisodeName.fixBrokenQuotes());
+                                NotificationDialog.Show("Error: " + tvShow.Name, message);
                             }
                             multiEpisodeOverview += (jCurrMultiEpisodeOverview + Environment.NewLine + Environment.NewLine);
                         }
@@ -317,6 +318,7 @@ namespace LVP_WPF
                     if (!(String.Compare(episode.Name, jEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
                     {
                         string message = "Local episode name does not match retrieved data. Renaming file '" + episode.Name + "' to '" + jEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
+                        System.Windows.Clipboard.SetText(jEpisodeName.fixBrokenQuotes());
                         InputDialog.Show("Warning: " + tvShow.Name, message);
 
                         string oldPath = episode.Path;
