@@ -35,6 +35,7 @@ namespace LVP_WPF
         internal static async Task Initialize(ProgressBar p)
         {
             string driveString = ConfigurationManager.AppSettings["Drives"];
+            if (driveString.Equals(String.Empty)) return;
             string[] drives = driveString.Split(';');
             foreach (string drive in drives) { ProcessRootDirectory(drive); }
 

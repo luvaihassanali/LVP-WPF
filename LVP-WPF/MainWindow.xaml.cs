@@ -50,6 +50,7 @@ namespace LVP_WPF
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             await Cache.Initialize(progressBar);
+            if (model == null) return;
             await Task.Run(() => { AssignControlContext(); });
 
             Panel.SetZIndex(loadGrid, -1);
