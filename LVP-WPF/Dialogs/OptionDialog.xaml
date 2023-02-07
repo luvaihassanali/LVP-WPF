@@ -21,10 +21,12 @@
             <Grid Margin="10,0,10,0" Grid.Row="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition/>
                 </Grid.RowDefinitions>
                 <TextBlock Margin="0,0,0,10" FontSize="28" Foreground="White" Text="{Binding Message}" TextWrapping="Wrap"/>
-                <Grid Grid.Row="1">
+                <TextBlock Grid.Row="1" Margin="0,0,0,10" FontSize="24" Foreground="White" Text="{Binding Path}" TextWrapping="Wrap"/>
+                <Grid Grid.Row="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>

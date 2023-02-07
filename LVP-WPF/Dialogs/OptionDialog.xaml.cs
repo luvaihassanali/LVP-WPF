@@ -10,11 +10,12 @@ namespace LVP_WPF
     {
         private static int returnId = -1;
 
-        public static int Show(string title, string[][] info, DateTime?[] dates)
+        public static int Show(string title, string path, string[][] info, DateTime?[] dates)
         {
             OptionDialog dialog = new OptionDialog();
             dialog.Caption = title + "?";
             dialog.Message = "Select the correct entry for: " + title;
+            dialog.Path = path;
             dialog.Topmost = true;
             OptionWindowBox[] entries = new OptionWindowBox[info[0].Length];
             for (int i = 0; i < info[0].Length; i++)
@@ -36,7 +37,7 @@ namespace LVP_WPF
         [ObservableProperty]
         private string message;
         [ObservableProperty]
-        private BitmapSource image;
+        private string path;
 
         public OptionDialog()
         {

@@ -151,7 +151,7 @@ namespace LVP_WPF
                     }
 
                     string[][] info = new string[][] { names, ids, overviews };
-                    tvShow.Id = OptionDialog.Show(tvShow.Name, info, dates);
+                    tvShow.Id = OptionDialog.Show(tvShow.Name, tvShow.Seasons[0].Episodes[0].Path, info, dates);
                 }
                 else
                 {
@@ -398,7 +398,7 @@ namespace LVP_WPF
                 }
 
                 string[][] info = new string[][] { names, ids, overviews };
-                movie.Id = OptionDialog.Show(movie.Name, info, dates);
+                movie.Id = OptionDialog.Show(movie.Name, movie.Path, info, dates);
             }
             else
             {
