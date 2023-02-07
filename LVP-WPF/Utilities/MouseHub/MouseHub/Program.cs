@@ -389,7 +389,8 @@ namespace MouseMoverClient
 #if DEBUG
                         path = path.Replace("Utilities\\MouseHub\\MouseHub\\bin\\Debug\\", "\\bin\\Debug\\net6.0-windows\\LVP-WPF.exe");
 #else
-                        path = path.Replace("Utilities\\MouseHub\\MouseHub\\bin\\Release\\", "\\bin\\Release\\net6.0-windows\\LVP-WPF.exe");
+                        path = ConfigurationManager.AppSettings["LVP-WPF-Path"] + "LVP-WPF.exe";
+                        if (path.Contains("%USERPROFILE%")) { path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
 #endif
                         System.Diagnostics.Process p = new System.Diagnostics.Process();
                         p.StartInfo = new System.Diagnostics.ProcessStartInfo();

@@ -1,6 +1,7 @@
 ﻿using LVP_WPF.Windows;
 using Microsoft.Win32;
 using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -91,7 +92,8 @@ namespace LVP_WPF
 #if DEBUG
                 path = path.Replace("bin\\Debug\\", "Utilities\\MouseHub\\MouseHub\\bin\\Debug\\MouseHub.exe");
 #else
-                path = path.Replace("bin\\Release\\", "Utilities\\MouseHub\\MouseHub\\bin\\Release\\MouseHub.exe");
+                path = ConfigurationManager.AppSettings["MouseHubPath"] + "MouseHub.exe";
+                if (path.Contains("%USERPROFILE%")) { path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
 #endif
                 Process.Start(path);
             }
