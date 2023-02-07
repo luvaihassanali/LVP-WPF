@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Diagnostics;
+using System.Security.Policy;
 using System.Windows;
 
 namespace LVP_WPF
@@ -29,6 +31,7 @@ namespace LVP_WPF
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
+            GuiModel.RestoreSystemCursor();
             Environment.Exit(0);
         }
     }

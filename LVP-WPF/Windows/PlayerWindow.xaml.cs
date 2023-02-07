@@ -219,7 +219,7 @@ namespace LVP_WPF.Windows
                                     LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
                                     GuiModel.Log("Play: " + currMedia.Path);
                                     ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                    tvShowWindow.Dispatcher.Invoke(() => { tvShowWindow.Update(tvShow.CurrSeason); });
+                                    tvShowWindow.Dispatcher.Invoke(() => { tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason); });
                                     return;
                                 }
                             }

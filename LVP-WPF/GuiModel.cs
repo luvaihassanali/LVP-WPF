@@ -7,17 +7,25 @@ using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 
 namespace LVP_WPF
 {
     [ObservableObject]
     public partial class GuiModel
     {
+        [DllImport("user32.dll", EntryPoint = "SystemParametersInfo")]
+        public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, uint pvParam, uint fWinIni);
+        private const int SPI_SETCURSORS = 0x0057;
+        private const int SPIF_UPDATEINIFILE = 0x01;
+        private const int SPIF_SENDCHANGE = 0x02;
+
         [ObservableProperty]
         private int progressBarValue = 5;
         [ObservableProperty]
@@ -48,7 +56,12 @@ namespace LVP_WPF
         {
             loggingEnabled = bool.Parse(ConfigurationManager.AppSettings["LoggingEnabled"]);
             hideCursor = bool.Parse(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
+            logPath = AppDomain.CurrentDomain.BaseDirectory;
+#if DEBUG
+            logPath = "%USERPROFILE%\\Desktop\\LVP-WPF.log";
+#else
             logPath = ConfigurationManager.AppSettings["LogPath"] + "LVP-WPF.log";
+#endif
             if (logPath.Contains("%USERPROFILE%")) { logPath = logPath.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
         }
 
@@ -100,6 +113,32 @@ namespace LVP_WPF
                 else return result;
             }
             return null;
+        }
+
+
+        internal static void RestoreSystemCursor()
+        {
+            string[] keys = Properties.Resources.keys_backup.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+            foreach (string key in keys)
+            {
+                string[] keyValuePair = key.Split('=');
+                Registry.SetValue(@"HKEY_CURRENT_USER\Control Panel\Cursors\", keyValuePair[0], keyValuePair[1]);
+            }
+            SystemParametersInfo(SPI_SETCURSORS, 0, 0, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+            SystemParametersInfo(0x2029, 0, 32, 0x01);
+        }
+
+        internal static void InitializeCustomCursor()
+        {
+            string cursorPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
+            string[] keys = Properties.Resources.keys_custom.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+            foreach (string key in keys)
+            {
+                string[] keyValuePair = key.Split('=');
+                Registry.SetValue(@"HKEY_CURRENT_USER\Control Panel\Cursors\", keyValuePair[0], cursorPath + keyValuePair[1]);
+            }
+            SystemParametersInfo(SPI_SETCURSORS, 0, 0, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+            SystemParametersInfo(0x2029, 0, 128, 0x01);
         }
 
         public static void Log(string message)

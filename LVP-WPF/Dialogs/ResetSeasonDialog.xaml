@@ -38,7 +38,7 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <CheckBox VerticalContentAlignment="Center" Foreground="White" Grid.Row="1" FontSize="20" Content="{Binding Name}" Checked="CheckBox_Checked"/>
+                                    <CheckBox VerticalContentAlignment="Center" Foreground="White" Grid.Row="1" FontSize="20" Content="{Binding Name}" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked"/>
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>

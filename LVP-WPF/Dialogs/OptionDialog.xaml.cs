@@ -1,7 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Diagnostics;
 using System.Windows;
-using System.Windows.Media.Imaging;
 
 namespace LVP_WPF
 {
@@ -47,6 +47,8 @@ namespace LVP_WPF
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
+            GuiModel.RestoreSystemCursor();
+            Cache.SaveData();
             Environment.Exit(0);
         }
 

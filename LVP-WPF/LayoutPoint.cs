@@ -568,8 +568,7 @@ namespace LVP_WPF.Windows
 
         private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null)
         {
-            image.Dispatcher.Invoke(() =>
-            {
+            image.Dispatcher.Invoke(() => {
                 if (scrollViewer != null)
                 {
                     if (row == 0)

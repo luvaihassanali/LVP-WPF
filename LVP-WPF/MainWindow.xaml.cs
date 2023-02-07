@@ -1,5 +1,4 @@
 ﻿using LVP_WPF.Windows;
-using Microsoft.Win32;
 using System;
 using System.Configuration;
 using System.Diagnostics;
@@ -15,12 +14,6 @@ namespace LVP_WPF
 {
     public partial class MainWindow : Window
     {
-        [DllImport("user32.dll", EntryPoint = "SystemParametersInfo")]
-        public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, uint pvParam, uint fWinIni);
-        private const int SPI_SETCURSORS = 0x0057;
-        private const int SPIF_UPDATEINIFILE = 0x01;
-        private const int SPIF_SENDCHANGE = 0x02;
-
         static public MainModel model;
         static public GuiModel gui;
         static public TcpSerialListener tcpWorker;
@@ -30,8 +23,8 @@ namespace LVP_WPF
 
         public MainWindow()
         {
+            GuiModel.InitializeCustomCursor();
             TcpSerialListener.SetCursorPos(500, 2000);
-            InitializeCustomCursor();
             InitializeComponent();
             gui = new GuiModel();
             DataContext = gui;
@@ -79,7 +72,7 @@ namespace LVP_WPF
         private void MainWindow_Closed(object sender, EventArgs e)
         {
             Cache.SaveData();
-            RestoreSystemCursor();
+            GuiModel.RestoreSystemCursor();
             inactivityTimer.Dispose();
 
             if (tcpWorker != null)
@@ -210,31 +203,6 @@ namespace LVP_WPF
                 double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
                 scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
             }
-        }
-
-        private void RestoreSystemCursor()
-        {
-            string[] keys = Properties.Resources.keys_backup.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-            foreach (string key in keys)
-            {
-                string[] keyValuePair = key.Split('=');
-                Registry.SetValue(@"HKEY_CURRENT_USER\Control Panel\Cursors\", keyValuePair[0], keyValuePair[1]);
-            }
-            SystemParametersInfo(SPI_SETCURSORS, 0, 0, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-            SystemParametersInfo(0x2029, 0, 32, 0x01);
-        }
-
-        private void InitializeCustomCursor()
-        {
-            string cursorPath = Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
-            string[] keys = Properties.Resources.keys_custom.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
-            foreach (string key in keys)
-            {
-                string[] keyValuePair = key.Split('=');
-                Registry.SetValue(@"HKEY_CURRENT_USER\Control Panel\Cursors\", keyValuePair[0], cursorPath + keyValuePair[1]);
-            }
-            SystemParametersInfo(SPI_SETCURSORS, 0, 0, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-            SystemParametersInfo(0x2029, 0, 128, 0x01);
         }
 
         private void MainWindow_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)

@@ -3,6 +3,7 @@ using LVP_WPF.Dialogs;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -35,8 +36,9 @@ namespace LVP_WPF.Windows
             window.Description = tvShow.Overview.Length > 377 ? tvShow.Overview.Substring(0, 377) + "..." : tvShow.Overview;
             string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);
-            window.seasonButton.Content = "Season " + tvShow.CurrSeason.ToString();
-            Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
+            window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : "Season " + tvShow.CurrSeason.ToString();
+            int index = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
+            Episode[] episodes = tvShow.Seasons[index].Episodes;
             window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
             TvShowWindow.episodes = CreateEpisodeListItems(episodes);
             window.EpisodeListView.ItemsSource = TvShowWindow.episodes;
@@ -87,11 +89,16 @@ namespace LVP_WPF.Windows
                 string description;
                 if (episodes[i].Overview != null)
                 {
-                    description = episodes[i].Overview.Length > 605 ? episodes[i].Overview.Substring(0, 605) + "..." : episodes[i].Overview;
+                    description = episodes[i].Overview.Length > 377 ? episodes[i].Overview.Substring(0, 377) + "..." : episodes[i].Overview;
                 }
                 else
                 {
                     description = episodes[i].Name;
+                }
+
+                if (episodes[i].Name.Contains("#"))
+                {
+                    episodes[i].Name = episodes[i].Name.Replace("#", " & ");
                 }
 
                 long total = episodes[i].Length == 0 ? 1 : episodes[i].Length;
@@ -149,7 +156,8 @@ namespace LVP_WPF.Windows
         {
             EpisodeWindowBox item = (EpisodeWindowBox)(sender as ListView).SelectedItem;
             if (item == null) return;
-            Episode[] episodes = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
+            int index = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
+            Episode[] episodes = tvShow.Seasons[index].Episodes;
             foreach (Episode episode in episodes)
             {
                 if (item.Id == episode.Id)
@@ -166,7 +174,11 @@ namespace LVP_WPF.Windows
             TvShowWindow_Fade(0.1);
             int prevIndex = tvShow.CurrSeason;
             int seasonIndex = SeasonWindow.Show(tvShow);
-            if (seasonIndex != 0 && seasonIndex != prevIndex) Update(seasonIndex);
+            if (seasonIndex != 0 && seasonIndex != prevIndex)
+            {
+                tvShow.CurrSeason = seasonIndex;
+                UpdateTvWindowSeasonChange(seasonIndex);
+            }
             TvShowWindow_Fade(1.0);
         }
 
@@ -189,7 +201,7 @@ namespace LVP_WPF.Windows
             mainGrid.BeginAnimation(OpacityProperty, da);
         }
 
-        internal void Update(int seasonIndex)
+        internal void UpdateTvWindowSeasonChange(int seasonIndex)
         {
             scrollViewer.ScrollToHome();
             this.EpisodeListView.ItemsSource = null;
@@ -305,7 +317,7 @@ namespace LVP_WPF.Windows
             {
                 for (int i = 0; i < seasons.Length - 1; i++)
                 {
-                    int seasonIndex = seasons[i] - 1;
+                    int seasonIndex = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
                     Season currSeason = tvShow.Seasons[seasonIndex];
                     for (int j = 0; j < currSeason.Episodes.Length; j++)
                     {
@@ -328,9 +340,9 @@ namespace LVP_WPF.Windows
                     }
                 }
                 tvShow.CurrSeason = fill ? seasons[0] + 1 : seasons[seasons.Length - 2];
-                tvShow.LastEpisode = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0];
+                tvShow.LastEpisode = null;
             }
-            Update(tvShow.CurrSeason);
+            UpdateTvWindowSeasonChange(tvShow.CurrSeason);
         }
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)

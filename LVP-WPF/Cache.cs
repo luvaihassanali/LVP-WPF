@@ -221,9 +221,10 @@ namespace LVP_WPF
                 string seasonLabel = tvShow.Seasons[j].Id == -1 ? "Extras" : (j + 1).ToString();
 
                 string seasonString = "";
+                string seasonUrl = "";
                 try
                 {
-                    string seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
+                    seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
                     using HttpResponseMessage tvSeasonResponse = await client.GetAsync(seasonUrl);
                     using HttpContent tvSeasonContent = tvSeasonResponse.Content;
                     seasonString = await tvSeasonContent.ReadAsStringAsync();
@@ -238,7 +239,7 @@ namespace LVP_WPF
                 if (((string)seasonObject["name"]).Contains("Specials"))
                 {
                     seasonIndex++;
-                    string seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
+                    seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
                     using HttpResponseMessage tvSeasonResponse = await client.GetAsync(seasonUrl);
                     using HttpContent tvSeasonContent = tvSeasonResponse.Content;
                     seasonString = await tvSeasonContent.ReadAsStringAsync();
@@ -292,10 +293,29 @@ namespace LVP_WPF
                             if (String.Compare(currMultiEpisodeName, jCurrMultiEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture,
                                 System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
                             {
-                                string message = "Multi episode name does not match retrieved data: Episode name: '" + currMultiEpisodeName + "', retrieved: '" + jCurrMultiEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
-                                System.Windows.Clipboard.SetText(jCurrMultiEpisodeName.fixBrokenQuotes());
-                                SaveData();
-                                NotificationDialog.Show("Error: " + tvShow.Name, message);
+                                string message = "Multi episode name does not match retrieved data: Renaming file: '" + currMultiEpisodeName + "', to: '" + jCurrMultiEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
+                                InputDialog.Show("Warning: " + tvShow.Name, message, tvShow, season.Id + 1);
+
+                                string oldPath = episode.Path;
+                                string newPath = oldPath.Replace(currMultiEpisodeName, jCurrMultiEpisodeName.fixBrokenQuotes());
+                                string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
+                                foreach (char c in invalid)
+                                {
+                                    newPath = newPath.Replace(c.ToString(), "");
+                                }
+
+                                try
+                                {
+                                    char drive = newPath[0];
+                                    string drivePath = drive + ":";
+                                    newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
+                                    File.Move(oldPath, newPath);
+                                    episode.Path = newPath;
+                                }
+                                catch (Exception e)
+                                {
+                                    NotificationDialog.Show("Error", e.Message);
+                                }
                             }
                             multiEpisodeOverview += (jCurrMultiEpisodeOverview + Environment.NewLine + Environment.NewLine);
                         }
@@ -320,7 +340,7 @@ namespace LVP_WPF
                     if (!(String.Compare(episode.Name, jEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
                     {
                         string message = "Local episode name does not match retrieved data. Renaming file '" + episode.Name + "' to '" + jEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
-                        InputDialog.Show("Warning: " + tvShow.Name, message);
+                        InputDialog.Show("Warning: " + tvShow.Name, message, tvShow, season.Id + 1);
 
                         string oldPath = episode.Path;
                         jEpisodeName = (string)jEpisode["name"];
@@ -379,6 +399,8 @@ namespace LVP_WPF
             if (numMovieObjects == 0)
             {
                 NotificationDialog.Show("Error", "No movie found for: " + movie.Name);
+                GuiModel.RestoreSystemCursor();
+                Cache.SaveData();
                 Environment.Exit(0);
             }
             else if (numMovieObjects != 1)
@@ -579,18 +601,22 @@ namespace LVP_WPF
 
                 Season season = new Season(i + 1);
                 string[] episodeEntries = Directory.GetFiles(seasonEntries[i]);
-                Array.Sort(episodeEntries, CompareIndex);
+                try
+                {
+                    Array.Sort(episodeEntries, CompareIndex);
+                }
+                catch
+                {
+                    NotificationDialog.Show("Error", "Episode is missing separator in " + show.Name + ", Season " + (i + 1));
+                    GuiModel.RestoreSystemCursor();
+                    Environment.Exit(0);
+                }
                 season.Episodes = new Episode[episodeEntries.Length];
 
                 for (int j = 0; j < episodeEntries.Length; j++)
                 {
                     mediaCount++;
                     string[] namePath = episodeEntries[j].Split('\\');
-                    if (!episodeEntries[j].Contains('%'))
-                    {
-                        NotificationDialog.Show("Error", "Episode is missing separator: " + episodeEntries[j]);
-                        Environment.Exit(0);
-                    }
                     string[] episodeNameNumber = namePath[namePath.Length - 1].Split(new[] { '%' }, 2);
                     int fileSuffixIndex = episodeNameNumber[1].LastIndexOf('.');
                     string episodeName = episodeNameNumber[1].Substring(0, fileSuffixIndex).Trim();
@@ -687,6 +713,7 @@ namespace LVP_WPF
             if (!Directory.Exists(tvDirPath))
             {
                 NotificationDialog.Show("Error", "TV folder on " + driveLetter + " drive not found.");
+                GuiModel.RestoreSystemCursor();
                 Environment.Exit(0);
             }
 
@@ -694,6 +721,7 @@ namespace LVP_WPF
             if (!Directory.Exists(movieDirPath))
             {
                 NotificationDialog.Show("Error", "Movie folder on " + driveLetter + " drive not found.");
+                GuiModel.RestoreSystemCursor();
                 Environment.Exit(0);
             }
 

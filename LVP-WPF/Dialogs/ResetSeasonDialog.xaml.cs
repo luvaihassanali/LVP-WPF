@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -78,43 +79,39 @@ namespace LVP_WPF.Dialogs
         private void CheckBox_Checked(object sender, RoutedEventArgs e)
         {
             CheckBox c = (CheckBox)sender;
-            bool selected = (bool)c.IsChecked;
             string name = c.Content.ToString();
             if (name.Equals("  All"))
             {
-                if (selected)
-                {
-                    results.Add(0);
-                }
-                else
-                {
-                    results.Remove(0);
-                }
+                results.Add(0);
             }
-            else if (name.Equals("Extras"))
+            else if (name.Equals("  Extras"))
             {
-                if (selected)
-                {
-                    results.Add(-1);
-                }
-                else
-                {
-                    results.Remove(-1);
-                }
+                results.Add(-1);
             }
             else
             {
-                name = name.Replace("Season ", "");
-                if (selected)
-                {
-                    results.Add(Int32.Parse(name));
-                }
-                else
-                {
-                    results.Remove(Int32.Parse(name));
-                }
+                name = name.Replace("  Season ", "");
+                results.Add(Int32.Parse(name));
             }
+        }
 
+        private void CheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            CheckBox c = (CheckBox)sender;
+            string name = c.Content.ToString();
+            if (name.Equals("  All"))
+            {
+                results.Remove(0);
+            }
+            else if (name.Equals("  Extras"))
+            {
+                results.Remove(-1);
+            }
+            else
+            {
+                name = name.Replace("  Season ", "");
+                results.Remove(Int32.Parse(name));
+            }
         }
     }
 }
