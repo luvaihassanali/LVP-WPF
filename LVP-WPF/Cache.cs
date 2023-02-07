@@ -293,6 +293,7 @@ namespace LVP_WPF
                             {
                                 string message = "Multi episode name does not match retrieved data: Episode name: '" + currMultiEpisodeName + "', retrieved: '" + jCurrMultiEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
                                 System.Windows.Clipboard.SetText(jCurrMultiEpisodeName.fixBrokenQuotes());
+                                SaveData();
                                 NotificationDialog.Show("Error: " + tvShow.Name, message);
                             }
                             multiEpisodeOverview += (jCurrMultiEpisodeOverview + Environment.NewLine + Environment.NewLine);
@@ -318,7 +319,6 @@ namespace LVP_WPF
                     if (!(String.Compare(episode.Name, jEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
                     {
                         string message = "Local episode name does not match retrieved data. Renaming file '" + episode.Name + "' to '" + jEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
-                        System.Windows.Clipboard.SetText(jEpisodeName.fixBrokenQuotes());
                         InputDialog.Show("Warning: " + tvShow.Name, message);
 
                         string oldPath = episode.Path;
