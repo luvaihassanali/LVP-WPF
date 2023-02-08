@@ -33,7 +33,7 @@ namespace LVP_WPF.Windows
             tvShow = t;
             TvShowWindow window = new TvShowWindow();
             window.ShowName = tvShow.Name + " (" + tvShow.Date.GetValueOrDefault().Year + ")";
-            window.Description = tvShow.Overview.Length > 377 ? tvShow.Overview.Substring(0, 377) + "..." : tvShow.Overview;
+            window.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
             string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);
             window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : "Season " + tvShow.CurrSeason.ToString();
@@ -89,7 +89,7 @@ namespace LVP_WPF.Windows
                 string description;
                 if (episodes[i].Overview != null)
                 {
-                    description = episodes[i].Overview.Length > 377 ? episodes[i].Overview.Substring(0, 377) + "..." : episodes[i].Overview;
+                    description = episodes[i].Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? episodes[i].Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : episodes[i].Overview;
                 }
                 else
                 {

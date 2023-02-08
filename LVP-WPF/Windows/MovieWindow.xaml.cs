@@ -19,11 +19,11 @@ namespace LVP_WPF.Windows
         {
             movie = m;
             MovieWindow window = new MovieWindow();
-            window.MovieName = movie.Name;
+            window.MovieName = movie.Name + " (" + movie.Date.GetValueOrDefault().Year + ")";
             TimeSpan temp = TimeSpan.FromMinutes(movie.RunningTime);
             string hour = temp.Hours > 1 ? "hours " : "hour ";
             window.RunningTime = "Running time: " + temp.Hours + " " + hour + temp.Minutes + " minutes";
-            window.Description = movie.Overview.Length > 1011 ? movie.Overview.Substring(0, 1011) + "..." : movie.Overview;
+            window.Description = movie.Overview; //.Length > 1011 ? movie.Overview.Substring(0, 1011) + "..." : movie.Overview;
             string img = movie.Backdrop == null ? "Resources\\noPrevWide.png" : movie.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);
             window.Overlay = Cache.LoadImage("Resources\\play.png", 960);

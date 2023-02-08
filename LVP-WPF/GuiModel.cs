@@ -26,8 +26,10 @@ namespace LVP_WPF
         private const int SPIF_UPDATEINIFILE = 0x01;
         private const int SPIF_SENDCHANGE = 0x02;
 
+        public const int OVERVIEW_MAX_LEN = 370;
+
         [ObservableProperty]
-        private int progressBarValue = 5;
+        private int progressBarValue = 1;
         [ObservableProperty]
         private int progressBarMax = 100;
         [ObservableProperty]

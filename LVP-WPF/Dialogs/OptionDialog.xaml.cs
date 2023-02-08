@@ -59,5 +59,10 @@ namespace LVP_WPF
             returnId = o.Id;
             this.Close();
         }
+
+        private void OptionWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            OptionListView.SelectedIndex= 0;
+        }
     }
 }
