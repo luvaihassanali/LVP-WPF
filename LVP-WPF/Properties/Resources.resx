@@ -155,7 +155,7 @@ UpArrow=C:\Windows\cursors\aero_up.cur
 Wait=C:\Windows\cursors\aero_busy.ani</value>
   </data>
   <data name="keys_custom" xml:space="preserve">
-    <value>AppStarting=\Resources\blue_cursors_xl\blue_working_xl_clean.ani
+    <value>AppStarting=\Resources\blue_cursors_xl\blue_working_xl.ani
 Arrow=\Resources\blue_cursors_xl\blue_arrow_xl.cur
 Hand=\Resources\blue_cursors_xl\blue_link_xl.cur
 Help=\Resources\blue_cursors_xl\blue_helpsel_xl.cur
@@ -167,7 +167,7 @@ SizeNS=\Resources\blue_cursors_xl\blue_ns_xl.cur
 SizeNWSE=\Resources\blue_cursors_xl\blue_nwse_xl.cur
 SizeWE=\Resources\blue_cursors_xl\blue_ew_xl.cur
 UpArrow=\Resources\blue_cursors_xl\blue_up_xl.cur
-Wait=\Resources\blue_cursors_xl\blue_busy_xl_clean.ani</value>
+Wait=\Resources\blue_cursors_xl\blue_busy_xl.ani</value>
   </data>
   <data name="movie" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\movie.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>

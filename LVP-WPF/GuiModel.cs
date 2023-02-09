@@ -39,7 +39,11 @@ namespace LVP_WPF
         [ObservableProperty]
         ObservableCollection<MainWindowBox> cartoons = new ObservableCollection<MainWindowBox>();
 
-        static public bool hideCursor = true;
+        static public bool hideCursor = false;
+        static public int hideCursorX = 35;
+        static public int hideCursorY = 2000;
+        static public int centerX = 960;
+        static public int centerY = 540;
         static private bool loggingEnabled;
         static private string logPath;
         public bool isPlaying = false;
@@ -153,16 +157,6 @@ namespace LVP_WPF
                     Debug.WriteLine("{0} - {1}: {2}", DateTime.Now.ToString("dd-MM-yy HH:mm:ss.fff"), (new StackTrace()).GetFrame(1).GetMethod().Name, message);
                 }
             }
-        }
-
-        static public void ShowLoadingCursor()
-        {
-            Mouse.OverrideCursor = Cursors.Wait;
-        }
-
-        static public void HideLoadingCursor()
-        {
-            Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
         }
     }
 

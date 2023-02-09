@@ -23,7 +23,7 @@ namespace LVP_WPF
 
         public MainWindow()
         {
-            if (GuiModel.hideCursor) Mouse.OverrideCursor = Cursors.None;
+            TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
             GuiModel.InitializeCustomCursor();
             InitializeComponent();
             gui = new GuiModel();

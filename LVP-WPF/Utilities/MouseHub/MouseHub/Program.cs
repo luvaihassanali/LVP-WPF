@@ -325,8 +325,8 @@ namespace MouseMoverClient
             pollingTimer.Enabled = false;
             pollingTimer.Stop();
 
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
+            //GC.Collect();
+            //GC.WaitForPendingFinalizers();
             StartListener();
         }
 

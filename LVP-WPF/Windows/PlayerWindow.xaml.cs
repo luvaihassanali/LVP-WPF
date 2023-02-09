@@ -54,7 +54,7 @@ namespace LVP_WPF.Windows
             SliderMax = 1;
         }
 
-        private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
         {
             mediaPlayer.TimeChanged += MediaPlayer_TimeChanged;
             mediaPlayer.LengthChanged += MediaPlayer_LengthChanged;
@@ -83,10 +83,11 @@ namespace LVP_WPF.Windows
                 }
             }
 
-            if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
             MainWindow.gui.playerWindow = this;
             MainWindow.gui.playerCloseButton = this.closeButton;
             MainWindow.tcpWorker.layoutPoint.Select("PlayerWindow");
+            await System.Threading.Tasks.Task.Delay(1000);
+            TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
         }
 
         private void PlayerWindow_Closed(object sender, EventArgs e)

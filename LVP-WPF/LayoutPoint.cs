@@ -78,14 +78,14 @@ namespace LVP_WPF.Windows
                 {
                     movieWindowActive = true;
                     currControl = movieBackdrop;
-                    CenterMouseOverControl(currControl);
+                    CenterMouseOverControl(currControl, backdrop: true);
                 }
                 else
                 {
                     tvShowWindowActive = true;
                     currPoint = (tvIndex, -1);
                     currControl = tvControlList[currPoint.x];
-                    CenterMouseOverControl(currControl);
+                    CenterMouseOverControl(currControl, backdrop:true);
                 }
                 return;
             }
@@ -144,13 +144,13 @@ namespace LVP_WPF.Windows
                     if (movieWindowActive)
                     {
                         currControl = movieBackdrop;
-                        CenterMouseOverControl(currControl);
+                        CenterMouseOverControl(currControl, backdrop: true);
                     }
                     else if (tvShowWindowActive)
                     {
                         currPoint = returnPointB;
                         currControl = tvControlList[currPoint.x];
-                        CenterMouseOverControl(currControl);
+                        CenterMouseOverControl(currControl, backdrop: true);
                     }
                     return;
                 }
@@ -552,8 +552,13 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void CenterMouseOverControl(object control, int row = -1, ScrollViewer scrollViewer = null)
+        private void CenterMouseOverControl(object control, int row = -1, ScrollViewer scrollViewer = null, bool backdrop = false)
         {
+            if (backdrop == true)
+            {
+                CenterMouse();
+                return;
+            }
             if (control as Button != null)
             {
                 Button button = (Button)control;
@@ -562,11 +567,11 @@ namespace LVP_WPF.Windows
             else if (control as Image != null)
             {
                 Image image = (Image)control;
-                CenterMouseOverImage(image, row, scrollViewer);
+                CenterMouseOverImage(image, row, scrollViewer, backdrop);
             }
         }
 
-        private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null)
+        private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null, bool backdrop = false)
         {
             image.Dispatcher.Invoke(() => {
                 if (scrollViewer != null)
@@ -603,6 +608,11 @@ namespace LVP_WPF.Windows
                 target.Y += button.ActualHeight / 2;
                 TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
             });
+        }
+
+        private void CenterMouse()
+        {
+            TcpSerialListener.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
         }
 
         private void PrintGrid()

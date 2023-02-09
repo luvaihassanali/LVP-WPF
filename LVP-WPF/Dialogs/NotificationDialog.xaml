@@ -19,7 +19,7 @@
             </Grid.RowDefinitions>
             <TextBlock Margin="10,0,0,0" Text="{Binding Caption}" FontSize="48" Foreground="LightBlue"/>
             <TextBlock Grid.Row="1" Margin="10,0,10,0" FontSize="28" Foreground="White" Text="{Binding Message}" TextWrapping="Wrap"/>
-            <Button FontSize="24" Foreground="White" Cursor="Hand" Background="Black" Content="Exit" HorizontalAlignment="Right" Margin="10,10,10,10" Grid.Row="2" Height="40" Width="120" Click="ExitButton_Click"/>
+            <Button FontSize="24" Foreground="White" Background="Black" Content="Exit" HorizontalAlignment="Right" Margin="10,10,10,10" Grid.Row="2" Height="40" Width="120" Click="ExitButton_Click"/>
         </Grid>
     </Border>
 </Window>
