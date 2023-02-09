@@ -77,15 +77,15 @@ namespace LVP_WPF.Windows
             if (currMedia as Episode != null)
             {
                 Episode episode = (Episode)currMedia;
-                if (episode.SavedTime != 0)
+                if (episode.SavedTime != 0 && episode.SavedTime < episode.Length)
                 {
                     mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(episode.SavedTime));
                 }
             }
 
+            if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
             MainWindow.gui.playerWindow = this;
             MainWindow.gui.playerCloseButton = this.closeButton;
-            TcpSerialListener.SetCursorPos(500, 2000);
             MainWindow.tcpWorker.layoutPoint.Select("PlayerWindow");
         }
 

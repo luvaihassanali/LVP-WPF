@@ -57,7 +57,7 @@ namespace LVP_WPF
         {
             gui = g;
             layoutPoint = new LayoutPoint(g);
-            if (GuiModel.hideCursor) Mouse.OverrideCursor = Cursors.None;
+            if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
         }
 
         public void StartThread()
@@ -369,7 +369,7 @@ namespace LVP_WPF
                 string msg = serialPort.ReadLine();
                 msg = msg.Replace("\r", "");
                 GuiModel.Log(msg);
-                if (GuiModel.hideCursor) Mouse.OverrideCursor = Cursors.None;
+                if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
                 switch (msg)
                 {
                     case "left":
