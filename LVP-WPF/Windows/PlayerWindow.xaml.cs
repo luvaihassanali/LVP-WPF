@@ -86,7 +86,6 @@ namespace LVP_WPF.Windows
             MainWindow.gui.playerWindow = this;
             MainWindow.gui.playerCloseButton = this.closeButton;
             MainWindow.tcpWorker.layoutPoint.Select("PlayerWindow");
-            await System.Threading.Tasks.Task.Delay(1000);
             TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
         }
 
