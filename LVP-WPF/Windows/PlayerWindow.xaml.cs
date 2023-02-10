@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -41,6 +42,7 @@ namespace LVP_WPF.Windows
         private double sliderMax;
         [ObservableProperty]
         private double sliderValue;
+        private double prevSliderValue;
 
         public PlayerWindow()
         {
@@ -52,9 +54,11 @@ namespace LVP_WPF.Windows
             videoView.MediaPlayer = mediaPlayer;
             SliderValue = 0;
             SliderMax = 1;
+            prevSliderValue = 0;
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
 #endif
+
         }
 
         private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
@@ -148,7 +152,7 @@ namespace LVP_WPF.Windows
             mediaPlayer.Dispose();
             libVLC.Dispose();
         }
-       
+
         private void UpdateProgressBar(Episode episode)
         {
             tvShowWindow.Dispatcher.Invoke(() =>
@@ -263,7 +267,14 @@ namespace LVP_WPF.Windows
 
         private void MediaPlayer_TimeChanged(object? sender, MediaPlayerTimeChangedEventArgs e)
         {
-            SliderValue = mediaPlayer.Time;
+            if (!sliderMouseDown)
+            {
+                SliderValue = mediaPlayer.Time;
+            } 
+            else
+            {
+                sliderMouseDown = false;
+            }
         }
 
         private LibVLCSharp.Shared.Media CreateMedia(Media m)
@@ -334,18 +345,6 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void Slider_MouseUp(object sender, MouseButtonEventArgs e)
-        {
-            sliderMouseDown = false;
-            TimeSpan ts = TimeSpan.FromMilliseconds(SliderValue);
-            mediaPlayer.SeekTo(ts);
-        }
-
-        private void Slider_MouseDown(object sender, MouseButtonEventArgs e)
-        {
-            sliderMouseDown = true;
-        }
-
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (mediaPlayer != null)
@@ -364,10 +363,10 @@ namespace LVP_WPF.Windows
                         TimeLabel = currTime.ToString(@"mm\:ss") + "/" + lengthTime.ToString(@"mm\:ss");
                     }
 
-                    if (sliderMouseDown)
+                    if (Math.Abs(SliderValue - prevSliderValue) > 3000 && prevSliderValue != 0)
                     {
+                        sliderMouseDown = true;
                         TimeSpan seekTime = TimeSpan.FromMilliseconds(SliderValue);
-                        if (seekTime.TotalMilliseconds > lengthTime.TotalMilliseconds) SliderValue = lengthTime.TotalMilliseconds;
                         mediaPlayer.SeekTo(seekTime);
                     }
                 }
@@ -375,6 +374,7 @@ namespace LVP_WPF.Windows
                 {
                     GuiModel.Log("Slider_ValueChanged: " + ex.Message);
                 }
+                prevSliderValue = SliderValue;
             }
         }
 

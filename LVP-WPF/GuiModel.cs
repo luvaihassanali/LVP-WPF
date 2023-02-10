@@ -20,12 +20,16 @@ namespace LVP_WPF
     [ObservableObject]
     public partial class GuiModel
     {
+        [DllImport("user32.dll")]
+        static extern void mouse_event(Int32 dwFlags, Int32 dx, Int32 dy, Int32 dwData, UIntPtr dwExtraInfo);
+
         [DllImport("user32.dll", EntryPoint = "SystemParametersInfo")]
+
         public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, uint pvParam, uint fWinIni);
         private const int SPI_SETCURSORS = 0x0057;
         private const int SPIF_UPDATEINIFILE = 0x01;
         private const int SPIF_SENDCHANGE = 0x02;
-
+        private const int MOUSEEVENTF_MOVE = 0x0001;
         public const int OVERVIEW_MAX_LEN = 370;
 
         [ObservableProperty]
