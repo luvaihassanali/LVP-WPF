@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
-        Title="SeasonWindow" Background="Black" Height="1050" Width="650" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
+        Title="SeasonWindow" Background="Black" Height="950" Width="650" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
         RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" Loaded="SeasonWindow_Loaded" PreviewMouseWheel="Window_PreviewMouseWheel" Icon="/Resources/movie.ico">
     <Border BorderThickness="1">
         <Border.BorderBrush>

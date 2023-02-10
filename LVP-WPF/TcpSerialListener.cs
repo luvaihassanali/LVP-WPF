@@ -407,7 +407,7 @@ namespace LVP_WPF
                         gui.playerWindow.PlayPause_TcpSerialListener();
                         break;
                     case "stop":
-                        gui.playerWindow.Stop_TcpSerialListener();
+                        gui.playerWindow.PlayPause_TcpSerialListener();
                         break;
                     case "fastforward":
                         gui.playerWindow.Seek_TcpSerialListener(false);

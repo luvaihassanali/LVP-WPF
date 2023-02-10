@@ -52,6 +52,9 @@ namespace LVP_WPF.Windows
             videoView.MediaPlayer = mediaPlayer;
             SliderValue = 0;
             SliderMax = 1;
+#if DEBUG
+            this.WindowStyle = WindowStyle.SingleBorderWindow;
+#endif
         }
 
         private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
@@ -408,28 +411,28 @@ namespace LVP_WPF.Windows
             {
                 TimeSpan lengthTime = TimeSpan.FromMilliseconds(mediaPlayer.Length);
                 TimeSpan currTime = TimeSpan.FromMilliseconds(mediaPlayer.Time);
-                long thirtyMs = 300000;
+                TimeSpan thirtySecs = TimeSpan.FromSeconds(30);
 
                 if (rewind)
                 {
-                    if (currTime.TotalMilliseconds < thirtyMs)
+                    if (currTime.TotalMilliseconds < thirtySecs.TotalMilliseconds)
                     {
                         mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(0));
                     }
                     else
                     {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Time + thirtyMs));
+                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Time - thirtySecs.TotalMilliseconds));
                     }
                 }
                 else
                 {
-                    if (currTime.TotalMilliseconds + thirtyMs > lengthTime.TotalMilliseconds)
+                    if ((currTime.TotalMilliseconds + thirtySecs.TotalMilliseconds) > lengthTime.TotalMilliseconds)
                     {
                         mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(lengthTime.TotalMilliseconds));
                     }
                     else
                     {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Time - thirtyMs));
+                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(currTime.TotalMilliseconds + thirtySecs.TotalMilliseconds));
                     }
                 }
             }
