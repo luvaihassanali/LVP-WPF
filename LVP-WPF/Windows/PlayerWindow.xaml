@@ -38,7 +38,7 @@
                         </Style>
                     </Button.Resources>
                 </Button>
-                <Slider MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Name="timelineSlider" Background="Black" Grid.Row="2" Margin="85,20,10,0"
+                <Slider MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Name="timelineSlider" Background="Transparent" Grid.Row="2" Margin="85,20,10,0"
                         Value="{Binding SliderValue}" Maximum="{Binding SliderMax}" ValueChanged="Slider_ValueChanged" IsMoveToPointEnabled="True" />
                 <Label FontSize="28" Grid.Column="1" HorizontalAlignment="Right" Grid.Row="2" Margin="0,5,10,10" Foreground="White" Content="{Binding TimeLabel}"></Label>
             </Grid>

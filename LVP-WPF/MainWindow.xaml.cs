@@ -147,6 +147,7 @@ namespace LVP_WPF
             this.Close();
         }
 
+        //To-do: loader?
         private void ListView_Click(object sender, RoutedEventArgs e)
         {
             MainWindow_Fade(0.1);

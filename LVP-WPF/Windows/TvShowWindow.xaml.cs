@@ -169,7 +169,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void SeasonButton_Click(object sender, RoutedEventArgs e)
+        private async void SeasonButton_Click(object sender, RoutedEventArgs e)
         {
             TvShowWindow_Fade(0.1);
             int prevIndex = tvShow.CurrSeason;
@@ -180,6 +180,18 @@ namespace LVP_WPF.Windows
                 UpdateTvWindowSeasonChange(seasonIndex);
             }
             TvShowWindow_Fade(1.0);
+
+            await System.Threading.Tasks.Task.Delay(500); // wait for content
+            MainWindow.tcpWorker.layoutPoint.tvControlList.Clear();
+            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(this.tvBackdrop);
+            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(this.seasonButton);
+            ItemContainerGenerator generator = EpisodeListView.ItemContainerGenerator;
+            for (int j = 0; j < episodes.Length; j++)
+            {
+                ListViewItem container = (ListViewItem)generator.ContainerFromItem(episodes[j]);
+                Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
+                MainWindow.tcpWorker.layoutPoint.tvControlList.Add(img);
+            }
         }
 
         private void TvShowWindow_Fade(double direction)

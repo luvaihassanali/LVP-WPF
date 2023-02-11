@@ -109,7 +109,7 @@ namespace LVP_WPF.Windows
                     BuildSeasonGrid();
                     currPoint = GetCurrSeasonPoint(seasonIndex);
                     currControl = seasonWindowControlGrid[currPoint.x][currPoint.y];
-                    CenterMouseOverControl(currControl);
+                    CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.seasonScrollViewer);
                 }
                 if (controlName.Equals("PlayerWindow")) { playerWindowActive = true; }
             }
@@ -157,7 +157,7 @@ namespace LVP_WPF.Windows
 
                 if (seasonWindowActive)
                 {
-                    TcpSerialListener.DoMouseClick();
+                    /*TcpSerialListener.DoMouseClick();
                     seasonWindowActive = false;
                     seasonControlList.Clear();
                     seasonWindowGrid.Clear();
@@ -165,7 +165,7 @@ namespace LVP_WPF.Windows
                     currPoint = returnPointB;
                     currControl = tvControlList[currPoint.x];
                     CenterMouseOverControl(currControl);
-                    return;
+                    return;*/
                 }
                 else if (tvShowWindowActive)
                 {
