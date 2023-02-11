@@ -15,7 +15,6 @@ namespace MouseMoverClient
 {
     class Program
     {
-
         [DllImport("kernel32.dll", ExactSpelling = true)]
         private static extern IntPtr GetConsoleWindow();
 
@@ -36,7 +35,6 @@ namespace MouseMoverClient
         [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
         public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
 
-
         private const int MOUSEEVENTF_LEFTDOWN = 0x02;
         private const int MOUSEEVENTF_LEFTUP = 0x04;
         private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
@@ -55,7 +53,7 @@ namespace MouseMoverClient
         static SerialPort serialPort;
         static System.Timers.Timer pollingTimer;
 
-        static int Counter;
+        static int matrixCounter;
         static Random randomPosition = new Random();
         static int flowSpeed = 100;
         static int fastFlow = flowSpeed + 30;
@@ -73,6 +71,10 @@ namespace MouseMoverClient
             Console.SetBufferSize(50, 10);
             SetWindowPos(MyConsole, 0, 600, 10, 0, 0, SWP_NOSIZE); // Console.SetWindowPosition();
             SetWindowLong(MyConsole, GWL_EXSTYLE, GetWindowLong(MyConsole, GWL_EXSTYLE) | WS_EX_LAYERED); // https://stackoverflow.com/questions/24110600/transparent-console-dllimport
+            int style = GetWindowLong(MyConsole, -16);
+            style &= -12582913;
+            SetWindowLong(MyConsole, -16, style);
+            SetWindowPos(MyConsole, 0, 0, 0, 0, 0, 0x27);
             SetLayeredWindowAttributes(MyConsole, 0, 230, LWA_ALPHA); // Opacity = 0.5 = (255/2) = 128*/ 75 = 191, 80 = 204, 90 = 230
 
             pollingTimer = new System.Timers.Timer(6000); // esp timeout is 5s
@@ -392,10 +394,10 @@ namespace MouseMoverClient
                         Initialize(out width, out height, out y);
                         while (true)
                         {
-                            Counter++;
+                            matrixCounter++;
                             ColumnUpdate(width, height, y);
-                            if (Counter > (3 * flowSpeed))
-                                Counter = 0;
+                            if (matrixCounter > (3 * flowSpeed))
+                                matrixCounter = 0;
                         }
                     default:
                         Log("Unknown msg received: " + msg);
@@ -426,7 +428,7 @@ namespace MouseMoverClient
         private static void ColumnUpdate(int width, int height, int[] y)
         {
             int x;
-            if (Counter < flowSpeed)
+            if (matrixCounter < flowSpeed)
             {
                 for (x = 0; x < width; ++x)
                 {
@@ -449,7 +451,7 @@ namespace MouseMoverClient
                     y[x] = YPositionFields(y[x] + 1, height);
                 }
             }
-            else if (Counter > flowSpeed && Counter < textFlow)
+            else if (matrixCounter > flowSpeed && matrixCounter < textFlow)
             {
                 for (x = 0; x < width; ++x)
                 {
@@ -463,7 +465,7 @@ namespace MouseMoverClient
 
                 }
             }
-            else if (Counter > fastFlow)
+            else if (matrixCounter > fastFlow)
             {
                 for (x = 0; x < width; ++x)
                 {
@@ -474,7 +476,7 @@ namespace MouseMoverClient
                     Console.SetCursorPosition(x, YPositionFields(temp1, height));
                     Console.Write(' ');
 
-                    if (Counter > fastFlow && Counter < textFlow)
+                    if (matrixCounter > fastFlow && matrixCounter < textFlow)
                     {
                         if (x % 10 == 9) Console.ForegroundColor = fadedcolor;
                         else Console.ForegroundColor = basecolor;
