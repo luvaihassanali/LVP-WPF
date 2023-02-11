@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Configuration;
+using System.Drawing;
 using System.IO.Ports;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,25 +15,27 @@ namespace MouseMoverClient
 {
     class Program
     {
-        [DllImport("user32.dll")]
-        static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll")]
-        static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        internal static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
         [DllImport("kernel32.dll", ExactSpelling = true)]
         private static extern IntPtr GetConsoleWindow();
 
         private static IntPtr MyConsole = GetConsoleWindow();
 
+        [DllImport("user32.dll", SetLastError = true)]
+        internal static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+        
+        [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
+        public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
+
+        [DllImport("user32.dll")]
+        static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
+
+        [DllImport("user32.dll")]
+        static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
         [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
         public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-        public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
 
         private const int MOUSEEVENTF_LEFTDOWN = 0x02;
         private const int MOUSEEVENTF_LEFTUP = 0x04;
@@ -51,22 +55,28 @@ namespace MouseMoverClient
         static SerialPort serialPort;
         static System.Timers.Timer pollingTimer;
 
+        static int Counter;
+        static Random randomPosition = new Random();
+        static int flowSpeed = 100;
+        static int fastFlow = flowSpeed + 30;
+        static int textFlow = flowSpeed + 500;
+        static ConsoleColor basecolor = ConsoleColor.DarkBlue;
+        static ConsoleColor fadedcolor = ConsoleColor.White;
+
         static async Task Main(string[] args)
         {
+            ConsoleHelper.SetCurrentFont("Segoe Mono Boot", 32);
             Console.Title = "";
-            Console.SetWindowSize(60, 10);
-            Console.SetBufferSize(60, 10);
             Console.ForegroundColor = ConsoleColor.White;
             Console.BackgroundColor = ConsoleColor.Blue;
-            Console.Clear();
-
-            ConsoleHelper.SetCurrentFont("Cascadia Code", 32);
-            SetWindowPos(MyConsole, 0, 625, 10, 0, 0, SWP_NOSIZE);
+            Console.SetWindowSize(50, 10);
+            Console.SetBufferSize(50, 10);
+            SetWindowPos(MyConsole, 0, 600, 10, 0, 0, SWP_NOSIZE); // Console.SetWindowPosition();
             SetWindowLong(MyConsole, GWL_EXSTYLE, GetWindowLong(MyConsole, GWL_EXSTYLE) | WS_EX_LAYERED); // https://stackoverflow.com/questions/24110600/transparent-console-dllimport
-            SetLayeredWindowAttributes(MyConsole, 0, 128, LWA_ALPHA); // Opacity = 0.5 = (255/2) = 128
+            SetLayeredWindowAttributes(MyConsole, 0, 230, LWA_ALPHA); // Opacity = 0.5 = (255/2) = 128*/ 75 = 191, 80 = 204, 90 = 230
 
             pollingTimer = new System.Timers.Timer(6000); // esp timeout is 5s
-            pollingTimer.Elapsed += OnTimedEvent;
+            pollingTimer.Elapsed += OnTimedEventAsync;
             pollingTimer.AutoReset = false;
 
             InitializeSerialPort();
@@ -87,7 +97,7 @@ namespace MouseMoverClient
 
         static async Task StartListener()
         {
-            Log("Start");
+            Log("Starting listener");
             while (!Console.KeyAvailable)
             {
                 Log("Pinging server...");
@@ -123,10 +133,9 @@ namespace MouseMoverClient
 
                     CheckSerialConnection();
                     await Task.Delay(500);
-
                 }
             }
-            Log("Stop");
+            Log("Stopping listener");
         }
 
         static private void CheckSerialConnection()
@@ -198,7 +207,7 @@ namespace MouseMoverClient
                         if (buffer.Contains("initack"))
                         {
                             // Send cursor to centre of screen
-                            Cursor.Position = new System.Drawing.Point(960, 540);
+                            Cursor.Position = new Point(960, 540);
                             DoMouseClick();
                             StopTimer();
                             StartTimer();
@@ -287,10 +296,9 @@ namespace MouseMoverClient
             {
                 divisor = 40;
             }
-
             for (int i = 0; i < 15; i++)
             {
-                Cursor.Position = new System.Drawing.Point(Cursor.Position.X + joystickX / divisor, Cursor.Position.Y + joystickY / divisor);
+                Cursor.Position = new Point(Cursor.Position.X + joystickX / divisor, Cursor.Position.Y + joystickY / divisor);
                 await Task.Delay(1);
             }
         }
@@ -321,15 +329,12 @@ namespace MouseMoverClient
             pollingTimer.Stop();
         }
 
-        static void OnTimedEvent(Object source, ElapsedEventArgs e)
+        static async void OnTimedEventAsync(Object source, ElapsedEventArgs e)
         {
             Log("Polling timer stopped");
             pollingTimer.Enabled = false;
             pollingTimer.Stop();
-
-            //GC.Collect();
-            //GC.WaitForPendingFinalizers();
-            StartListener();
+            await StartListener();
         }
 
         static public void InitializeSerialPort()
@@ -366,27 +371,8 @@ namespace MouseMoverClient
                 {
                     case "power":
                         // Send cursor to centre of screen
-                        Cursor.Position = new System.Drawing.Point(960, 540);
+                        Cursor.Position = new Point(960, 540);
                         DoMouseClick();
-                        string launchMsg = @"
-
-
-
-
-
-
-
-
-
-
-   ██╗      █████╗ ██╗   ██╗███╗   ██╗ ██████╗██╗  ██╗██╗
-   ██║     ██╔══██╗██║   ██║████╗  ██║██╔════╝██║  ██║██║
-   ██║     ███████║██║   ██║██╔██╗ ██║██║     ███████║██║
-   ██║     ██╔══██║██║   ██║██║╚██╗██║██║     ██╔══██║╚═╝
-   ███████╗██║  ██║╚██████╔╝██║ ╚████║╚██████╗██║  ██║██╗
-   ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝╚═╝  ╚═╝╚═╝
-";
-                        Console.WriteLine(launchMsg);
                         string path = AppDomain.CurrentDomain.BaseDirectory;
 #if DEBUG
                         path = path.Replace("Utilities\\MouseHub\\MouseHub\\bin\\Debug\\", "\\bin\\Debug\\net6.0-windows\\LVP-WPF.exe");
@@ -399,12 +385,122 @@ namespace MouseMoverClient
                         p.StartInfo.FileName = path;
                         p.StartInfo.WorkingDirectory = path.Replace("LVP-WPF.exe", "");
                         p.Start();
-                        break;
+
+                        Console.CursorVisible = false;
+                        int width, height;
+                        int[] y;
+                        Initialize(out width, out height, out y);
+                        while (true)
+                        {
+                            Counter++;
+                            ColumnUpdate(width, height, y);
+                            if (Counter > (3 * flowSpeed))
+                                Counter = 0;
+                        }
                     default:
                         Log("Unknown msg received: " + msg);
                         break;
-                    //To-do: Add restart case
+                        //To-do: Add restart case
                 }
+            }
+        }
+
+        public static int YPositionFields(int yPosition, int height)
+        {
+            if (yPosition < 0) return yPosition + height;
+            else if (yPosition < height) return yPosition;
+            else return 0;
+
+        }
+
+        private static void Initialize(out int width, out int height, out int[] y)
+        {
+            height = Console.WindowHeight;
+            width = Console.WindowWidth - 1;
+            y = new int[width];
+            Console.Clear();
+
+            for (int x = 0; x < width; ++x) { y[x] += randomPosition.Next(height); }
+        }
+
+        private static void ColumnUpdate(int width, int height, int[] y)
+        {
+            int x;
+            if (Counter < flowSpeed)
+            {
+                for (x = 0; x < width; ++x)
+                {
+                    if (x % 10 == 1) Console.ForegroundColor = fadedcolor;
+                    else Console.ForegroundColor = basecolor;
+
+                    Console.SetCursorPosition(x, y[x]);
+                    Console.Write(Asciicharacters);
+
+                    if (x % 10 == 9) Console.ForegroundColor = fadedcolor;
+                    else Console.ForegroundColor = basecolor;
+
+                    int temp = y[x] - 2;
+                    Console.SetCursorPosition(x, YPositionFields(temp, height));
+                    Console.Write(Asciicharacters);
+
+                    int temp1 = y[x] - 10;
+                    Console.SetCursorPosition(x, YPositionFields(temp1, height));
+                    Console.Write(' ');
+                    y[x] = YPositionFields(y[x] + 1, height);
+                }
+            }
+            else if (Counter > flowSpeed && Counter < textFlow)
+            {
+                for (x = 0; x < width; ++x)
+                {
+                    Console.SetCursorPosition(x, y[x]);
+                    if (x % 10 == 9) Console.ForegroundColor = fadedcolor;
+                    else Console.ForegroundColor = basecolor;
+
+                    Console.Write(Asciicharacters);
+
+                    y[x] = YPositionFields(y[x] + 1, height);
+
+                }
+            }
+            else if (Counter > fastFlow)
+            {
+                for (x = 0; x < width; ++x)
+                {
+                    Console.SetCursorPosition(x, y[x]);
+                    Console.Write(' ');
+
+                    int temp1 = y[x] - 10;
+                    Console.SetCursorPosition(x, YPositionFields(temp1, height));
+                    Console.Write(' ');
+
+                    if (Counter > fastFlow && Counter < textFlow)
+                    {
+                        if (x % 10 == 9) Console.ForegroundColor = fadedcolor;
+                        else Console.ForegroundColor = basecolor;
+
+                        int temp = y[x] - 2;
+                        Console.SetCursorPosition(x, YPositionFields(temp, height));
+                        Console.Write(Asciicharacters);
+
+                    }
+                    Console.SetCursorPosition(width / 2, height / 2);
+                    y[x] = YPositionFields(y[x] + 1, height);
+                }
+            }
+        }
+
+        static char Asciicharacters
+        {
+            get
+            {
+                int t = randomPosition.Next(10);
+
+                if (t <= 2) return (char)('0' + randomPosition.Next(10));
+                else if (t <= 4) return (char)('a' + randomPosition.Next(27));
+                else if (t <= 6) return (char)('A' + randomPosition.Next(27));
+                else return (char)(randomPosition.Next(32, 255));
+
             }
         }
 

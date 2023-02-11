@@ -46,7 +46,6 @@ namespace LVP_WPF
             if (model == null) return;
             await Task.Run(() => { AssignControlContext(); });
 
-            loadGrid.Visibility = Visibility.Hidden;
             if (progressBar.Visibility == Visibility.Visible) progressBar.Visibility = Visibility.Hidden;
             coffeeGif.Source = null;
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
@@ -56,17 +55,10 @@ namespace LVP_WPF
             gui.mainScrollViewer = this.scrollViewer;
             gui.mainGrid = this.mainGrid;
 
-            if (Cache.update)
-            {
-                await Task.Delay(100);
-            }
-            else
-            {
-                await Task.Delay(10);
-            }
-
             tcpWorker = new TcpSerialListener(gui);
             tcpWorker.StartThread();
+            await Task.Delay(300); // wait for content
+            loadGrid.Visibility = Visibility.Hidden;
         }
 
         private void MainWindow_Closed(object sender, EventArgs e)
