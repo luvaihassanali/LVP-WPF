@@ -51,7 +51,7 @@ namespace MouseMoverClient
         static SerialPort serialPort;
         static System.Timers.Timer pollingTimer;
 
-        static unsafe void Main(string[] args)
+        static async Task Main(string[] args)
         {
             Console.Title = "";
             Console.SetWindowSize(60, 10);
@@ -70,7 +70,7 @@ namespace MouseMoverClient
             pollingTimer.AutoReset = false;
 
             InitializeSerialPort();
-            StartListener();
+            await StartListener();
 
             if (tcpClient != null)
             {
@@ -85,7 +85,7 @@ namespace MouseMoverClient
             }
         }
 
-        static void StartListener()
+        static async Task StartListener()
         {
             Log("Start");
             while (!Console.KeyAvailable)
@@ -122,6 +122,8 @@ namespace MouseMoverClient
                     }
 
                     CheckSerialConnection();
+                    await Task.Delay(500);
+
                 }
             }
             Log("Stop");

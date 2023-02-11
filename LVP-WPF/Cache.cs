@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
 
@@ -54,19 +55,10 @@ namespace LVP_WPF
             update = CheckForUpdates();
             if (update)
             {
-                //To-do: Detect file extension changes
+                //To-do: Detect file extension changes and episode deletions
+                p.Visibility = Visibility.Visible;
                 MainWindow.gui.ProgressBarMax = mediaCount;
                 await BuildCache();
-            } 
-            else
-            {
-#if RELEASE
-                for (int i = 1; i <= 100; i++)
-                {
-                    await Task.Delay(1);
-                    MainWindow.gui.ProgressBarValue = i;
-                }
-#endif
             }
 
             for (int i = 0; i < MainWindow.model.Movies.Length; i++)

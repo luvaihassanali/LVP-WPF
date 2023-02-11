@@ -171,6 +171,7 @@ namespace LVP_WPF.Windows
 
         private async void SeasonButton_Click(object sender, RoutedEventArgs e)
         {
+            loadGrid.Visibility = Visibility.Visible;
             TvShowWindow_Fade(0.1);
             int prevIndex = tvShow.CurrSeason;
             int seasonIndex = SeasonWindow.Show(tvShow);
@@ -192,6 +193,7 @@ namespace LVP_WPF.Windows
                 Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
                 MainWindow.tcpWorker.layoutPoint.tvControlList.Add(img);
             }
+            loadGrid.Visibility = Visibility.Hidden;
         }
 
         private void TvShowWindow_Fade(double direction)

@@ -16,7 +16,7 @@ namespace LVP_WPF.Windows
 
         public static int Show(TvShow tvShow)
         {
-            seasonIndex = tvShow.CurrSeason;
+            seasonIndex = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
             SeasonWindow seasonWindow = new SeasonWindow();
             SeasonWindowBox[] seasonBoxes = new SeasonWindowBox[tvShow.Seasons.Length];
             for (int i = 0; i < tvShow.Seasons.Length; i++)
@@ -69,6 +69,7 @@ namespace LVP_WPF.Windows
             scrollViewer = (ScrollViewer)GuiModel.GetScrollViewer(SeasonListView);
             scrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
             MainWindow.gui.seasonScrollViewer = scrollViewer;
+            MainWindow.tcpWorker.layoutPoint.seasonIndex = seasonIndex;
             MainWindow.tcpWorker.layoutPoint.Select("SeasonWindow");
         }
 

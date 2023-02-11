@@ -146,6 +146,8 @@ namespace LVP_WPF
                 }
 
                 CheckSerialConnection();
+                try { Task.Delay(500).Wait(); }
+                catch { }
             }
 
             pingSender.Dispose();

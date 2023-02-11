@@ -46,8 +46,8 @@ namespace LVP_WPF
             if (model == null) return;
             await Task.Run(() => { AssignControlContext(); });
 
-            Panel.SetZIndex(loadGrid, -1);
-            progressBar.Visibility = Visibility.Collapsed;
+            loadGrid.Visibility = Visibility.Hidden;
+            if (progressBar.Visibility == Visibility.Visible) progressBar.Visibility = Visibility.Hidden;
             coffeeGif.Source = null;
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
@@ -150,6 +150,7 @@ namespace LVP_WPF
         //To-do: loader?
         private void ListView_Click(object sender, RoutedEventArgs e)
         {
+            loadGrid.Visibility = Visibility.Visible;
             MainWindow_Fade(0.1);
             MainWindowBox item = (MainWindowBox)(sender as ListView).SelectedItem;
             if (item != null)
@@ -165,6 +166,7 @@ namespace LVP_WPF
                 }
             }
             MainWindow_Fade(1.0);
+            loadGrid.Visibility = Visibility.Hidden;
         }
 
         private void MainWindow_Fade(double direction)
