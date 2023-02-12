@@ -151,7 +151,7 @@
         </ScrollViewer>
         <Grid Name="loadGrid" Background="Transparent">
             <fa:ImageAwesome Name="loadIcon" Icon="Spinner" Foreground="White" Spin="True" Height="128" Width="128"/>
-            <MediaElement Name="coffeeGif" MediaEnded="Coffee_Gif_Ended" Source="Resources\coffee.gif" MaxWidth="498" MaxHeight="431" LoadedBehavior="Play" />
+            <MediaElement Name="coffeeGif" MediaEnded="Coffee_Gif_Ended" Source="Resources\coffee.gif" MaxWidth="498" MaxHeight="431" LoadedBehavior="Play" Visibility="Hidden" />
             <ProgressBar Name="progressBar" Value="{Binding ProgressBarValue}" Maximum="{Binding ProgressBarMax}" Width="498" Height= "10" IsIndeterminate="False" Visibility="Hidden"
                          HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,428,0,0" Background="#FF9CCAC4" Foreground="#FF068494" BorderBrush="#FF9CCAC4"  />
         </Grid>

@@ -42,7 +42,7 @@ namespace LVP_WPF
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            await Cache.Initialize(progressBar);
+            await Cache.Initialize(progressBar, coffeeGif);
             if (model == null) return;
             await Task.Run(() => { AssignControlContext(); });
 

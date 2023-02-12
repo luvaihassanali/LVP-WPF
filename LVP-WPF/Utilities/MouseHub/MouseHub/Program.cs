@@ -75,8 +75,6 @@ namespace MouseMoverClient
             pollingTimer.AutoReset = false;
 
             InitializeSerialPort();
-            await Task.Delay(1000);
-            StartMatrix();
             await StartListener();
 
             if (tcpClient != null)

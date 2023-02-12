@@ -33,7 +33,7 @@ namespace LVP_WPF
         private static int mediaCount = 0;
         public static bool update;
 
-        internal static async Task Initialize(ProgressBar p)
+        internal static async Task Initialize(ProgressBar p, MediaElement c)
         {
             string driveString = ConfigurationManager.AppSettings["Drives"];
             if (driveString.Equals(String.Empty)) return;
@@ -57,6 +57,7 @@ namespace LVP_WPF
             {
                 //To-do: Detect file extension changes and episode deletions
                 p.Visibility = Visibility.Visible;
+                c.Visibility = Visibility.Visible;
                 MainWindow.gui.ProgressBarMax = mediaCount;
                 await BuildCache();
             }
