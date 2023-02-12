@@ -73,7 +73,7 @@ namespace LVP_WPF.Windows
             pollingTimer = new DispatcherTimer();
             pollingTimer.Interval = TimeSpan.FromSeconds(3);
             pollingTimer.Tick += PollingTimer_Tick;
-            inactivityTimer = new InactivityTimer(TimeSpan.FromHours(2)); //(TimeSpan.FromSeconds(10));
+            inactivityTimer = new InactivityTimer(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
@@ -105,7 +105,6 @@ namespace LVP_WPF.Windows
                 pollingTimer.IsEnabled = false;
                 pollingTimer = null;
             }
-            inactivityTimer.Dispose();
 
             if (!TvShowWindow.cartoonShuffle && !skipClosing)
             {
@@ -151,6 +150,7 @@ namespace LVP_WPF.Windows
             if (mediaPlayer.IsPlaying) mediaPlayer.Stop();
             mediaPlayer.Dispose();
             libVLC.Dispose();
+            inactivityTimer.Dispose();
         }
 
         private void UpdateProgressBar(Episode episode)
@@ -460,6 +460,10 @@ namespace LVP_WPF.Windows
         private void InactivityDetected(object sender, EventArgs e)
         {
             if (mediaPlayer.IsPlaying) return;
+            this.Dispatcher.Invoke(() =>
+            {
+                this.Close();
+            });
             Application.Current.Shutdown();
         }
     }

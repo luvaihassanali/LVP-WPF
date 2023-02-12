@@ -53,14 +53,6 @@ namespace MouseMoverClient
         static SerialPort serialPort;
         static System.Timers.Timer pollingTimer;
 
-        static int matrixCounter;
-        static Random randomPosition = new Random();
-        static int flowSpeed = 100;
-        static int fastFlow = flowSpeed + 30;
-        static int textFlow = flowSpeed + 500;
-        static ConsoleColor basecolor = ConsoleColor.DarkBlue;
-        static ConsoleColor fadedcolor = ConsoleColor.White;
-
         static async Task Main(string[] args)
         {
             ConsoleHelper.SetCurrentFont("Segoe Mono Boot", 32);
@@ -83,6 +75,8 @@ namespace MouseMoverClient
             pollingTimer.AutoReset = false;
 
             InitializeSerialPort();
+            await Task.Delay(1000);
+            StartMatrix();
             await StartListener();
 
             if (tcpClient != null)
@@ -388,23 +382,27 @@ namespace MouseMoverClient
                         p.StartInfo.FileName = path;
                         p.StartInfo.WorkingDirectory = path.Replace("LVP-WPF.exe", "");
                         p.Start();
-
-                        Console.CursorVisible = false;
-                        int width, height;
-                        int[] y;
-                        Initialize(out width, out height, out y);
-                        while (true)
-                        {
-                            matrixCounter++;
-                            ColumnUpdate(width, height, y);
-                            if (matrixCounter > (3 * flowSpeed))
-                                matrixCounter = 0;
-                        }
+                        StartMatrix();
+                        break;
                     default:
                         Log("Unknown msg received: " + msg);
                         break;
                         //To-do: Add restart case
                 }
+            }
+        }
+
+        private static void StartMatrix()
+        {
+            Console.CursorVisible = false;
+            int width, height;
+            int[] y;
+            Initialize(out width, out height, out y);
+            while (true)
+            {
+                matrixCounter++;
+                ColumnUpdate(width, height, y);
+                if (matrixCounter > (3 * flowSpeed)) matrixCounter = 0;
             }
         }
 
@@ -426,6 +424,19 @@ namespace MouseMoverClient
             for (int x = 0; x < width; ++x) { y[x] += randomPosition.Next(height); }
         }
 
+        static int matrixCounter;
+        static Random randomPosition = new Random();
+        static int flowSpeed = 50;
+        static int fastFlow = flowSpeed + 30;
+        static int textFlow = flowSpeed + 500;
+        static ConsoleColor baseColor = ConsoleColor.DarkBlue;
+        static ConsoleColor fadedColor = ConsoleColor.White;
+
+        static int divisor = 10;
+        static int modVal = 9;
+        static int yPad = 2;
+        static int yPad1 = 2;
+
         private static void ColumnUpdate(int width, int height, int[] y)
         {
             int x;
@@ -433,20 +444,20 @@ namespace MouseMoverClient
             {
                 for (x = 0; x < width; ++x)
                 {
-                    if (x % 10 == 1) Console.ForegroundColor = fadedcolor;
-                    else Console.ForegroundColor = basecolor;
+                    if (x % divisor == 1) Console.ForegroundColor = fadedColor;
+                    else Console.ForegroundColor = baseColor;
 
                     Console.SetCursorPosition(x, y[x]);
                     Console.Write(Asciicharacters);
 
-                    if (x % 10 == 9) Console.ForegroundColor = fadedcolor;
-                    else Console.ForegroundColor = basecolor;
+                    if (x % divisor == modVal) Console.ForegroundColor = fadedColor;
+                    else Console.ForegroundColor = baseColor;
 
-                    int temp = y[x] - 2;
+                    int temp = y[x] - yPad;
                     Console.SetCursorPosition(x, YPositionFields(temp, height));
                     Console.Write(Asciicharacters);
 
-                    int temp1 = y[x] - 10;
+                    int temp1 = y[x] - yPad1;
                     Console.SetCursorPosition(x, YPositionFields(temp1, height));
                     Console.Write(' ');
                     y[x] = YPositionFields(y[x] + 1, height);
@@ -457,8 +468,8 @@ namespace MouseMoverClient
                 for (x = 0; x < width; ++x)
                 {
                     Console.SetCursorPosition(x, y[x]);
-                    if (x % 10 == 9) Console.ForegroundColor = fadedcolor;
-                    else Console.ForegroundColor = basecolor;
+                    if (x % divisor == modVal) Console.ForegroundColor = fadedColor;
+                    else Console.ForegroundColor = baseColor;
 
                     Console.Write(Asciicharacters);
 
@@ -473,16 +484,16 @@ namespace MouseMoverClient
                     Console.SetCursorPosition(x, y[x]);
                     Console.Write(' ');
 
-                    int temp1 = y[x] - 10;
+                    int temp1 = y[x] - yPad1;
                     Console.SetCursorPosition(x, YPositionFields(temp1, height));
                     Console.Write(' ');
 
                     if (matrixCounter > fastFlow && matrixCounter < textFlow)
                     {
-                        if (x % 10 == 9) Console.ForegroundColor = fadedcolor;
-                        else Console.ForegroundColor = basecolor;
+                        if (x % divisor == modVal) Console.ForegroundColor = fadedColor;
+                        else Console.ForegroundColor = baseColor;
 
-                        int temp = y[x] - 2;
+                        int temp = y[x] - yPad;
                         Console.SetCursorPosition(x, YPositionFields(temp, height));
                         Console.Write(Asciicharacters);
 
