@@ -155,7 +155,7 @@ namespace LVP_WPF.Windows
 
         private void UpdateProgressBar(Episode episode)
         {
-            tvShowWindow.Dispatcher.Invoke(() =>
+            tvShowWindow.Dispatcher.BeginInvoke(() =>
             {
                 for (int i = 0; i < tvShowWindow.EpisodeListView.Items.Count; i++)
                 {
@@ -172,7 +172,6 @@ namespace LVP_WPF.Windows
 
         private void MediaPlayer_EndReached(object? sender, EventArgs e)
         {
-            SliderValue = 0;
             if (TvShowWindow.cartoonShuffle)
             {
                 TvShowWindow.cartoonIndex++;
@@ -226,7 +225,7 @@ namespace LVP_WPF.Windows
                                     LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
                                     GuiModel.Log("Play: " + currMedia.Path);
                                     ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                    tvShowWindow.Dispatcher.Invoke(() => { tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason); });
+                                    tvShowWindow.Dispatcher.BeginInvoke(() => { tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason); });
                                     return;
                                 }
                             }
