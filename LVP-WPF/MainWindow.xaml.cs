@@ -136,7 +136,7 @@ namespace LVP_WPF
         private void InactivityDetected(object sender, EventArgs e)
         {
             if (gui.isPlaying) return;
-            this.Close();
+            Application.Current.Shutdown();
         }
 
         //To-do: loader?

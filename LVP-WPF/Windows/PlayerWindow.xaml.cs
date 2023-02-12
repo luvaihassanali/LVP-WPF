@@ -460,7 +460,7 @@ namespace LVP_WPF.Windows
         private void InactivityDetected(object sender, EventArgs e)
         {
             if (mediaPlayer.IsPlaying) return;
-            this.Close();
+            Application.Current.Shutdown();
         }
     }
 }

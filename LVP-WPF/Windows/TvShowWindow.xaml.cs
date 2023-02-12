@@ -265,6 +265,8 @@ namespace LVP_WPF.Windows
 
         internal static void PlayRandomCartoons()
         {
+            cartoonIndex = 0;
+            cartoonShuffleList.Clear();
             cartoonShuffle = true;
             cartoonLimit = Int32.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
             for (int i = 0; i < cartoonLimit; i++)
