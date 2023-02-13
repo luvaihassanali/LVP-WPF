@@ -23,18 +23,9 @@ namespace LVP_WPF
 
         public MainWindow()
         {
-            TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
-            GuiModel.InitializeCustomCursor();
             InitializeComponent();
             gui = new GuiModel();
             DataContext = gui;
-
-            Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
-            if (mouseHubProcess.Length != 0)
-            {
-                mouseHubProcess[0].Kill();
-                mouseHubKilled = true;
-            }
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
 #endif
@@ -42,23 +33,39 @@ namespace LVP_WPF
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            await Task.Run(() =>
+            {
+                TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+                GuiModel.InitializeCustomCursor();
+
+                Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
+                if (mouseHubProcess.Length != 0)
+                {
+                    mouseHubProcess[0].Kill();
+                    mouseHubKilled = true;
+                }
+            });
+
             await Cache.Initialize(progressBar, coffeeGif);
             if (model == null) return;
-            await Task.Run(() => { AssignControlContext(); });
+            await AssignControlContext();
 
-            if (progressBar.Visibility == Visibility.Visible) progressBar.Visibility = Visibility.Hidden;
-            coffeeGif.Source = null;
+            await this.Dispatcher.BeginInvoke(() =>
+            {
+                if (progressBar.Visibility == Visibility.Visible) progressBar.Visibility = Visibility.Hidden;
+                if (coffeeGif.Visibility == Visibility.Visible) coffeeGif.Visibility = Visibility.Hidden;
+                coffeeGif.Source = null;
+                gui.mainCloseButton = this.closeButton;
+                gui.mainScrollViewer = this.scrollViewer;
+                gui.mainGrid = this.mainGrid;
+
+                tcpWorker = new TcpSerialListener(gui);
+                tcpWorker.StartThread();
+            });
+
+            loadGrid.Visibility = Visibility.Hidden;
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
-
-            gui.mainCloseButton = this.closeButton;
-            gui.mainScrollViewer = this.scrollViewer;
-            gui.mainGrid = this.mainGrid;
-
-            tcpWorker = new TcpSerialListener(gui);
-            tcpWorker.StartThread();
-            await Task.Delay(300); // wait for content
-            loadGrid.Visibility = Visibility.Hidden;
         }
 
         private void MainWindow_Closed(object sender, EventArgs e)
@@ -85,15 +92,17 @@ namespace LVP_WPF
             }
         }
 
-        internal void AssignControlContext()
+        internal async Task AssignControlContext()
         {
+            TimeSpan delay = new TimeSpan(1);
             for (int i = 0; i < model.Movies.Length; i++)
             {
                 string img = model.Movies[i].Poster == null ? "Resources\\noPrev.png" : model.Movies[i].Poster;
-                MovieListView.Dispatcher.Invoke(() =>
+                await MovieListView.Dispatcher.BeginInvoke(() =>
                 {
                     gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = Cache.LoadImage(img, 300) });
                 });
+                await Task.Delay(1);
             }
 
             for (int i = 0; i < model.TvShows.Length; i++)
@@ -101,19 +110,21 @@ namespace LVP_WPF
                 if (model.TvShows[i].Cartoon)
                 {
                     string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
-                    CartoonsListView.Dispatcher.Invoke(() =>
+                    await CartoonsListView.Dispatcher.BeginInvoke(() =>
                     {
                         gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
                     });
+                    await Task.Delay(1);
                     TvShowWindow.cartoons.Add(model.TvShows[i]);
                 }
                 else
                 {
                     string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
-                    TvShowListView.Dispatcher.Invoke(() =>
+                    await TvShowListView.Dispatcher.BeginInvoke(() =>
                     {
                         gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
                     });
+                    await Task.Delay(1);
                 }
             }
         }
@@ -136,6 +147,7 @@ namespace LVP_WPF
         private void InactivityDetected(object sender, EventArgs e)
         {
             if (gui.isPlaying) return;
+            GuiModel.Log("Inactivity shutdown (MainWindow)");
             Application.Current.Shutdown();
         }
 
