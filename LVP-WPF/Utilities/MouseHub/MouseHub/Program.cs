@@ -46,6 +46,7 @@ namespace MouseMoverClient
 
         static bool connectionEstablished = true;
         static string esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
+        static int opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
         static int esp8266ServerPort = 3000;
         static int joystickX;
         static int joystickY;
@@ -63,7 +64,8 @@ namespace MouseMoverClient
             Console.SetBufferSize(50, 12);
             SetWindowPos(MyConsole, 0, 600, 680, 0, 0, SWP_NOSIZE); // Console.SetWindowPosition();
             SetWindowLong(MyConsole, GWL_EXSTYLE, GetWindowLong(MyConsole, GWL_EXSTYLE) | WS_EX_LAYERED); // https://stackoverflow.com/questions/24110600/transparent-console-dllimport
-            SetLayeredWindowAttributes(MyConsole, 0, 230, LWA_ALPHA); // Opacity = 0.5 = (255/2) = 128, 75 = 191, 80 = 204, 90 = 230
+            
+            SetLayeredWindowAttributes(MyConsole, 0, (byte)opacity, LWA_ALPHA); // Opacity = 0.5 = (255/2) = 128, 75 = 191, 80 = 204, 90 = 230
             // Hide title bar
             int style = GetWindowLong(MyConsole, -16);
             style &= -12582913;

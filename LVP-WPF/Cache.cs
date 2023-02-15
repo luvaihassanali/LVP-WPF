@@ -213,30 +213,28 @@ namespace LVP_WPF
                 if (season.Id == -1) continue;
                 string seasonLabel = tvShow.Seasons[j].Id == -1 ? "Extras" : (j + 1).ToString();
 
-                string seasonString = "";
-                string seasonUrl = "";
+                string seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
+                using HttpResponseMessage tvSeasonResponse = await client.GetAsync(seasonUrl);
+                using HttpContent tvSeasonContent = tvSeasonResponse.Content;
+                string seasonString = await tvSeasonContent.ReadAsStringAsync();
+
+                JObject seasonObject = JObject.Parse(seasonString);
                 try
                 {
-                    seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
-                    using HttpResponseMessage tvSeasonResponse = await client.GetAsync(seasonUrl);
-                    using HttpContent tvSeasonContent = tvSeasonResponse.Content;
-                    seasonString = await tvSeasonContent.ReadAsStringAsync();
+                    if (((string)seasonObject["name"]).Contains("Specials"))
+                    {
+                        seasonIndex++;
+                        seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
+                        using HttpResponseMessage tvSeasonResponseSpecials = await client.GetAsync(seasonUrl);
+                        using HttpContent tvSeasonContentSpecials = tvSeasonResponseSpecials.Content;
+                        seasonString = await tvSeasonContentSpecials.ReadAsStringAsync();
+                        seasonObject = JObject.Parse(seasonString);
+                    }
                 }
                 catch
                 {
                     NotificationDialog.Show("Error", "Season first index error: " + tvShow.Name + ", ID = " + tvShow.Id);
                     Environment.Exit(1);
-                }
-
-                JObject seasonObject = JObject.Parse(seasonString);
-                if (((string)seasonObject["name"]).Contains("Specials"))
-                {
-                    seasonIndex++;
-                    seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
-                    using HttpResponseMessage tvSeasonResponse = await client.GetAsync(seasonUrl);
-                    using HttpContent tvSeasonContent = tvSeasonResponse.Content;
-                    seasonString = await tvSeasonContent.ReadAsStringAsync();
-                    seasonObject = JObject.Parse(seasonString);
                 }
 
                 if (season.Poster == null)
