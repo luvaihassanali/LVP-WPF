@@ -114,7 +114,7 @@ namespace LVP_WPF
                     {
                         gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
                     });
-                    await Task.Delay(1);
+                    //await Task.Delay(1);
                     TvShowWindow.cartoons.Add(model.TvShows[i]);
                 }
                 else

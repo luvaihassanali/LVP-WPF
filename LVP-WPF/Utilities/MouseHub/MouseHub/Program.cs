@@ -61,7 +61,7 @@ namespace MouseMoverClient
             Console.BackgroundColor = ConsoleColor.Blue;
             Console.SetWindowSize(50, 12);
             Console.SetBufferSize(50, 12);
-            SetWindowPos(MyConsole, 0, 600, 10, 0, 0, SWP_NOSIZE); // Console.SetWindowPosition();
+            SetWindowPos(MyConsole, 0, 600, 680, 0, 0, SWP_NOSIZE); // Console.SetWindowPosition();
             SetWindowLong(MyConsole, GWL_EXSTYLE, GetWindowLong(MyConsole, GWL_EXSTYLE) | WS_EX_LAYERED); // https://stackoverflow.com/questions/24110600/transparent-console-dllimport
             SetLayeredWindowAttributes(MyConsole, 0, 230, LWA_ALPHA); // Opacity = 0.5 = (255/2) = 128, 75 = 191, 80 = 204, 90 = 230
             // Hide title bar

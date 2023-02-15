@@ -381,6 +381,7 @@ namespace LVP_WPF.Windows
         {
             if (mediaPlayer != null)
             {
+                TcpSerialListener.DoMouseClick();
                 if (mediaPlayer.IsPlaying)
                 {
                     overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Visible; });
@@ -459,7 +460,9 @@ namespace LVP_WPF.Windows
 
         private void InactivityDetected(object sender, EventArgs e)
         {
+            //System.Threading.Tasks.Task.Delay(2000).Wait();
             if (mediaPlayer.IsPlaying) return;
+            GuiModel.Log("Inactivity shutdown (PlayerWindow)");
             this.Dispatcher.Invoke(() =>
             {
                 this.Close();
