@@ -580,7 +580,7 @@ namespace LVP_WPF.Windows
                     {
                         scrollViewer.ScrollToHome();
                     }
-                    else if (row == mainWindowGrid.Count - 1)
+                    else if ((seasonWindowActive && row == seasonWindowGrid.Count - 1) || (tvShowWindowActive && row == tvControlList.Count - 1)|| (mainWindowActive && row == mainWindowGrid.Count - 1))
                     {
                         scrollViewer.ScrollToBottom();
                     }

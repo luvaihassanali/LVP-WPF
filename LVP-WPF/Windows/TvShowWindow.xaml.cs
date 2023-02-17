@@ -250,11 +250,19 @@ namespace LVP_WPF.Windows
         {
             if (tvShow.LastEpisode == null)
             {
-                PlayerWindow.Show(tvShow.Seasons[0].Episodes[0], this);
+                PlayerWindow.Show(tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0], this);
             }
             else
             {
-                PlayerWindow.Show(tvShow.LastEpisode, this);
+                foreach (Episode episode in tvShow.Seasons[tvShow.CurrSeason - 1].Episodes)
+                {
+                    if (episode.Compare(tvShow.LastEpisode))
+                    {
+                        PlayerWindow.Show(tvShow.LastEpisode, this);
+                        return;
+                    }
+                }
+                PlayerWindow.Show(tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0], this);
             }
         }
 

@@ -93,15 +93,15 @@ namespace LVP_WPF
                 if (tvShow.Name.Equals("Tom & Jerry"))
                 {
                     CustomCache.BuildTomAndJerryData(tvShow);
-                    continue;
                 }
                 else if (tvShow.Name.Equals("Looney Tunes"))
                 {
                     CustomCache.BuildLooneyTunesData(tvShow);
-                    continue;
                 }
-
-                await BuildTvShowCache(tvShow, client);
+                else
+                {
+                    await BuildTvShowCache(tvShow, client);
+                }
             }
             client.Dispose();
 
@@ -200,13 +200,7 @@ namespace LVP_WPF
 
         private static async Task BuildSeasonCache(TvShow tvShow, HttpClient client)
         {
-            string tvIdExceptions = ConfigurationManager.AppSettings["TvExceptionIds"];
             int seasonIndex = 0;
-            if (tvIdExceptions.Contains(tvShow.Id.ToString()))
-            {
-                seasonIndex = 1;
-            }
-
             for (int j = 0; j < tvShow.Seasons.Length; j++)
             {
                 Season season = tvShow.Seasons[j];
@@ -219,6 +213,17 @@ namespace LVP_WPF
                 string seasonString = await tvSeasonContent.ReadAsStringAsync();
 
                 JObject seasonObject = JObject.Parse(seasonString);
+                //{"success":false,"status_code":34,"status_message":"The resource you requested could not be found."}
+                if (seasonString.ToLower().Contains("\"success\":false"))
+                {
+                    seasonIndex = 1;
+                    string seasonUrl1Idx = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
+                    using HttpResponseMessage tvSeasonResponse1Idx = await client.GetAsync(seasonUrl1Idx);
+                    using HttpContent tvSeasonContent1Idx = tvSeasonResponse1Idx.Content;
+                    seasonString = await tvSeasonContent1Idx.ReadAsStringAsync(); 
+                    seasonObject = JObject.Parse(seasonString);
+                }
+
                 try
                 {
                     if (((string)seasonObject["name"]).Contains("Specials"))
