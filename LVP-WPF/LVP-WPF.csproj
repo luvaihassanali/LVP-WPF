@@ -34,6 +34,26 @@
     <None Remove="Resources\blue_cursors_xl\blue_working_xl.ani" />
     <None Remove="Resources\coffee.gif" />
     <None Remove="Resources\extras.png" />
+    <None Remove="Resources\no-preview-seasons\1.png" />
+    <None Remove="Resources\no-preview-seasons\10.png" />
+    <None Remove="Resources\no-preview-seasons\11.png" />
+    <None Remove="Resources\no-preview-seasons\12.png" />
+    <None Remove="Resources\no-preview-seasons\13.png" />
+    <None Remove="Resources\no-preview-seasons\14.png" />
+    <None Remove="Resources\no-preview-seasons\15.png" />
+    <None Remove="Resources\no-preview-seasons\16.png" />
+    <None Remove="Resources\no-preview-seasons\17.png" />
+    <None Remove="Resources\no-preview-seasons\18.png" />
+    <None Remove="Resources\no-preview-seasons\19.png" />
+    <None Remove="Resources\no-preview-seasons\2.png" />
+    <None Remove="Resources\no-preview-seasons\20.png" />
+    <None Remove="Resources\no-preview-seasons\3.png" />
+    <None Remove="Resources\no-preview-seasons\4.png" />
+    <None Remove="Resources\no-preview-seasons\5.png" />
+    <None Remove="Resources\no-preview-seasons\6.png" />
+    <None Remove="Resources\no-preview-seasons\7.png" />
+    <None Remove="Resources\no-preview-seasons\8.png" />
+    <None Remove="Resources\no-preview-seasons\9.png" />
     <None Remove="Resources\noPrev.png" />
     <None Remove="Resources\noPrevWide.png" />
     <None Remove="Resources\play.png" />
@@ -93,6 +113,66 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\movie.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\10.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\11.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\12.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\13.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\14.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\15.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\16.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\17.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\18.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\19.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\2.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\20.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\3.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\4.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\5.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\6.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\7.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\8.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\no-preview-seasons\9.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\noPrev.png">
