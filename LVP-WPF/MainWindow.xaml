@@ -66,11 +66,9 @@
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
-                <!--<Expander Grid.Row="2" Header="Cartoons" Foreground="White" HorizontalAlignment="Left" FlowDirection="RightToLeft">
-                <StackPanel FlowDirection="LeftToRight">
-                    <Label Content="   Ctemp" Foreground="White" ></Label>
-                </StackPanel>
-            </Expander>-->
+                <!--<Expander Grid.Row="2" Header="Cartoons" Foreground="White">
+                    <Label Content="Cartoons" Foreground="White" ></Label>
+                </Expander>-->
                 <Label Name="cartoonsHeader" PreviewMouseDown="CartoonsHeader_Click" Grid.Row="2" Content="Cartoons" Foreground="White"></Label>
                 <ListView PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Cartoons}" Grid.Row="3" Name="CartoonsListView" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
