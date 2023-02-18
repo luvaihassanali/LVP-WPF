@@ -282,17 +282,55 @@ namespace LVP_WPF.Windows
             LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(libVLC, m.Path, FromType.FromPath);
             media.AddOption(":avcodec-hw=auto");
             media.AddOption(":no-mkv-preload-local-dir");
-            string subtitleTrackOption = String.Format(":sub-track-id={0}", Int32.MaxValue);
+            string subtitleTrackOption = String.Format(":sub-track={0}", Int32.MaxValue);
             if (m as Movie != null)
             {
                 Movie movie = (Movie)m;
                 if (movie.Subtitles)
                 {
-                    subtitleTrackOption = String.Format(":sub-track-id={0}", movie.SubtitleTrack);
+                    subtitleTrackOption = String.Format(":sub-track={0}", movie.SubtitleTrack);
                 }
             }
             media.AddOption(subtitleTrackOption);
+            /*
+            await media.Parse(MediaParseOptions.ParseLocal);
+
+            foreach (var track in media.Tracks)
+            {
+                switch (track.TrackType)
+                {
+                    case TrackType.Audio:
+                        Trace.WriteLine("Audio track");
+                        Trace.WriteLine($"{nameof(track.Data.Audio.Channels)}: {track.Data.Audio.Channels}");
+                        Trace.WriteLine($"{nameof(track.Data.Audio.Rate)}: {track.Data.Audio.Rate}");
+                        break;
+                    case TrackType.Video:
+                        Trace.WriteLine("Video track");
+                        Trace.WriteLine($"{nameof(track.Data.Video.FrameRateNum)}: {track.Data.Video.FrameRateNum}");
+                        Trace.WriteLine($"{nameof(track.Data.Video.FrameRateDen)}: {track.Data.Video.FrameRateDen}");
+                        Trace.WriteLine($"{nameof(track.Data.Video.Height)}: {track.Data.Video.Height}");
+                        Trace.WriteLine($"{nameof(track.Data.Video.Width)}: {track.Data.Video.Width}");
+                        break;
+                    case TrackType.Text:
+                        Trace.WriteLine("Sub track");
+                        Trace.WriteLine($"{nameof(track.Description)}: {track.Description}");
+                        break;
+                }
+            }
+            */
             return media;
+            /*
+            using (var libVLC = new LibVLC())
+            {
+                var media = new Media(_libVLC, "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4", FromType.FromLocation);
+                using (var mp = new MediaPlayer(media))
+                {
+                    mp.AddSlave(MediaSlaveType.Subtitle, "file:///C:\\Users\\Me\\Desktop\\subs.srt", true);
+                    var r = mp.Play();
+                    Console.ReadKey();
+                }
+            }
+            */
         }
 
         private void Control_MouseEnter(object sender, EventArgs e)
