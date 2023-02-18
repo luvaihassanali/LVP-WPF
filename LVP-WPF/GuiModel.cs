@@ -148,7 +148,7 @@ namespace LVP_WPF
                 Registry.SetValue(@"HKEY_CURRENT_USER\Control Panel\Cursors\", keyValuePair[0], cursorPath + keyValuePair[1]);
             }
             SystemParametersInfo(SPI_SETCURSORS, 0, 0, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-            SystemParametersInfo(0x2029, 0, 128, 0x01);
+            SystemParametersInfo(0x2029, 0, 72, 0x01);
         }
 
         public static void Log(string message)
