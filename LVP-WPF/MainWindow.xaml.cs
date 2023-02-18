@@ -26,6 +26,7 @@ namespace LVP_WPF
             InitializeComponent();
             gui = new GuiModel();
             DataContext = gui;
+            if (bool.Parse(ConfigurationManager.AppSettings["Snow"])) snow.Visibility = Visibility.Visible;
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
 #endif
@@ -118,7 +119,7 @@ namespace LVP_WPF
                     {
                         gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
                     });
-                    //await Task.Delay(1);
+                    await Task.Delay(1);
                     TvShowWindow.cartoons.Add(model.TvShows[i]);
                 }
             }

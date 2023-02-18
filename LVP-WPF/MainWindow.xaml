@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:sf="clr-namespace:WpfSnowfall;assembly=WpfSnowfall"
         xmlns:local="clr-namespace:LVP_WPF"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
         mc:Ignorable="d"
@@ -147,6 +148,7 @@
                 </ListView>
             </Grid>
         </ScrollViewer>
+        <sf:Snowfall Name="snow" EmissionRate="5" Fill="White" ScaleFactor="1.1" OpacityFactor="1" LeaveAnimation="Fade" ParticleSpeed="1" Visibility="Hidden" />
         <Grid Name="loadGrid" Background="Transparent">
             <fa:ImageAwesome Name="loadIcon" Icon="Spinner" Foreground="White" Spin="True" Height="128" Width="128"/>
             <MediaElement Name="coffeeGif" MediaEnded="Coffee_Gif_Ended" Source="Resources\coffee.gif" MaxWidth="498" MaxHeight="431" LoadedBehavior="Play" Visibility="Hidden" />

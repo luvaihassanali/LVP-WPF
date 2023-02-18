@@ -206,6 +206,7 @@
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.18" />
+    <PackageReference Include="WpfSnowfall" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>
