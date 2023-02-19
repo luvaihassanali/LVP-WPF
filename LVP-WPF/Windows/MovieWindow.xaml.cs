@@ -1,6 +1,12 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LibVLCSharp.Shared;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
@@ -15,8 +21,9 @@ namespace LVP_WPF.Windows
     {
         private static Movie movie;
 
-        public static void Show(Movie m)
+        public static async void Show(Movie m)
         {
+            PlayerWindow.subtitleTrack = Int32.MaxValue;
             movie = m;
             MovieWindow window = new MovieWindow();
             window.MovieName = movie.Name + " (" + movie.Date.GetValueOrDefault().Year + ")";
@@ -47,6 +54,32 @@ namespace LVP_WPF.Windows
             InitializeComponent();
         }
 
+        private void GetLanguageInfo(Movie movie)
+        {
+            LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(PlayerWindow.libVLC, movie.Path, FromType.FromPath);
+            Task.Run(async () => { await media.Parse(MediaParseOptions.ParseLocal); }).Wait();
+
+            subTrackComboBox.Items.Add("Subtitles (none)");
+            foreach (var track in media.Tracks)
+            {
+                switch (track.TrackType)
+                {
+                    //case TrackType.Audio:
+                    //case TrackType.Video:
+                    case TrackType.Text:
+                        subTrackComboBox.Items.Add(track.Description);
+                        break;
+                }
+            }
+
+            if (subTrackComboBox.Items.Count > 1)
+            {
+                subTrackComboBox.Visibility = Visibility.Visible;
+                subTrackComboBox.SelectedIndex = 0;
+            }
+            //To-do: check for srt
+        }
+
         private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
         {
             this.PlayOverlay.Opacity = 1.0;
@@ -69,9 +102,22 @@ namespace LVP_WPF.Windows
 
         private void MovieWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            GetLanguageInfo(movie);
             MainWindow.gui.tvMovieCloseButton = this.closeButton;
             MainWindow.tcpWorker.layoutPoint.movieBackdrop = this.movieBackdrop;
             MainWindow.tcpWorker.layoutPoint.Select("MovieWindow", true);
+        }
+
+        private void subTrackComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (subTrackComboBox.SelectedIndex == 0)
+            {
+                PlayerWindow.subtitleTrack = Int32.MaxValue;
+            } 
+            else
+            {
+                PlayerWindow.subtitleTrack = subTrackComboBox.SelectedIndex - 1;
+            }
         }
     }
 }

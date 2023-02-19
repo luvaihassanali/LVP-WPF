@@ -52,7 +52,7 @@ namespace LVP_WPF
                 MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
             }
 
-            GuiModel.Log("Media count: " + mediaCount.ToString());
+            //GuiModel.Log("Media count: " + mediaCount.ToString());
             update = CheckForUpdates();
             if (update)
             {

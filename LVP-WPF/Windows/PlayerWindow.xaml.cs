@@ -19,12 +19,14 @@ namespace LVP_WPF.Windows
     {
         static private Media currMedia;
         static private TvShowWindow? tvShowWindow;
-        private LibVLC libVLC;
+        static internal LibVLC libVLC = new LibVLC();
+        static public int subtitleTrack = Int32.MaxValue;
         private MediaPlayer mediaPlayer;
         private DispatcherTimer pollingTimer;
         InactivityTimer inactivityTimer;
         private bool skipClosing = false;
         private bool sliderMouseDown = false;
+        private double prevSliderValue;
 
         public static void Show(Media m, TvShowWindow? tw = null)
         {
@@ -42,14 +44,11 @@ namespace LVP_WPF.Windows
         private double sliderMax;
         [ObservableProperty]
         private double sliderValue;
-        private double prevSliderValue;
 
         public PlayerWindow()
         {
             DataContext = this;
             InitializeComponent();
-            Core.Initialize();
-            libVLC = new LibVLC();
             mediaPlayer = new MediaPlayer(libVLC);
             videoView.MediaPlayer = mediaPlayer;
             SliderValue = 0;
@@ -59,6 +58,11 @@ namespace LVP_WPF.Windows
             this.WindowStyle = WindowStyle.SingleBorderWindow;
 #endif
 
+        }
+
+        internal static void InitiaizeLibVlcCore()
+        {
+            Core.Initialize();
         }
 
         private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
@@ -149,7 +153,7 @@ namespace LVP_WPF.Windows
             }
             if (mediaPlayer.IsPlaying) mediaPlayer.Stop();
             mediaPlayer.Dispose();
-            libVLC.Dispose();
+            //libVLC.Dispose();
             inactivityTimer.Dispose();
         }
 
@@ -282,17 +286,24 @@ namespace LVP_WPF.Windows
             LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(libVLC, m.Path, FromType.FromPath);
             media.AddOption(":avcodec-hw=auto");
             media.AddOption(":no-mkv-preload-local-dir");
-            string subtitleTrackOption = String.Format(":sub-track={0}", Int32.MaxValue);
-            if (m as Movie != null)
+            string subtitleTrackOption = String.Format(":sub-track={0}", subtitleTrack);
+            media.AddOption(subtitleTrackOption);
+            return media;
+            /*
+            using (var libVLC = new LibVLC())
             {
-                Movie movie = (Movie)m;
-                if (movie.Subtitles)
+                var media = new Media(_libVLC, "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4", FromType.FromLocation);
+                using (var mp = new MediaPlayer(media))
                 {
-                    subtitleTrackOption = String.Format(":sub-track={0}", movie.SubtitleTrack);
+                    mp.AddSlave(MediaSlaveType.Subtitle, "file:///C:\\Users\\Me\\Desktop\\subs.srt", true);
+                    var r = mp.Play();
+                    Console.ReadKey();
                 }
             }
-            media.AddOption(subtitleTrackOption);
+            */
+
             /*
+            LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(libVLC, m.Path, FromType.FromPath);
             await media.Parse(MediaParseOptions.ParseLocal);
 
             foreach (var track in media.Tracks)
@@ -315,19 +326,6 @@ namespace LVP_WPF.Windows
                         Trace.WriteLine("Sub track");
                         Trace.WriteLine($"{nameof(track.Description)}: {track.Description}");
                         break;
-                }
-            }
-            */
-            return media;
-            /*
-            using (var libVLC = new LibVLC())
-            {
-                var media = new Media(_libVLC, "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4", FromType.FromLocation);
-                using (var mp = new MediaPlayer(media))
-                {
-                    mp.AddSlave(MediaSlaveType.Subtitle, "file:///C:\\Users\\Me\\Desktop\\subs.srt", true);
-                    var r = mp.Play();
-                    Console.ReadKey();
                 }
             }
             */

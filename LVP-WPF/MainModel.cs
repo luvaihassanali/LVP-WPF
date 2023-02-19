@@ -64,8 +64,6 @@ namespace LVP_WPF
                         this.movies[j].Date = prevMedia.movies[i].Date;
                         this.movies[j].Backdrop = prevMedia.movies[i].Backdrop;
                         this.movies[j].RunningTime = prevMedia.movies[i].RunningTime;
-                        this.movies[j].Subtitles = prevMedia.movies[i].Subtitles;
-                        this.movies[j].SubtitleTrack = prevMedia.movies[i].SubtitleTrack;
                     }
                     else
                     {
@@ -151,15 +149,11 @@ namespace LVP_WPF
         private string overview;
         DateTime? date;
         private int runningTime;
-        private bool subtitles;
-        private int subtitleTrack;
 
         public Movie(string n, string p)
         {
             name = n;
             Path = p;
-            subtitles = false;
-            subtitleTrack = 0;
         }
 
         public string Name
@@ -196,18 +190,6 @@ namespace LVP_WPF
         {
             get => runningTime;
             set => runningTime = value;
-        }
-
-        public bool Subtitles
-        {
-            get => subtitles;
-            set => subtitles = value;
-        }
-
-        public int SubtitleTrack
-        {
-            get => subtitleTrack;
-            set => subtitleTrack = value;
         }
 
         internal bool Compare(Movie localMovie)

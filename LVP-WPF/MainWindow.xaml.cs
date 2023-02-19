@@ -64,9 +64,10 @@ namespace LVP_WPF
                 tcpWorker.StartThread();
             });
 
-            loadGrid.Visibility = Visibility.Hidden;
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
+            PlayerWindow.InitiaizeLibVlcCore();
+            loadGrid.Visibility = Visibility.Hidden;
         }
 
         private void MainWindow_Closed(object sender, EventArgs e)
@@ -79,6 +80,8 @@ namespace LVP_WPF
             {
                 tcpWorker.StopThread();
             }
+
+            PlayerWindow.libVLC.Dispose();
 
             if (mouseHubKilled)
             {
