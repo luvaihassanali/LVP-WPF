@@ -36,9 +36,8 @@ namespace LVP_WPF
         {
             await Task.Run(() =>
             {
-                TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
                 GuiModel.InitializeCustomCursor();
-
+                //TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
                 Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
                 if (mouseHubProcess.Length != 0)
                 {
