@@ -164,7 +164,7 @@ namespace MouseMoverClient
                 IAsyncResult result = null;
 
                 result = tcpClient.BeginConnect(esp8266ServerIp, esp8266ServerPort, null, null);
-                success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(1));
+                success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(2));
 
                 while (!success)
                 {

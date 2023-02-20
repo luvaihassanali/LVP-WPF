@@ -617,7 +617,7 @@ namespace LVP_WPF.Windows
             });
         }
 
-        private void CenterMouse()
+        internal void CenterMouse()
         {
             TcpSerialListener.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
         }

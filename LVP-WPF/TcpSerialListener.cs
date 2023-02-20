@@ -163,7 +163,7 @@ namespace LVP_WPF
                 IAsyncResult result = null;
 
                 result = tcpClient.BeginConnect(esp8266ServerIp, esp8266ServerPort, null, null);
-                success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(1));
+                success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(2));
                 
                 while (!success)
                 {
@@ -202,7 +202,6 @@ namespace LVP_WPF
                         if (buffer.Contains("initack"))
                         {
                             DebugLog("initack received");
-                            TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
                             if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
                             StopTimer();
                             StartTimer();
