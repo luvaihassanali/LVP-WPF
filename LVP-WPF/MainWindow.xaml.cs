@@ -26,7 +26,6 @@ namespace LVP_WPF
             InitializeComponent();
             gui = new GuiModel();
             DataContext = gui;
-            if (bool.Parse(ConfigurationManager.AppSettings["Snow"])) snow.Visibility = Visibility.Visible;
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
 #endif
@@ -66,6 +65,9 @@ namespace LVP_WPF
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
             PlayerWindow.InitiaizeLibVlcCore();
+
+            MainWindow_Fade(1.0);
+            if (bool.Parse(ConfigurationManager.AppSettings["Snow"])) snow.Visibility = Visibility.Visible;
             loadGrid.Visibility = Visibility.Hidden;
         }
 

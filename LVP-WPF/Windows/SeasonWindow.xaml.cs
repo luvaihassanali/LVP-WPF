@@ -52,10 +52,10 @@ namespace LVP_WPF.Windows
 
         private void SeasonListView_Click(object sender, RoutedEventArgs e)
         {
+            MainWindow.tcpWorker.layoutPoint.Select(String.Empty);
             SeasonWindowBox item = (SeasonWindowBox)(sender as ListView).SelectedItem;
             seasonIndex = item.Id;
             this.Close();
-            MainWindow.tcpWorker.layoutPoint.Select(String.Empty);
         }
 
         private void SeasonWindow_Loaded(object sender, RoutedEventArgs e)

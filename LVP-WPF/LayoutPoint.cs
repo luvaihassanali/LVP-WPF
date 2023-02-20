@@ -129,8 +129,11 @@ namespace LVP_WPF.Windows
                 if (mainWindowActive)
                 {
                     gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToHome(); });
+                    GuiModel.DoEvents();
                     CenterMouseOverControl(gui.mainCloseButton);
+                    await Task.Delay(150);
                     TcpSerialListener.DoMouseClick();
+                    await Task.Delay(150);
                 }
 
                 if (playerWindowActive)
@@ -140,10 +143,9 @@ namespace LVP_WPF.Windows
                     if (click)
                     {
                         CenterMouseOverControl(gui.playerCloseButton);
-                        GuiModel.DoEvents();
-                        await Task.Delay(50);
+                        await Task.Delay(150);
                         TcpSerialListener.DoMouseClick();
-                        await Task.Delay(50);
+                        await Task.Delay(150);
                     }
 
                     if (movieWindowActive)
@@ -172,7 +174,9 @@ namespace LVP_WPF.Windows
                         gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
                         GuiModel.DoEvents();
                         CenterMouseOverControl(gui.tvMovieCloseButton);
+                        await Task.Delay(150);
                         TcpSerialListener.DoMouseClick();
+                        await Task.Delay(150);
                     }
 
                     currPoint = returnPointA;
@@ -187,7 +191,9 @@ namespace LVP_WPF.Windows
                     if (click)
                     {
                         CenterMouseOverControl(gui.tvMovieCloseButton);
+                        await Task.Delay(150);
                         TcpSerialListener.DoMouseClick();
+                        await Task.Delay(150);
                     }
                     currPoint = returnPointA;
                     currControl = mainWindowControlGrid[currPoint.x][currPoint.y];

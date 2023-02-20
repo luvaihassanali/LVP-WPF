@@ -8,10 +8,10 @@
         xmlns:fa="http://schemas.fontawesome.io/icons/"
         mc:Ignorable="d"
         Title="MainWindow" Background="Black" Loaded="MainWindow_Loaded" Closed="MainWindow_Closed" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" WindowState="Maximized" FontFamily="Segoe UI Black" FontSize="64" PreviewMouseWheel="MainWindow_PreviewMouseWheel" Icon="/Resources/movie.ico">
+        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" WindowState="Maximized" AllowsTransparency="True" FontFamily="Segoe UI Black" FontSize="64" PreviewMouseWheel="MainWindow_PreviewMouseWheel" Icon="/Resources/movie.ico">
     <Grid>
         <ScrollViewer Name="scrollViewer" ScrollChanged="ScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Hidden" PanningMode="Both">
-            <Grid Name="mainGrid">
+            <Grid Name="mainGrid" Opacity="0.1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
@@ -20,7 +20,7 @@
                     <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
                 </Grid.RowDefinitions>
-                <Button Name="closeButton" Panel.ZIndex="2" Click="CloseButton_Click" Foreground="White" Width="50" Height="50" HorizontalAlignment="Right" Margin="0,0,10,30">
+                <Button Name="closeButton" Panel.ZIndex="2" Click="CloseButton_Click" Foreground="White" Width="50" Height="50" HorizontalAlignment="Right" Margin="0,0,20,10">
                     <TextBlock Text="✖" Margin="0,-3,1,0" FontSize="28" FontFamily="Segoe UI"/>
                     <Button.Resources>
                         <Style TargetType="Border">
