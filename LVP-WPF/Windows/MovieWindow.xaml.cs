@@ -125,6 +125,7 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
+            MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
         }
 
         private void MovieWindow_Loaded(object sender, RoutedEventArgs e)

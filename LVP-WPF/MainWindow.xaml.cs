@@ -159,7 +159,6 @@ namespace LVP_WPF
             Application.Current.Shutdown();
         }
 
-        //To-do: loader?
         private void ListView_Click(object sender, RoutedEventArgs e)
         {
             loadGrid.Visibility = Visibility.Visible;

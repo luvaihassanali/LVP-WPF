@@ -29,6 +29,8 @@ namespace LVP_WPF.Windows
         private bool skipClosing = false;
         private bool sliderMouseDown = false;
         private double prevSliderValue;
+        private System.Windows.Media.SolidColorBrush playHoverBackground = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#FF26A0DA");
+        private System.Windows.Media.SolidColorBrush playHoverBorderBrush = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#3c7fb1");
 
         public static void Show(Media m, TvShowWindow? tw = null)
         {
@@ -318,6 +320,7 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             closeButton.MouseLeave -= Control_MouseLeave;
+            if (!skipClosing) MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
             this.Close();
         }
 
@@ -326,12 +329,16 @@ namespace LVP_WPF.Windows
             if (mediaPlayer.IsPlaying)
             {
                 PlayButton_SetSymbol(0);
+                playButton.Background = playHoverBackground;
+                playButton.BorderBrush = playHoverBorderBrush;
                 mediaPlayer.Pause();
                 pollingTimer.Stop();
             }
             else
             {
                 PlayButton_SetSymbol(1);
+                playButton.Background = System.Windows.Media.Brushes.Transparent;
+                playButton.BorderBrush = System.Windows.Media.Brushes.White;
                 mediaPlayer.Play();
                 pollingTimer.Start();
             }
@@ -386,9 +393,6 @@ namespace LVP_WPF.Windows
                 prevSliderValue = SliderValue;
             }
         }
-
-        private System.Windows.Media.SolidColorBrush playHoverBackground = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#FF26A0DA");
-        private System.Windows.Media.SolidColorBrush playHoverBorderBrush = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#3c7fb1");
 
         internal void TcpSerialListener_PlayPause()
         {
@@ -480,7 +484,6 @@ namespace LVP_WPF.Windows
 
         private void InactivityDetected(object sender, EventArgs e)
         {
-            //System.Threading.Tasks.Task.Delay(2000).Wait();
             if (mediaPlayer.IsPlaying) return;
             GuiModel.Log("Inactivity shutdown (PlayerWindow)");
             this.Dispatcher.Invoke(() =>

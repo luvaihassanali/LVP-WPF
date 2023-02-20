@@ -269,6 +269,7 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
+            MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
         }
 
         internal static void PlayRandomCartoons()

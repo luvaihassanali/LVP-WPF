@@ -399,7 +399,7 @@ namespace LVP_WPF
                         else
                         {
                             DoMouseClick();
-                            layoutPoint.Select(String.Empty);
+                            if (!layoutPoint.seasonWindowActive) layoutPoint.Select(String.Empty);
                         }
                         break;
                     case "return":

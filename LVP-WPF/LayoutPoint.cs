@@ -85,7 +85,7 @@ namespace LVP_WPF.Windows
                     tvShowWindowActive = true;
                     currPoint = (tvIndex, -1);
                     currControl = tvControlList[currPoint.x];
-                    CenterMouseOverControl(currControl, backdrop:true);
+                    CenterMouseOverControl(currControl, backdrop: true);
                 }
                 return;
             }
@@ -120,7 +120,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        internal async void CloseCurrWindow()
+        internal async void CloseCurrWindow(bool click = true)
         {
             try
             {
@@ -134,12 +134,15 @@ namespace LVP_WPF.Windows
                 if (playerWindowActive)
                 {
                     playerWindowActive = false;
-                    CenterMouseOverControl(gui.playerCloseButton);
-                    GuiModel.DoEvents();
 
-                    await Task.Delay(50);
-                    TcpSerialListener.DoMouseClick();
-                    await Task.Delay(50);
+                    if (click)
+                    {
+                        CenterMouseOverControl(gui.playerCloseButton);
+                        GuiModel.DoEvents();
+                        await Task.Delay(50);
+                        TcpSerialListener.DoMouseClick();
+                        await Task.Delay(50);
+                    }
 
                     if (movieWindowActive)
                     {
@@ -155,29 +158,20 @@ namespace LVP_WPF.Windows
                     return;
                 }
 
-                if (seasonWindowActive)
-                {
-                    /*TcpSerialListener.DoMouseClick();
-                    seasonWindowActive = false;
-                    seasonControlList.Clear();
-                    seasonWindowGrid.Clear();
-                    seasonWindowControlGrid.Clear();
-                    currPoint = returnPointB;
-                    currControl = tvControlList[currPoint.x];
-                    CenterMouseOverControl(currControl);
-                    return;*/
-                }
-                else if (tvShowWindowActive)
+                if (tvShowWindowActive)
                 {
                     tvControlList.Clear();
                     tvIndex = 0;
                     tvShowWindowActive = false;
                     mainWindowActive = true;
 
-                    gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
-                    GuiModel.DoEvents();
-                    CenterMouseOverControl(gui.tvMovieCloseButton);
-                    TcpSerialListener.DoMouseClick();
+                    if (click)
+                    {
+                        gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
+                        GuiModel.DoEvents();
+                        CenterMouseOverControl(gui.tvMovieCloseButton);
+                        TcpSerialListener.DoMouseClick();
+                    }
 
                     currPoint = returnPointA;
                     currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
@@ -187,8 +181,12 @@ namespace LVP_WPF.Windows
                 {
                     movieWindowActive = false;
                     mainWindowActive = true;
-                    CenterMouseOverControl(gui.tvMovieCloseButton);
-                    TcpSerialListener.DoMouseClick();
+
+                    if (click)
+                    {
+                        CenterMouseOverControl(gui.tvMovieCloseButton);
+                        TcpSerialListener.DoMouseClick();
+                    }
                     currPoint = returnPointA;
                     currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
                     CenterMouseOverControl(currControl);
@@ -573,14 +571,15 @@ namespace LVP_WPF.Windows
 
         private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null, bool backdrop = false)
         {
-            image.Dispatcher.Invoke(() => {
+            image.Dispatcher.Invoke(() =>
+            {
                 if (scrollViewer != null)
                 {
                     if (row == 0)
                     {
                         scrollViewer.ScrollToHome();
                     }
-                    else if ((seasonWindowActive && row == seasonWindowGrid.Count - 1) || (tvShowWindowActive && row == tvControlList.Count - 1)|| (mainWindowActive && row == mainWindowGrid.Count - 1))
+                    else if ((seasonWindowActive && row == seasonWindowGrid.Count - 1) || (tvShowWindowActive && row == tvControlList.Count - 1) || (mainWindowActive && row == mainWindowGrid.Count - 1))
                     {
                         scrollViewer.ScrollToBottom();
                     }
