@@ -140,6 +140,7 @@ namespace LVP_WPF
 
         internal static void InitializeCustomCursor()
         {
+            int cursorSize = Int32.Parse(ConfigurationManager.AppSettings["CursorSize"]);
             string cursorPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location));
             string[] keys = Properties.Resources.keys_custom.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
             foreach (string key in keys)
@@ -148,7 +149,7 @@ namespace LVP_WPF
                 Registry.SetValue(@"HKEY_CURRENT_USER\Control Panel\Cursors\", keyValuePair[0], cursorPath + keyValuePair[1]);
             }
             SystemParametersInfo(SPI_SETCURSORS, 0, 0, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
-            SystemParametersInfo(0x2029, 0, 72, 0x01);
+            SystemParametersInfo(0x2029, 0, (uint)cursorSize, 0x01);
         }
 
         public static void Log(string message)

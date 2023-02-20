@@ -2,6 +2,7 @@
 using LibVLCSharp.Shared;
 using System;
 using System.Diagnostics;
+using System.Security;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,7 +20,7 @@ namespace LVP_WPF.Windows
     {
         static private Media currMedia;
         static private TvShowWindow? tvShowWindow;
-        static internal LibVLC libVLC = new LibVLC();
+        static internal LibVLC libVLC = new LibVLC("--freetype-font=Segoe UI");
         static public int subtitleTrack = Int32.MaxValue;
         static public string subtitleFile = "";
         private MediaPlayer mediaPlayer;
@@ -66,7 +67,7 @@ namespace LVP_WPF.Windows
             Core.Initialize();
         }
 
-        private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
+        private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
         {
             mediaPlayer.TimeChanged += MediaPlayer_TimeChanged;
             mediaPlayer.LengthChanged += MediaPlayer_LengthChanged;
@@ -386,27 +387,37 @@ namespace LVP_WPF.Windows
             }
         }
 
-        internal void PlayPause_TcpSerialListener()
+        private System.Windows.Media.SolidColorBrush playHoverBackground = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#FF26A0DA");
+        private System.Windows.Media.SolidColorBrush playHoverBorderBrush = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#3c7fb1");
+
+        internal void TcpSerialListener_PlayPause()
         {
             if (mediaPlayer != null)
             {
-                TcpSerialListener.DoMouseClick();
                 if (mediaPlayer.IsPlaying)
                 {
+                    TcpSerialListener.DoMouseClick();
+                    playButton.Dispatcher.Invoke(() => { playButton.Background = playHoverBackground; });
+                    playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = playHoverBorderBrush; });
                     overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Visible; });
                     buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(0); });
                     mediaPlayer.Pause();
+                    TcpSerialListener.SetCursorPos(65, (int)this.Height - 65);
                 }
                 else
                 {
+                    TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+                    playButton.Dispatcher.Invoke(() => { playButton.Background = System.Windows.Media.Brushes.Transparent;});
+                    playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = System.Windows.Media.Brushes.White;});
                     overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Hidden; });
                     buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(1); });
                     mediaPlayer.Play();
+                    TcpSerialListener.DoMouseClick();
                 }
             }
         }
 
-        internal void Stop_TcpSerialListener()
+        internal void TcpSerialListener_Stop()
         {
             if (mediaPlayer != null)
             {
@@ -414,7 +425,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        internal void Seek_TcpSerialListener(bool rewind)
+        internal void TcpSerialListener_Seek(bool rewind)
         {
             if (mediaPlayer != null)
             {

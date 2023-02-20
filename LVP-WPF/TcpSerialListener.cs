@@ -390,7 +390,7 @@ namespace LVP_WPF
                     case "enter":
                         if (layoutPoint.playerWindowActive)
                         {
-                            gui.playerWindow.PlayPause_TcpSerialListener();
+                            gui.playerWindow.TcpSerialListener_PlayPause();
                         }
                         else if (layoutPoint.mainWindowActive)
                         {
@@ -407,16 +407,16 @@ namespace LVP_WPF
                         break;
                     case "play":
                     case "pause":
-                        gui.playerWindow.PlayPause_TcpSerialListener();
+                        gui.playerWindow.TcpSerialListener_PlayPause();
                         break;
                     case "stop":
-                        gui.playerWindow.PlayPause_TcpSerialListener();
+                        gui.playerWindow.TcpSerialListener_PlayPause();
                         break;
                     case "fastforward":
-                        gui.playerWindow.Seek_TcpSerialListener(false);
+                        gui.playerWindow.TcpSerialListener_Seek(false);
                         break;
                     case "rewind":
-                        gui.playerWindow.Seek_TcpSerialListener(true);
+                        gui.playerWindow.TcpSerialListener_Seek(true);
                         break;
                 }
             }

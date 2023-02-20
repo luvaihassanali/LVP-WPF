@@ -20,14 +20,33 @@
                     <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
                 </Grid.RowDefinitions>
-                <Button Name="closeButton" Panel.ZIndex="2" Click="CloseButton_Click" BorderBrush="White" Foreground="White" Background="Transparent" BorderThickness="3" 
-                        Width="50" Height="50" HorizontalAlignment="Right" Margin="0,0,10,30">
+                <Button Name="closeButton" Panel.ZIndex="2" Click="CloseButton_Click" Foreground="White" Width="50" Height="50" HorizontalAlignment="Right" Margin="0,0,10,30">
                     <TextBlock Text="✖" Margin="0,-3,1,0" FontSize="28" FontFamily="Segoe UI"/>
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="5"/>
                         </Style>
                     </Button.Resources>
+                    <Button.Style>
+                        <Style TargetType="{x:Type Button}">
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type Button}">
+                                        <Border x:Name="Border" Background="{TemplateBinding Background}" BorderThickness="3" BorderBrush="White">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#FF26A0DA" TargetName="Border" />
+                                                <Setter Property="BorderBrush" Value="#3c7fb1" TargetName="Border"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
                 </Button>
                 <Label Name="tvHeader" Content="TV" Foreground="White"/>
                 <ListView PreviewMouseLeftButtonUp="ListView_Click" Grid.Row="1" ItemsSource="{Binding TvShows}" Name="TvShowListView" Background="Black" BorderBrush="Black">

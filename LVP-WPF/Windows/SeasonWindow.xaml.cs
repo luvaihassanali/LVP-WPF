@@ -33,7 +33,7 @@ namespace LVP_WPF.Windows
                 seasonBoxes[i] = new SeasonWindowBox
                 {
                     Id = tvShow.Seasons[i].Id,
-                    Image = Cache.LoadImage(img, 150)
+                    Image = Cache.LoadImage(img, 200)
                 };
             }
             seasons = seasonBoxes;
