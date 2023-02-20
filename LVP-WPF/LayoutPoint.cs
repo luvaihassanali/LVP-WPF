@@ -19,6 +19,7 @@ namespace LVP_WPF.Windows
         public bool tvShowWindowActive = false;
         public bool seasonWindowActive = false;
         public bool playerWindowActive = false;
+        public bool incomingSerialMsg = false;
         public (int x, int y) currPoint = (0, 0);
         public (int x, int y) returnPointA = (0, 0);
         public (int x, int y) returnPointB = (0, 0);
@@ -122,6 +123,7 @@ namespace LVP_WPF.Windows
 
         internal async void CloseCurrWindow(bool click = true)
         {
+            if (click) incomingSerialMsg = true;
             try
             {
                 if (mainWindowActive)

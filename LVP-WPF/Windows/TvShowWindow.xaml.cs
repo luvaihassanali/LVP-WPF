@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -269,7 +270,14 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
-            MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
+            if (!MainWindow.tcpWorker.layoutPoint.incomingSerialMsg)
+            {
+                MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
+            }
+            else
+            {
+                MainWindow.tcpWorker.layoutPoint.incomingSerialMsg = false;
+            }
         }
 
         internal static void PlayRandomCartoons()

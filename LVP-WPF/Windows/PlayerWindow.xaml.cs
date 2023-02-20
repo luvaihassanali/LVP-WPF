@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Security;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -69,7 +70,7 @@ namespace LVP_WPF.Windows
             Core.Initialize();
         }
 
-        private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
         {
             mediaPlayer.TimeChanged += MediaPlayer_TimeChanged;
             mediaPlayer.LengthChanged += MediaPlayer_LengthChanged;
@@ -320,8 +321,15 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             closeButton.MouseLeave -= Control_MouseLeave;
-            if (!skipClosing) MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
             this.Close();
+            if (!MainWindow.tcpWorker.layoutPoint.incomingSerialMsg)
+            {
+                MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
+            }
+            else
+            {
+                MainWindow.tcpWorker.layoutPoint.incomingSerialMsg = false;
+            }
         }
 
         private void PlayButton_Click(object sender, RoutedEventArgs e)
@@ -400,22 +408,24 @@ namespace LVP_WPF.Windows
             {
                 if (mediaPlayer.IsPlaying)
                 {
-                    TcpSerialListener.DoMouseClick();
                     playButton.Dispatcher.Invoke(() => { playButton.Background = playHoverBackground; });
                     playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = playHoverBorderBrush; });
                     overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Visible; });
                     buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(0); });
                     mediaPlayer.Pause();
-                    TcpSerialListener.SetCursorPos(65, (int)this.Height - 65);
+                    pollingTimer.Stop();
+                    TcpSerialListener.DoMouseClick(); 
+                    TcpSerialListener.SetCursorPos(50, 1030);
                 }
                 else
                 {
-                    TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
                     playButton.Dispatcher.Invoke(() => { playButton.Background = System.Windows.Media.Brushes.Transparent;});
                     playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = System.Windows.Media.Brushes.White;});
                     overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Hidden; });
                     buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(1); });
                     mediaPlayer.Play();
+                    pollingTimer.Start();
+                    TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
                     TcpSerialListener.DoMouseClick();
                 }
             }

@@ -45,7 +45,7 @@ namespace LVP_WPF
 
         static public bool hideCursor = false;
         static public int hideCursorX = 35;
-        static public int hideCursorY = 2000;
+        static public int hideCursorY = 1100;
         static public int centerX = 960;
         static public int centerY = 540;
         static private bool loggingEnabled;
