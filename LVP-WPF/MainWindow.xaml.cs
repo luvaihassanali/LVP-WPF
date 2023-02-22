@@ -28,6 +28,7 @@ namespace LVP_WPF
             DataContext = gui;
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
+            this.AllowsTransparency = false;
 #endif
         }
 

@@ -61,6 +61,7 @@ namespace LVP_WPF.Windows
             prevSliderValue = 0;
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
+            this.AllowsTransparency = false;
 #endif
 
         }

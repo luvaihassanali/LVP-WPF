@@ -561,7 +561,7 @@ namespace LVP_WPF
 
         internal static Movie ProcessMovieDirectory(string targetDir)
         {
-            string[] movieEntry = Directory.GetFiles(targetDir);
+            string[] movieEntry = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
             string[] path = movieEntry[0].Split('\\');
             string[] movieName = path[path.Length - 1].Split('.');
             Movie movie = new Movie(movieName[0].Trim(), movieEntry[0]);
@@ -597,7 +597,7 @@ namespace LVP_WPF
                 if (!seasonEntries[i].Contains("Season")) continue;
 
                 Season season = new Season(i + 1);
-                string[] episodeEntries = Directory.GetFiles(seasonEntries[i]);
+                string[] episodeEntries = Directory.GetFiles(seasonEntries[i]).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
                 try
                 {
                     Array.Sort(episodeEntries, CompareIndex);
@@ -627,7 +627,7 @@ namespace LVP_WPF
 
         internal static void ProcessExtrasDirectory(List<Episode> extras, string targetDir)
         {
-            string[] rootEntries = Directory.GetFiles(targetDir);
+            string[] rootEntries = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
             foreach (string entry in rootEntries)
             {
                 string[] namePath = entry.Split('\\');
@@ -728,7 +728,6 @@ namespace LVP_WPF
 
         internal static BitmapImage LoadImage(string filename, int pixelWidth)
         {
-            //To-do: resize images to see if helps memory
             string path = AppDomain.CurrentDomain.BaseDirectory;
             if (filename.Contains("Resources\\")) filename = path + filename;
             BitmapImage image = new BitmapImage();

@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
         Title="InputDialog" Height="300" Width="900" ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
-        FontFamily="Segoe UI" Background="Black" WindowStyle="None">
+        FontFamily="Segoe UI" Background="Black" AllowsTransparency="True" WindowStyle="None" >
     <Border BorderThickness="1">
         <Border.BorderBrush>
             <SolidColorBrush Color="White" Opacity="0.5"/>

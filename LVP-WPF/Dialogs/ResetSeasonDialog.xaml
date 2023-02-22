@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF.Dialogs"
         mc:Ignorable="d"
         Title="ResetSeasonDialog" Height="600" Width="600" ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
-        FontFamily="Segoe UI" Background="Black" WindowStyle="None" >
+        FontFamily="Segoe UI" Background="Black" AllowsTransparency="True" WindowStyle="None" >
     <Border BorderThickness="1">
         <Border.BorderBrush>
             <SolidColorBrush Color="White" Opacity="0.5"/>

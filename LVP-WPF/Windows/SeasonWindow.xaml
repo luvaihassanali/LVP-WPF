@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF.Windows"
         mc:Ignorable="d"
         Title="SeasonWindow" Background="Black" Height="950" Width="650" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
-        RenderOptions.BitmapScalingMode="HighQuality" WindowStyle="None" AllowsTransparency="True" Loaded="SeasonWindow_Loaded" PreviewMouseWheel="Window_PreviewMouseWheel" Icon="/Resources/movie.ico">
+        RenderOptions.BitmapScalingMode="HighQuality" AllowsTransparency="True" WindowStyle="None" Loaded="SeasonWindow_Loaded" PreviewMouseWheel="Window_PreviewMouseWheel" Icon="/Resources/movie.ico">
 
     <Grid>
         <Grid>

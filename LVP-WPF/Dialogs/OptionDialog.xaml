@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
         Title="OptionDialog" Height="600" Width="1200" ResizeMode="NoResize" WindowStartupLocation="CenterScreen"
-        FontFamily="Segoe UI" Background="Black" WindowStyle="None" Loaded="OptionWindow_Loaded" >
+        FontFamily="Segoe UI" Background="Black" AllowsTransparency="True" WindowStyle="None" Loaded="OptionWindow_Loaded" >
     <Border BorderThickness="1">
         <Border.BorderBrush>
             <SolidColorBrush Color="White" Opacity="0.5"/>
