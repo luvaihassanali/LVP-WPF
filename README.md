@@ -1,0 +1,2 @@
+Rebuild of [Local Video Player](https://github.com/luvaihassanali/LocalVideoPlayer) using Windows Presentation Foundation.
+<video src="https://luvaihassanali.github.io/portfolio/assets/video/lvp-wpf-main.mp4"></video>
