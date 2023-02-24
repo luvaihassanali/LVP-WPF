@@ -113,5 +113,15 @@ namespace LVP_WPF.Dialogs
                 results.Remove(Int32.Parse(name));
             }
         }
+
+        private void SeasonListView_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            ListView seasonListView = sender as ListView;
+            OptionWindowBox item = (OptionWindowBox)seasonListView.SelectedItem;
+            ItemContainerGenerator generator = seasonListView.ItemContainerGenerator;
+            ListViewItem container = (ListViewItem)generator.ContainerFromItem(item);
+            CheckBox c = GuiModel.GetChildrenByType(container, typeof(CheckBox), "checkbox") as CheckBox;
+            if (c != null) c.IsChecked = (bool)c.IsChecked ? false : true;
+        }
     }
 }

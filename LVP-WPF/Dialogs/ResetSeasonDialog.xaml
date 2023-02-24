@@ -31,14 +31,14 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <ListView Grid.Row="2" Name="SeasonListView" ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                          Background="Black" BorderBrush="Black">
+                          Background="Black" BorderBrush="Black" PreviewMouseLeftButtonUp="SeasonListView_PreviewMouseLeftButtonUp" >
                         <ListView.ItemTemplate>
                             <DataTemplate>
                                 <Grid Margin="0,10,0,10">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
-                                    <CheckBox VerticalContentAlignment="Center" Foreground="White" Grid.Row="1" FontSize="20" Content="{Binding Name}" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked"/>
+                                    <CheckBox  Name="checkbox" VerticalContentAlignment="Center" Foreground="White" Grid.Row="1" FontSize="20" Content="{Binding Name}" Checked="CheckBox_Checked" Unchecked="CheckBox_Unchecked"/>
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>

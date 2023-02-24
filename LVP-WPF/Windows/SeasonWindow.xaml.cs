@@ -52,7 +52,7 @@ namespace LVP_WPF.Windows
 
         private void SeasonListView_Click(object sender, RoutedEventArgs e)
         {
-            MainWindow.tcpWorker.layoutPoint.Select(String.Empty);
+            TcpSerialListener.layoutPoint.Select(String.Empty);
             SeasonWindowBox item = (SeasonWindowBox)(sender as ListView).SelectedItem;
             seasonIndex = item.Id;
             this.Close();
@@ -65,13 +65,13 @@ namespace LVP_WPF.Windows
             {
                 ListViewItem container = (ListViewItem)generator.ContainerFromItem(seasons[j]);
                 Image img = GuiModel.GetChildrenByType(container, typeof(Image), "seasonImage") as Image;
-                MainWindow.tcpWorker.layoutPoint.seasonControlList.Add(img);
+                TcpSerialListener.layoutPoint.seasonControlList.Add(img);
             }
             scrollViewer = (ScrollViewer)GuiModel.GetScrollViewer(SeasonListView);
             scrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
             MainWindow.gui.seasonScrollViewer = scrollViewer;
-            MainWindow.tcpWorker.layoutPoint.seasonIndex = seasonIndex;
-            MainWindow.tcpWorker.layoutPoint.Select("SeasonWindow");
+            TcpSerialListener.layoutPoint.seasonIndex = seasonIndex;
+            TcpSerialListener.layoutPoint.Select("SeasonWindow");
         }
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)

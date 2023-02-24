@@ -46,10 +46,10 @@ namespace LVP_WPF
         private int joystickX;
         private int joystickY;
         private GuiModel gui;
-        public LayoutPoint layoutPoint;
+        static public LayoutPoint layoutPoint;
         static System.Timers.Timer pollingTimer = null;
         private SerialPort serialPort;
-        private bool serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
+        public bool serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
         private TcpClient tcpClient;
         private Thread workerThread = null;
 
@@ -202,6 +202,8 @@ namespace LVP_WPF
                         if (buffer.Contains("initack"))
                         {
                             DebugLog("initack received");
+                            SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+                            DoMouseClick();
                             if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
                             StopTimer();
                             StartTimer();

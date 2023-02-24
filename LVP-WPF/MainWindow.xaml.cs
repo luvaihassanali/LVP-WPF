@@ -36,8 +36,10 @@ namespace LVP_WPF
         {
             await Task.Run(() =>
             {
+#if RELEASE
                 GuiModel.InitializeCustomCursor();
-                //TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+#endif
+                TcpSerialListener.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
                 Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
                 if (mouseHubProcess.Length != 0)
                 {
@@ -68,8 +70,8 @@ namespace LVP_WPF
             PlayerWindow.InitiaizeLibVlcCore();
 
             MainWindow_Fade(1.0);
-            if (bool.Parse(ConfigurationManager.AppSettings["Snow"])) snow.Visibility = Visibility.Visible;
             loadGrid.Visibility = Visibility.Hidden;
+            if (bool.Parse(ConfigurationManager.AppSettings["Snow"])) snow.Visibility = Visibility.Visible;
         }
 
         private void MainWindow_Closed(object sender, EventArgs e)

@@ -125,13 +125,13 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
-            if (!MainWindow.tcpWorker.layoutPoint.incomingSerialMsg)
+            if (!TcpSerialListener.layoutPoint.incomingSerialMsg)
             {
-                MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
+                TcpSerialListener.layoutPoint.CloseCurrWindow(false);
             } 
             else
             {
-                MainWindow.tcpWorker.layoutPoint.incomingSerialMsg = false;
+                TcpSerialListener.layoutPoint.incomingSerialMsg = false;
             }
         }
 
@@ -139,8 +139,8 @@ namespace LVP_WPF.Windows
         {
             GetLanguageInfo(movie);
             MainWindow.gui.tvMovieCloseButton = this.closeButton;
-            MainWindow.tcpWorker.layoutPoint.movieBackdrop = this.movieBackdrop;
-            MainWindow.tcpWorker.layoutPoint.Select("MovieWindow", true);
+            TcpSerialListener.layoutPoint.movieBackdrop = this.movieBackdrop;
+            TcpSerialListener.layoutPoint.Select("MovieWindow", true);
         }
 
         private void subTrackComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)

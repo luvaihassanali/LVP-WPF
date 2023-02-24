@@ -66,8 +66,8 @@ namespace LVP_WPF.Windows
 
         private void TvShowWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(this.tvBackdrop);
-            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(this.seasonButton);
+            TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
+            TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
             MainWindow.gui.episodeScrollViewer = this.scrollViewer;
             MainWindow.gui.tvMovieCloseButton = this.closeButton;
 
@@ -76,9 +76,9 @@ namespace LVP_WPF.Windows
             {
                 ListViewItem container = (ListViewItem)generator.ContainerFromItem(episodes[j]);
                 Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
-                MainWindow.tcpWorker.layoutPoint.tvControlList.Add(img);
+                TcpSerialListener.layoutPoint.tvControlList.Add(img);
             }
-            MainWindow.tcpWorker.layoutPoint.Select("TvShowWindow");
+            TcpSerialListener.layoutPoint.Select("TvShowWindow");
         }
 
         static private EpisodeWindowBox[] CreateEpisodeListItems(Episode[] episodes)
@@ -182,18 +182,18 @@ namespace LVP_WPF.Windows
                 UpdateTvWindowSeasonChange(seasonIndex);
             }
             TvShowWindow_Fade(1.0);
-
-            await System.Threading.Tasks.Task.Delay(500); // wait for content
-            MainWindow.tcpWorker.layoutPoint.tvControlList.Clear();
-            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(this.tvBackdrop);
-            MainWindow.tcpWorker.layoutPoint.tvControlList.Add(this.seasonButton);
+            /*
+            await Task.Delay(500); // wait for content
+            TcpSerialListener.layoutPoint.tvControlList.Clear();
+            TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
+            TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
             ItemContainerGenerator generator = EpisodeListView.ItemContainerGenerator;
             for (int j = 0; j < episodes.Length; j++)
             {
                 ListViewItem container = (ListViewItem)generator.ContainerFromItem(episodes[j]);
                 Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
-                MainWindow.tcpWorker.layoutPoint.tvControlList.Add(img);
-            }
+                TcpSerialListener.layoutPoint.tvControlList.Add(img);
+            }*/
             loadGrid.Visibility = Visibility.Hidden;
         }
 
@@ -270,13 +270,13 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
-            if (!MainWindow.tcpWorker.layoutPoint.incomingSerialMsg)
+            if (!TcpSerialListener.layoutPoint.incomingSerialMsg)
             {
-                MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
+                TcpSerialListener.layoutPoint.CloseCurrWindow(false);
             }
             else
             {
-                MainWindow.tcpWorker.layoutPoint.incomingSerialMsg = false;
+                TcpSerialListener.layoutPoint.incomingSerialMsg = false;
             }
         }
 

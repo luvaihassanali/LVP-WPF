@@ -102,7 +102,7 @@ namespace LVP_WPF.Windows
 
             MainWindow.gui.playerWindow = this;
             MainWindow.gui.playerCloseButton = this.closeButton;
-            MainWindow.tcpWorker.layoutPoint.Select("PlayerWindow");
+            TcpSerialListener.layoutPoint.Select("PlayerWindow");
             TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
         }
 
@@ -188,7 +188,7 @@ namespace LVP_WPF.Windows
                 if (TvShowWindow.cartoonIndex == TvShowWindow.cartoonLimit)
                 {
                     skipClosing = true;
-                    MainWindow.tcpWorker.layoutPoint.CloseCurrWindow();
+                    TcpSerialListener.layoutPoint.CloseCurrWindow();
                 }
 
                 currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
@@ -207,7 +207,7 @@ namespace LVP_WPF.Windows
                 if (episode.Id == -1)
                 {
                     skipClosing = true;
-                    MainWindow.tcpWorker.layoutPoint.CloseCurrWindow();
+                    TcpSerialListener.layoutPoint.CloseCurrWindow();
                 }
 
                 TvShow tvShow = TvShowWindow.tvShow;
@@ -224,7 +224,7 @@ namespace LVP_WPF.Windows
                                 if (i == tvShow.Seasons.Length - 2 && tvShow.Seasons[tvShow.Seasons.Length - 1].Id == -1 || i == tvShow.Seasons.Length - 1)
                                 {
                                     skipClosing = true;
-                                    MainWindow.tcpWorker.layoutPoint.CloseCurrWindow();
+                                    TcpSerialListener.layoutPoint.CloseCurrWindow();
                                 }
                                 else
                                 {
@@ -255,7 +255,7 @@ namespace LVP_WPF.Windows
             else //if Movie
             {
                 skipClosing = true;
-                MainWindow.tcpWorker.layoutPoint.CloseCurrWindow();
+                TcpSerialListener.layoutPoint.CloseCurrWindow();
             }
         }
 
@@ -323,13 +323,13 @@ namespace LVP_WPF.Windows
         {
             closeButton.MouseLeave -= Control_MouseLeave;
             this.Close();
-            if (!MainWindow.tcpWorker.layoutPoint.incomingSerialMsg)
+            if (!TcpSerialListener.layoutPoint.incomingSerialMsg)
             {
-                MainWindow.tcpWorker.layoutPoint.CloseCurrWindow(false);
+                TcpSerialListener.layoutPoint.CloseCurrWindow(false);
             }
             else
             {
-                MainWindow.tcpWorker.layoutPoint.incomingSerialMsg = false;
+                TcpSerialListener.layoutPoint.incomingSerialMsg = false;
             }
         }
 
