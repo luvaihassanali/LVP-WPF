@@ -91,7 +91,7 @@ namespace LVP_WPF
             {
                 string path = AppDomain.CurrentDomain.BaseDirectory;
 #if DEBUG
-                path = path.Replace("bin\\Debug\\", "Utilities\\MouseHub\\MouseHub\\bin\\Debug\\MouseHub.exe");
+                path = path.Replace("bin\\Debug\\net6.0-windows\\", "Utilities\\MouseHub\\MouseHub\\bin\\Debug\\MouseHub.exe");
 #else
                 path = ConfigurationManager.AppSettings["MouseHubPath"] + "MouseHub.exe";
                 if (path.Contains("%USERPROFILE%")) { path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
@@ -160,7 +160,7 @@ namespace LVP_WPF
         private void InactivityDetected(object sender, EventArgs e)
         {
             if (gui.isPlaying) return;
-            GuiModel.Log("Inactivity shutdown (MainWindow)");
+            GuiModel.Log("Inactivity shutdown");
             Application.Current.Shutdown();
         }
 

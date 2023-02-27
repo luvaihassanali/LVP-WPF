@@ -117,7 +117,7 @@ namespace MouseMoverClient
                     catch
                     { }
 
-                    if (reply.Status == IPStatus.Success)
+                    if (reply != null && reply.Status == IPStatus.Success)
                     {
                         Log("Ping success");
                         ConnectToServer();

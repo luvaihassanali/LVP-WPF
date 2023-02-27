@@ -83,7 +83,7 @@ namespace LVP_WPF.Windows
             pollingTimer = new DispatcherTimer();
             pollingTimer.Interval = TimeSpan.FromSeconds(3);
             pollingTimer.Tick += PollingTimer_Tick;
-            inactivityTimer = new InactivityTimer(TimeSpan.FromHours(2)); //(TimeSpan.FromSeconds(5));
+            inactivityTimer = new InactivityTimer(TimeSpan.FromSeconds(5));
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
@@ -496,7 +496,7 @@ namespace LVP_WPF.Windows
         private void InactivityDetected(object sender, EventArgs e)
         {
             if (mediaPlayer.IsPlaying) return;
-            GuiModel.Log("Inactivity shutdown (PlayerWindow)");
+            GuiModel.Log("Inactivity shutdown player");
             this.Dispatcher.Invoke(() =>
             {
                 this.Close();
