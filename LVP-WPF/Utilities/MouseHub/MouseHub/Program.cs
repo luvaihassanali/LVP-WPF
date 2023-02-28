@@ -56,6 +56,7 @@ namespace MouseMoverClient
 
         static async Task Main(string[] args)
         {
+            AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
             ConsoleHelper.SetCurrentFont("Segoe Mono Boot", 32);
             Console.Title = "";
             Console.ForegroundColor = ConsoleColor.White;
@@ -90,6 +91,13 @@ namespace MouseMoverClient
                 pollingTimer.Stop();
                 pollingTimer.Dispose();
             }
+        }
+
+        private static void UnhandledExceptionHandler(object sender, UnhandledExceptionEventArgs e)
+        {
+            Console.WriteLine(e.ExceptionObject.ToString());
+            Console.WriteLine("Press enter to exit");
+            Console.ReadLine();
         }
 
         static async Task StartListener()
