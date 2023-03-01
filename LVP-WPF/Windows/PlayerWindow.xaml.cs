@@ -159,7 +159,6 @@ namespace LVP_WPF.Windows
             }
             if (mediaPlayer.IsPlaying) mediaPlayer.Stop();
             mediaPlayer.Dispose();
-            //libVLC.Dispose();
             inactivityTimer.Dispose();
         }
 
@@ -496,11 +495,15 @@ namespace LVP_WPF.Windows
         private void InactivityDetected(object sender, EventArgs e)
         {
             if (mediaPlayer.IsPlaying) return;
-            GuiModel.Log("Inactivity shutdown player");
-            this.Dispatcher.Invoke(() =>
+            else
             {
-                this.Close();
-            });
+                // Double check after 10s to make sure media player was not in process of changing to new video
+                Task.Delay(10000).Wait();
+                if (mediaPlayer.IsPlaying) return;
+            }
+
+            GuiModel.Log("Inactivity shutdown player");
+            this.Dispatcher.Invoke(() => { this.Close(); });
             Application.Current.Shutdown();
         }
     }

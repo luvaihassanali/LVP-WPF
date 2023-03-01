@@ -38,8 +38,10 @@
             this.columnHeader1 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader3 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader2 = new System.Windows.Forms.ColumnHeader();
-            this.button1 = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
+            this.button2 = new System.Windows.Forms.Button();
+            this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.button1 = new System.Windows.Forms.Button();
             this.listView2 = new System.Windows.Forms.ListView();
             this.columnHeader4 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader6 = new System.Windows.Forms.ColumnHeader();
@@ -74,11 +76,13 @@
             // 
             // splitContainer1.Panel2
             // 
-            this.splitContainer1.Panel2.Controls.Add(this.button1);
             this.splitContainer1.Panel2.Controls.Add(this.textBox1);
+            this.splitContainer1.Panel2.Controls.Add(this.button2);
+            this.splitContainer1.Panel2.Controls.Add(this.checkBox1);
+            this.splitContainer1.Panel2.Controls.Add(this.button1);
             this.splitContainer1.Panel2.Controls.Add(this.listView2);
-            this.splitContainer1.Size = new System.Drawing.Size(1042, 421);
-            this.splitContainer1.SplitterDistance = 759;
+            this.splitContainer1.Size = new System.Drawing.Size(1097, 491);
+            this.splitContainer1.SplitterDistance = 809;
             this.splitContainer1.TabIndex = 0;
             // 
             // splitContainer2
@@ -94,20 +98,19 @@
             // splitContainer2.Panel2
             // 
             this.splitContainer2.Panel2.Controls.Add(this.listView1);
-            this.splitContainer2.Size = new System.Drawing.Size(759, 421);
-            this.splitContainer2.SplitterDistance = 251;
+            this.splitContainer2.Size = new System.Drawing.Size(809, 491);
+            this.splitContainer2.SplitterDistance = 274;
             this.splitContainer2.TabIndex = 0;
             // 
             // treeView1
             // 
-            this.treeView1.Cursor = System.Windows.Forms.Cursors.Default;
             this.treeView1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.treeView1.ImageIndex = 0;
             this.treeView1.ImageList = this.imageList1;
             this.treeView1.Location = new System.Drawing.Point(0, 0);
             this.treeView1.Name = "treeView1";
             this.treeView1.SelectedImageIndex = 0;
-            this.treeView1.Size = new System.Drawing.Size(251, 421);
+            this.treeView1.Size = new System.Drawing.Size(274, 491);
             this.treeView1.TabIndex = 0;
             this.treeView1.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView1_NodeMouseClick);
             // 
@@ -117,11 +120,10 @@
             this.columnHeader1,
             this.columnHeader3,
             this.columnHeader2});
-            this.listView1.Cursor = System.Windows.Forms.Cursors.Default;
             this.listView1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.listView1.Location = new System.Drawing.Point(0, 0);
             this.listView1.Name = "listView1";
-            this.listView1.Size = new System.Drawing.Size(504, 421);
+            this.listView1.Size = new System.Drawing.Size(531, 491);
             this.listView1.SmallImageList = this.imageList1;
             this.listView1.TabIndex = 0;
             this.listView1.UseCompatibleStateImageBehavior = false;
@@ -142,33 +144,57 @@
             this.columnHeader2.Text = "Path";
             this.columnHeader2.Width = 280;
             // 
+            // textBox1
+            // 
+            this.textBox1.Cursor = System.Windows.Forms.Cursors.IBeam;
+            this.textBox1.Location = new System.Drawing.Point(139, 6);
+            this.textBox1.Name = "textBox1";
+            this.textBox1.Size = new System.Drawing.Size(46, 23);
+            this.textBox1.TabIndex = 2;
+            this.textBox1.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            // 
+            // button2
+            // 
+            this.button2.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.button2.Location = new System.Drawing.Point(0, 5);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(90, 25);
+            this.button2.TabIndex = 4;
+            this.button2.Text = "Compare";
+            this.button2.UseVisualStyleBackColor = true;
+            this.button2.Click += new System.EventHandler(this.button2_Click);
+            // 
+            // checkBox1
+            // 
+            this.checkBox1.AutoSize = true;
+            this.checkBox1.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.checkBox1.Location = new System.Drawing.Point(97, 8);
+            this.checkBox1.Name = "checkBox1";
+            this.checkBox1.Size = new System.Drawing.Size(44, 19);
+            this.checkBox1.TabIndex = 3;
+            this.checkBox1.Text = "SRT";
+            this.checkBox1.UseVisualStyleBackColor = true;
+            // 
             // button1
             // 
             this.button1.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.button1.Location = new System.Drawing.Point(185, 3);
+            this.button1.Location = new System.Drawing.Point(191, 5);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(91, 25);
+            this.button1.Size = new System.Drawing.Size(90, 25);
             this.button1.TabIndex = 1;
             this.button1.Text = "Rename";
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.button1_Click);
-            // 
-            // textBox1
-            // 
-            this.textBox1.Location = new System.Drawing.Point(3, 4);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.Size = new System.Drawing.Size(179, 23);
-            this.textBox1.TabIndex = 2;
             // 
             // listView2
             // 
             this.listView2.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.columnHeader4,
             this.columnHeader6});
-            this.listView2.Cursor = System.Windows.Forms.Cursors.Default;
-            this.listView2.Location = new System.Drawing.Point(3, 32);
+            this.listView2.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.listView2.Location = new System.Drawing.Point(0, 35);
             this.listView2.Name = "listView2";
-            this.listView2.Size = new System.Drawing.Size(276, 389);
+            this.listView2.Size = new System.Drawing.Size(284, 456);
             this.listView2.SmallImageList = this.imageList1;
             this.listView2.TabIndex = 1;
             this.listView2.UseCompatibleStateImageBehavior = false;
@@ -188,7 +214,8 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1042, 421);
+            this.BackColor = System.Drawing.Color.White;
+            this.ClientSize = new System.Drawing.Size(1097, 491);
             this.Controls.Add(this.splitContainer1);
             this.Name = "Form1";
             this.Text = "Media Indexer";
@@ -219,5 +246,7 @@
         private Button button1;
         private TextBox textBox1;
         private ColumnHeader columnHeader3;
+        private CheckBox checkBox1;
+        private Button button2;
     }
 }
