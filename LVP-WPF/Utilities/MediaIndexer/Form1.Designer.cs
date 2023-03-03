@@ -38,13 +38,14 @@
             this.columnHeader1 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader3 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader2 = new System.Windows.Forms.ColumnHeader();
+            this.button3 = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.button2 = new System.Windows.Forms.Button();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.button1 = new System.Windows.Forms.Button();
             this.listView2 = new System.Windows.Forms.ListView();
             this.columnHeader4 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader6 = new System.Windows.Forms.ColumnHeader();
+            this.checkBox1 = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -76,11 +77,12 @@
             // 
             // splitContainer1.Panel2
             // 
+            this.splitContainer1.Panel2.Controls.Add(this.button3);
             this.splitContainer1.Panel2.Controls.Add(this.textBox1);
             this.splitContainer1.Panel2.Controls.Add(this.button2);
-            this.splitContainer1.Panel2.Controls.Add(this.checkBox1);
             this.splitContainer1.Panel2.Controls.Add(this.button1);
             this.splitContainer1.Panel2.Controls.Add(this.listView2);
+            this.splitContainer1.Panel2.Controls.Add(this.checkBox1);
             this.splitContainer1.Size = new System.Drawing.Size(1097, 491);
             this.splitContainer1.SplitterDistance = 809;
             this.splitContainer1.TabIndex = 0;
@@ -144,10 +146,21 @@
             this.columnHeader2.Text = "Path";
             this.columnHeader2.Width = 280;
             // 
+            // button3
+            // 
+            this.button3.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.button3.Location = new System.Drawing.Point(-1, 5);
+            this.button3.Name = "button3";
+            this.button3.Size = new System.Drawing.Size(40, 25);
+            this.button3.TabIndex = 5;
+            this.button3.Text = "Tree";
+            this.button3.UseVisualStyleBackColor = true;
+            this.button3.Click += new System.EventHandler(this.button3_Click);
+            // 
             // textBox1
             // 
             this.textBox1.Cursor = System.Windows.Forms.Cursors.IBeam;
-            this.textBox1.Location = new System.Drawing.Point(139, 6);
+            this.textBox1.Location = new System.Drawing.Point(166, 7);
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(46, 23);
             this.textBox1.TabIndex = 2;
@@ -156,31 +169,20 @@
             // button2
             // 
             this.button2.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.button2.Location = new System.Drawing.Point(0, 5);
+            this.button2.Location = new System.Drawing.Point(44, 5);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(90, 25);
+            this.button2.Size = new System.Drawing.Size(66, 25);
             this.button2.TabIndex = 4;
             this.button2.Text = "Compare";
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
-            // checkBox1
-            // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.checkBox1.Location = new System.Drawing.Point(97, 8);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(44, 19);
-            this.checkBox1.TabIndex = 3;
-            this.checkBox1.Text = "SRT";
-            this.checkBox1.UseVisualStyleBackColor = true;
-            // 
             // button1
             // 
             this.button1.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.button1.Location = new System.Drawing.Point(191, 5);
+            this.button1.Location = new System.Drawing.Point(218, 5);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(90, 25);
+            this.button1.Size = new System.Drawing.Size(63, 25);
             this.button1.TabIndex = 1;
             this.button1.Text = "Rename";
             this.button1.UseVisualStyleBackColor = true;
@@ -209,6 +211,17 @@
             // 
             this.columnHeader6.Text = "Name";
             this.columnHeader6.Width = 212;
+            // 
+            // checkBox1
+            // 
+            this.checkBox1.AutoSize = true;
+            this.checkBox1.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.checkBox1.Location = new System.Drawing.Point(120, 9);
+            this.checkBox1.Name = "checkBox1";
+            this.checkBox1.Size = new System.Drawing.Size(44, 19);
+            this.checkBox1.TabIndex = 3;
+            this.checkBox1.Text = "SRT";
+            this.checkBox1.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
@@ -248,5 +261,6 @@
         private ColumnHeader columnHeader3;
         private CheckBox checkBox1;
         private Button button2;
+        private Button button3;
     }
 }

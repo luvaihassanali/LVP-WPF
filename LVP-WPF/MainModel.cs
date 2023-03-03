@@ -71,7 +71,7 @@ namespace LVP_WPF
                     }
                 }
             }
-
+            //To-do* test ingest
             for (int i = 0; i < prevMedia.TvShows.Length; i++)
             {
                 for (int l = 0; l < this.tvShows.Length; l++)
@@ -88,34 +88,72 @@ namespace LVP_WPF
                         this.tvShows[l].CurrSeason = prevMedia.tvShows[i].CurrSeason;
                         this.tvShows[l].LastEpisode = prevMedia.tvShows[i].LastEpisode;
                         this.tvShows[l].RunningTime = prevMedia.tvShows[i].RunningTime;
-
-                        for (int j = 0; j < prevMedia.TvShows[i].Seasons.Length; j++)
+                        this.tvShows[l].MultiLang = prevMedia.tvShows[i].MultiLang;
+                        this.tvShows[l].MultiLangCurrSeason = prevMedia.tvShows[i].MultiLangCurrSeason;
+                        this.tvShows[l].MultiLangOverview = prevMedia.tvShows[i].MultiLangOverview;
+                        this.tvShows[l].MultiLangName = prevMedia.tvShows[i].MultiLangName;
+                        this.tvShows[i].MultiLangLastWatched = prevMedia.tvShows[i].MultiLangLastWatched;
+                        IngestSeason(prevMedia, i, l);
+                        for (int a = 0; a < prevMedia.TvShows[i].MultiLangSeasons.Count; a++)
                         {
-                            this.tvShows[l].Seasons[j].Id = prevMedia.TvShows[i].Seasons[j].Id;
-                            this.tvShows[l].Seasons[j].Poster = prevMedia.TvShows[i].Seasons[j].Poster;
-                            this.tvShows[l].Seasons[j].Date = prevMedia.TvShows[i].Seasons[j].Date;
-                            this.tvShows[l].CurrSeason = prevMedia.TvShows[i].CurrSeason;
-
-                            for (int k = 0; k < prevMedia.TvShows[i].Seasons[j].Episodes.Length; k++)
-                            {
-                                if (this.tvShows[l].Seasons[j].Episodes[k].Name.Equals(prevMedia.TvShows[i].Seasons[j].Episodes[k].Name))
-                                {
-                                    this.tvShows[l].Seasons[j].Episodes[k].Id = prevMedia.TvShows[i].Seasons[j].Episodes[k].Id;
-                                    this.tvShows[l].Seasons[j].Episodes[k].Name = prevMedia.TvShows[i].Seasons[j].Episodes[k].Name;
-                                    this.tvShows[l].Seasons[j].Episodes[k].Backdrop = prevMedia.TvShows[i].Seasons[j].Episodes[k].Backdrop;
-                                    this.tvShows[l].Seasons[j].Episodes[k].Date = prevMedia.TvShows[i].Seasons[j].Episodes[k].Date;
-                                    this.tvShows[l].Seasons[j].Episodes[k].Overview = prevMedia.TvShows[i].Seasons[j].Episodes[k].Overview;
-                                    this.tvShows[l].Seasons[j].Episodes[k].Path = prevMedia.TvShows[i].Seasons[j].Episodes[k].Path;
-                                    this.tvShows[l].Seasons[j].Episodes[k].SavedTime = prevMedia.TvShows[i].Seasons[j].Episodes[k].SavedTime;
-                                    this.tvShows[l].Seasons[j].Episodes[k].Length = prevMedia.TvShows[i].Seasons[j].Episodes[k].Length;
-                                }
-                            }
-
+                            IngestSeasonMultiLang(prevMedia, i, l, a);
                         }
                     }
                     else
                     {
                         continue;
+                    }
+                }
+            }
+        }
+
+        internal void IngestSeasonMultiLang(MainModel prevMedia, int i, int l, int a)
+        {
+            for (int j = 0; j < prevMedia.TvShows[i].MultiLangSeasons[a].Length; j++)
+            {
+                this.tvShows[l].MultiLangSeasons[a][j].Id = prevMedia.TvShows[i].MultiLangSeasons[a][j].Id;
+                this.tvShows[l].MultiLangSeasons[a][j].Poster = prevMedia.TvShows[i].MultiLangSeasons[a][j].Poster;
+                this.tvShows[l].MultiLangSeasons[a][j].Date = prevMedia.TvShows[i].MultiLangSeasons[a][j].Date;
+                this.tvShows[l].CurrSeason = prevMedia.TvShows[i].CurrSeason;
+
+                for (int k = 0; k < prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes.Length; k++)
+                {
+                    if (this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Name.Equals(prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Name))
+                    {
+                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Id = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Id;
+                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Name = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Name;
+                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Backdrop = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Backdrop;
+                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Date = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Date;
+                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Overview = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Overview;
+                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Path = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Path;
+                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].SavedTime = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].SavedTime;
+                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Length = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Length;
+                    }
+                }
+            }
+        }
+
+        internal void IngestSeason(MainModel prevMedia, int i, int l)
+        {
+            for (int j = 0; j < prevMedia.TvShows[i].Seasons.Length; j++)
+            {
+                this.tvShows[l].Seasons[j].Id = prevMedia.TvShows[i].Seasons[j].Id;
+                this.tvShows[l].Seasons[j].Poster = prevMedia.TvShows[i].Seasons[j].Poster;
+                this.tvShows[l].Seasons[j].Date = prevMedia.TvShows[i].Seasons[j].Date;
+                this.tvShows[l].CurrSeason = prevMedia.TvShows[i].CurrSeason;
+
+                for (int k = 0; k < prevMedia.TvShows[i].Seasons[j].Episodes.Length; k++)
+                {
+                    if (this.tvShows[l].Seasons[j].Episodes[k].Name.Equals(prevMedia.TvShows[i].Seasons[j].Episodes[k].Name))
+                    {
+                        this.tvShows[l].Seasons[j].Episodes[k].Id = prevMedia.TvShows[i].Seasons[j].Episodes[k].Id;
+                        this.tvShows[l].Seasons[j].Episodes[k].Name = prevMedia.TvShows[i].Seasons[j].Episodes[k].Name;
+                        this.tvShows[l].Seasons[j].Episodes[k].Backdrop = prevMedia.TvShows[i].Seasons[j].Episodes[k].Backdrop;
+                        this.tvShows[l].Seasons[j].Episodes[k].Date = prevMedia.TvShows[i].Seasons[j].Episodes[k].Date;
+                        this.tvShows[l].Seasons[j].Episodes[k].Overview = prevMedia.TvShows[i].Seasons[j].Episodes[k].Overview;
+                        this.tvShows[l].Seasons[j].Episodes[k].Path = prevMedia.TvShows[i].Seasons[j].Episodes[k].Path;
+                        this.tvShows[l].Seasons[j].Episodes[k].SavedTime = prevMedia.TvShows[i].Seasons[j].Episodes[k].SavedTime;
+                        this.tvShows[l].Seasons[j].Episodes[k].Length = prevMedia.TvShows[i].Seasons[j].Episodes[k].Length;
                     }
                 }
             }
@@ -127,6 +165,8 @@ namespace LVP_WPF
     {
         private int id;
         private string path;
+        //To-do: change to auto property
+        public string Name { get; set; }
 
         public int Id
         {
@@ -143,7 +183,6 @@ namespace LVP_WPF
 
     public class Movie : Media
     {
-        private string name;
         private string poster;
         private string backdrop;
         private string overview;
@@ -152,14 +191,8 @@ namespace LVP_WPF
 
         public Movie(string n, string p)
         {
-            name = n;
+            Name = n;
             Path = p;
-        }
-
-        public string Name
-        {
-            get => name;
-            set => name = value;
         }
 
         public string Backdrop
@@ -194,7 +227,7 @@ namespace LVP_WPF
 
         internal bool Compare(Movie localMovie)
         {
-            if (!this.name.Equals(localMovie.Name)) return false;
+            if (!this.Name.Equals(localMovie.Name)) return false;
             if (!this.Path.Equals(localMovie.Path)) return false;
             return true;
         }
@@ -210,15 +243,15 @@ namespace LVP_WPF
             {
                 Movie m1 = (Movie)a;
                 Movie m2 = (Movie)b;
-                return String.Compare(m1.Name, m2.name);
+                return String.Compare(m1.Name, m2.Name);
             }
         }
     }
 
+    
     public class TvShow : Media
     {
         private bool cartoon;
-        private string name;
         private string overview;
         private string backdrop;
         private string poster;
@@ -230,22 +263,17 @@ namespace LVP_WPF
 
         public TvShow(string n)
         {
-            name = n;
+            Name = n;
             currSeason = 1;
             lastWatched = null;
             cartoon = false;
+            MultiLang = false;
         }
 
         public bool Cartoon
         {
             get => cartoon;
             set => cartoon = value;
-        }
-
-        public string Name
-        {
-            get => name;
-            set => name = value;
         }
 
         public string Backdrop
@@ -295,13 +323,41 @@ namespace LVP_WPF
             set => runningTime = value;
         }
 
+        public bool MultiLang { get; set; }
+        public List<string> MultiLangName { get; set; }
+        public List<string> MultiLangOverview { get; set; }
+        public List<Season[]> MultiLangSeasons { get; set; }
+        public List<int> MultiLangCurrSeason { get; set; }
+        public List<Episode> MultiLangLastWatched { get; set; }
+
+        //To-do** test compare
         internal bool Compare(TvShow localShow)
         {
-            if (!this.name.Equals(localShow.name)) return false;
+            if (!this.Name.Equals(localShow.Name)) return false;
+         
             if (this.seasons.Length != localShow.seasons.Length) return false;
             for (int i = 0; i < this.seasons.Length; i++)
             {
                 if (!this.seasons[i].Compare(localShow.seasons[i])) return false;
+            }
+            
+            if (this.MultiLangName.Count != localShow.MultiLangName.Count) return false;
+            for (int i = 0; i < this.MultiLangName.Count; i++)
+            {
+                if (!this.MultiLangName[i].Equals(localShow.MultiLangName[i])) return false;
+            }
+            
+            if (this.MultiLangSeasons.Count != localShow.MultiLangSeasons.Count) return false;
+
+            for (int i = 0; i < this.MultiLangSeasons.Count; i++)
+            {
+                Season[] a = this.MultiLangSeasons[i];
+                Season[] b = localShow.MultiLangSeasons[i];
+                if (a.Length!= b.Length) return false;
+                for (int j = 0; j < a.Length; j++)
+                {
+                    if (!a[j].Compare(b[j])) return false;
+                }
             }
             return true;
         }
@@ -317,7 +373,7 @@ namespace LVP_WPF
             {
                 TvShow t1 = (TvShow)a;
                 TvShow t2 = (TvShow)b;
-                return String.Compare(t1.Name, t2.name);
+                return String.Compare(t1.Name, t2.Name);
             }
         }
     }
@@ -373,7 +429,6 @@ namespace LVP_WPF
     public class Episode : Media
     {
         private bool multiEpisode = false;
-        private string name;
         private string backdrop;
         private string overview;
         DateTime? date;
@@ -383,17 +438,12 @@ namespace LVP_WPF
         public Episode(int i, string n, string p, bool me = false)
         {
             Id = i;
-            name = n;
+            Name = n;
             Path = p;
             savedTime = 0;
             multiEpisode = me;
         }
 
-        public string Name
-        {
-            get => name;
-            set => name = value;
-        }
         public string Backdrop
         {
             get => backdrop;
@@ -431,7 +481,7 @@ namespace LVP_WPF
 
         internal bool Compare(Episode otherEpisode)
         {
-            if (!this.name.Equals(otherEpisode.name)) return false;
+            if (!this.Name.Equals(otherEpisode.Name)) return false;
             return true;
         }
     }

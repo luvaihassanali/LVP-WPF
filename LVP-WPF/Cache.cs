@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Printing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -568,17 +569,57 @@ namespace LVP_WPF
             return movie;
         }
 
+        internal static TvShow ProcessMultiLangTvDirectory(string folder, TvShow tvShow)
+        {
+            tvShow.MultiLang = true;
+            tvShow.MultiLangLastWatched = new List<Episode>();
+            tvShow.MultiLangCurrSeason = new List<int>();
+            tvShow.MultiLangSeasons = new List<Season[]>();
+            tvShow.MultiLangOverview = new List<string>();
+            tvShow.MultiLangName = new List<string>(); 
+
+            string[] langFolders = Directory.GetDirectories(folder);
+            for (int i = 0; i < langFolders.Length; i++)
+            {
+                string langFolder = langFolders[i];
+                string[] seasonEntries = Directory.GetDirectories(langFolder);
+                Array.Sort(seasonEntries, SeasonComparer);
+                tvShow.MultiLangSeasons[i] = ProcessTvShowSeasonDirectories(seasonEntries, tvShow);
+            }
+            return tvShow;
+        }
+
         internal static TvShow ProcessTvDirectory(string targetDir)
         {
             string[] path = targetDir.Split('\\');
             string name = path[path.Length - 1].Split('%')[0];
             TvShow show = new TvShow(name.Trim());
-            string[] seasonEntries = Directory.GetDirectories(targetDir);
-            Array.Sort(seasonEntries, SeasonComparer);
-            show.Seasons = new Season[seasonEntries.Length];
 
+            string[] seasonEntries = Directory.GetDirectories(targetDir);
+            string[] seasonParts = seasonEntries[0].Split('\\');
+            string folderName = seasonParts[seasonParts.Length - 1];
+            if (folderName.Length == 2)
+            {
+                return ProcessMultiLangTvDirectory(targetDir, show);
+            }
+
+            Array.Sort(seasonEntries, SeasonComparer);
+            show.Seasons = ProcessTvShowSeasonDirectories(seasonEntries, show);
+            return show;
+        }
+
+        private static Season[] ProcessTvShowSeasonDirectories(string[] seasonEntries, TvShow show)
+        {
+            Season[] seasons = new Season[seasonEntries.Length];
             for (int i = 0; i < seasonEntries.Length; i++)
             {
+                if (!seasonEntries[i].Contains("Extras") || !seasonEntries[i].Contains("Season"))
+                {
+                    NotificationDialog.Show("Error", show.Name + " contains unknown season folder, index: " + (i + 1));
+                    GuiModel.RestoreSystemCursor();
+                    Environment.Exit(0);
+                }
+
                 if (seasonEntries[i].Contains("Extras"))
                 {
                     Season extras = new Season(-1);
@@ -590,7 +631,7 @@ namespace LVP_WPF
                         mediaCount++;
                         extras.Episodes[j] = extraEpisodes[j];
                     }
-                    show.Seasons[show.Seasons.Length - 1] = extras;
+                    seasons[seasonEntries.Length - 1] = extras;
                     continue;
                 }
 
@@ -620,9 +661,9 @@ namespace LVP_WPF
                     Episode episode = new Episode(0, episodeName, episodeEntries[j]);
                     season.Episodes[j] = episode;
                 }
-                show.Seasons[i] = season;
+                seasons[i] = season;
             }
-            return show;
+            return seasons;
         }
 
         internal static void ProcessExtrasDirectory(List<Episode> extras, string targetDir)

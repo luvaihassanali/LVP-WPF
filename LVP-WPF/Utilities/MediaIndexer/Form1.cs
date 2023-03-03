@@ -19,7 +19,8 @@ namespace MediaIndexUtil
         private void PopulateTreeView()
         {
 #if DEBUG
-            DirectoryInfo info = new DirectoryInfo(@"../");
+            string path = Environment.GetEnvironmentVariable("USERPROFILE");
+            DirectoryInfo info = new DirectoryInfo(path + "\\Desktop");
 #else
             DirectoryInfo info = new DirectoryInfo(@"../");
 #endif
@@ -157,14 +158,13 @@ namespace MediaIndexUtil
 
         private void RenameFiles(List<string[]> list, string targetIndex)
         {
+            Cursor.Current = Cursors.WaitCursor;
             if (checkBox1.Checked)
             {
                 RenameSrtFiles();
                 return;
             }
 
-            button1.Enabled = false;
-            Cursor.Current = Cursors.WaitCursor;
             for (int i = 0; i < list.Count; i++)
             {
                 string fullPath = list[i][0];
@@ -179,12 +179,12 @@ namespace MediaIndexUtil
                 targetIndex = newIndex.ToString();
             }
             list.Clear();
-            button1.Enabled = true;
             Cursor.Current = Cursors.Arrow;
         }
 
         private void RenameSrtFiles()
         {
+            Cursor.Current = Cursors.WaitCursor;
             string[] files = Directory.GetFiles(currentDirectory);
             Array.Sort(files);
             int lineNum = 0;
@@ -245,6 +245,7 @@ namespace MediaIndexUtil
             log += "Finished";
             File.WriteAllText("log.txt", log);
             Process.Start("notepad.exe", "log.txt");
+            Cursor.Current = Cursors.Arrow;
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -262,11 +263,13 @@ namespace MediaIndexUtil
 
         private void CompareDirectories(string compareDir1, string compareDir2)
         {
+            Cursor.Current = Cursors.WaitCursor;
             string log = "Compare for directory: " + compareDir1 + " and " + compareDir2 + "\n";
             Trace.WriteLine("Compare for directory: " + compareDir1 + " and " + compareDir2);
 
             string[] showDir1 = Directory.GetDirectories(compareDir1);
             string[] showDir2 = Directory.GetDirectories(compareDir2);
+
             if (showDir1.Length != showDir2.Length)
             {
                 Trace.WriteLine("Warning: Number of seasons not the same");
@@ -307,6 +310,7 @@ namespace MediaIndexUtil
             log += "Finished";
             File.WriteAllText("log.txt", log);
             Process.Start("notepad.exe", "log.txt");
+            Cursor.Current = Cursors.Arrow;
         }
 
         private bool CompareFiles(string d1, string d2)
@@ -314,6 +318,35 @@ namespace MediaIndexUtil
             var fileList1 = Directory.GetFiles(d1).Where(name => !name.EndsWith(".srt"));
             var fileList2 = Directory.GetFiles(d2).Where(name => !name.EndsWith(".srt"));
             return fileList1.Count() == fileList2.Count();
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            Cursor.Current = Cursors.WaitCursor;
+            if (currentDirectory.EndsWith("\\")) currentDirectory = currentDirectory.Substring(0, currentDirectory.Length - 1);
+            string[] directoryParts = currentDirectory.Split("\\");
+            DirectoryInfo treeFolder = Directory.CreateDirectory(directoryParts[directoryParts.Length - 1]);
+            CreateTree(currentDirectory, treeFolder);
+            Cursor.Current = Cursors.Arrow;
+        }
+
+        private void CreateTree(string currentDirectory, DirectoryInfo treeFolder)
+        {
+            string[] directories = Directory.GetDirectories(currentDirectory);
+            for (int i = 0; i < directories.Length; i++)
+            {
+                string[] directoryNameParts = directories[i].Split("\\");
+                string directoryName = directoryNameParts[directoryNameParts.Length - 1];
+                DirectoryInfo treeSubFolder = treeFolder.CreateSubdirectory(directoryName);
+
+                string[] files = Directory.GetFiles(directories[i]);
+                for (int j = 0; j < files.Length; j++)
+                {
+                    string[] filenameParts= files[j].Split("\\");
+                    string filename = filenameParts[filenameParts.Length - 1].Split(".")[0];
+                    File.WriteAllText(treeSubFolder.FullName + "\\" + filename + ".txt", "blank");
+                }
+            }
         }
     }
 }
