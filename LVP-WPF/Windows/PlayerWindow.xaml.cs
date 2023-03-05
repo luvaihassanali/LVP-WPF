@@ -21,9 +21,9 @@ namespace LVP_WPF.Windows
     {
         static private Media currMedia;
         static private TvShowWindow? tvShowWindow;
-        static internal LibVLC libVLC = new LibVLC("--freetype-font=Segoe UI");
+        static internal LibVLC libVLC = new LibVLC("--freetype-font=Segoe UI"); //TO-do: change size?
         static public int subtitleTrack = Int32.MaxValue;
-        static public string subtitleFile = "";
+        static public bool subtitleFile = false;
         private MediaPlayer mediaPlayer;
         private DispatcherTimer pollingTimer;
         InactivityTimer inactivityTimer;
@@ -71,7 +71,7 @@ namespace LVP_WPF.Windows
             Core.Initialize();
         }
 
-        private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
+        private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
         {
             mediaPlayer.TimeChanged += MediaPlayer_TimeChanged;
             mediaPlayer.LengthChanged += MediaPlayer_LengthChanged;
@@ -291,13 +291,13 @@ namespace LVP_WPF.Windows
             LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(libVLC, m.Path, FromType.FromPath);
             media.AddOption(":avcodec-hw=auto");
             media.AddOption(":no-mkv-preload-local-dir");
-            if (!subtitleFile.Equals(String.Empty))
+            if (subtitleFile)
             {
                 string[] pathParts = m.Path.Split("\\");
                 string path = "";
                 string name = pathParts[pathParts.Length - 1].Split(".")[0];
                 for (int i = 0; i < pathParts.Length - 1; i++) path += pathParts[i] + "\\";
-                path += name + " " + subtitleFile + ".srt";
+                path += name + ".srt";
                 mediaPlayer.AddSlave(MediaSlaveType.Subtitle, "file:///" + path, true);
             }
             else

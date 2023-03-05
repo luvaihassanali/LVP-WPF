@@ -24,10 +24,10 @@ namespace LVP_WPF.Windows
     {
         private static Movie movie;
         
-        public static async void Show(Movie m)
+        public static void Show(Movie m)
         {
             PlayerWindow.subtitleTrack = Int32.MaxValue;
-            PlayerWindow.subtitleFile = "";
+            PlayerWindow.subtitleFile = false;
             movie = m;
             MovieWindow window = new MovieWindow();
             window.MovieName = movie.Name + " (" + movie.Date.GetValueOrDefault().Year + ")";
@@ -58,53 +58,6 @@ namespace LVP_WPF.Windows
         {
             DataContext = this;
             InitializeComponent();
-        }
-
-        private void GetLanguageInfo(Movie movie)
-        {
-            LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(PlayerWindow.libVLC, movie.Path, FromType.FromPath);
-            Task.Run(async () => { await media.Parse(MediaParseOptions.ParseLocal); }).Wait();
-
-            subTrackComboBox.Items.Add("Subtitles (none)");
-            foreach (var track in media.Tracks)
-            {
-                switch (track.TrackType)
-                {
-                    //case TrackType.Audio:
-                    //case TrackType.Video:
-                    case TrackType.Text:
-                        subTrackComboBox.Items.Add(track.Description);
-                        break;
-                }
-            }
-
-            if (subTrackComboBox.Items.Count > 1)
-            {
-                subTrackComboBox.Visibility = Visibility.Visible;
-                subTrackComboBox.SelectedIndex = 0;
-                return;
-            }
-
-            string[] pathParts = movie.Path.Split("\\");
-            string path = "";
-            for (int i = 0; i < pathParts.Length - 1; i++) path += pathParts[i] + "\\";
-            string name = pathParts[pathParts.Length - 1].Split('.')[0];
-
-            string[] movieFiles = Directory.GetFiles(path);
-            if (movieFiles.Length == 1) return;
-            srtFileExists = true;
-
-            for (int i = 0; i < movieFiles.Length; i++)
-            {
-                string[] fileParts = movieFiles[i].Split('\\');
-                string filename = fileParts[fileParts.Length - 1].Split(".")[0];
-                if (filename.Equals(name)) continue;
-                filename = filename.Replace(name, "").Trim();
-                subTrackComboBox.Items.Add(filename);
-            }
-
-            subTrackComboBox.Visibility = Visibility.Visible;
-            subTrackComboBox.SelectedIndex = 0;
         }
 
         private void Backdrop_MouseEnter(object sender, MouseEventArgs e)
@@ -143,20 +96,59 @@ namespace LVP_WPF.Windows
             TcpSerialListener.layoutPoint.Select("MovieWindow", true);
         }
 
-        private void subTrackComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void GetLanguageInfo(Movie movie)
         {
-            if (srtFileExists)
+            LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(PlayerWindow.libVLC, movie.Path, FromType.FromPath);
+            Task.Run(async () => { await media.Parse(MediaParseOptions.ParseLocal); }).Wait();
+
+            subTrackComboBox.Items.Add("Subtitles (none)");
+            foreach (var track in media.Tracks)
             {
-                PlayerWindow.subtitleFile = subTrackComboBox.SelectedItem.ToString().Equals("Subtitles (none)") ? "" : subTrackComboBox.SelectedItem.ToString();
+                switch (track.TrackType)
+                {
+                    //case TrackType.Audio:
+                    //case TrackType.Video:
+                    case TrackType.Text:
+                        subTrackComboBox.Items.Add(track.Description);
+                        break;
+                }
+            }
+
+            if (subTrackComboBox.Items.Count > 1)
+            {
+                subTrackComboBox.Visibility = Visibility.Visible;
+                subTrackComboBox.SelectedIndex = 0;
                 return;
             }
 
+            string[] pathParts = movie.Path.Split("\\");
+            string path = "";
+            for (int i = 0; i < pathParts.Length - 1; i++) path += pathParts[i] + "\\";
+            string name = pathParts[pathParts.Length - 1].Split('.')[0];
+
+            string[] movieFiles = Directory.GetFiles(path);
+            if (movieFiles.Length == 1) return;
+
+            srtFileExists = true;
+            subTrackComboBox.Items.Add("English");
+            subTrackComboBox.Visibility = Visibility.Visible;
+            subTrackComboBox.SelectedIndex = 0;
+        }
+
+        private void SubTrackComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
             if (subTrackComboBox.SelectedIndex == 0)
             {
                 PlayerWindow.subtitleTrack = Int32.MaxValue;
+                PlayerWindow.subtitleFile = false;
             } 
             else
             {
+                if (srtFileExists)
+                {
+                    PlayerWindow.subtitleFile = true;
+                    return;
+                }
                 PlayerWindow.subtitleTrack = subTrackComboBox.SelectedIndex - 1;
             }
         }

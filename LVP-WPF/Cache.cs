@@ -7,7 +7,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Printing;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -116,88 +118,211 @@ namespace LVP_WPF
         {
             if (tvShow.Id == 0)
             {
-                string tvSearchUrl = apiTvSearchUrl + tvShow.Name;
-                using HttpResponseMessage tvSearchResponse = await client.GetAsync(tvSearchUrl);
-                using HttpContent tvSearchContent = tvSearchResponse.Content;
-                string tvResourceString = await tvSearchContent.ReadAsStringAsync();
-                JObject tvObject = JObject.Parse(tvResourceString);
-                int totalResults = (int)tvObject["total_results"];
-
-                if (totalResults == 0)
-                {
-                    NotificationDialog.Show("Error", "No tv show found for: " + tvShow.Name);
-                }
-                else if (totalResults != 1)
-                {
-                    int actualResults = (int)((JArray)tvObject["results"]).Count();
-                    string[] names = new string[actualResults];
-                    string[] ids = new string[actualResults];
-                    string[] overviews = new string[actualResults];
-                    DateTime?[] dates = new DateTime?[actualResults];
-
-                    for (int j = 0; j < actualResults; j++)
-                    {
-                        DateTime temp;
-                        dates[j] = DateTime.TryParse((string)tvObject["results"][j]["first_air_date"], out temp) ? temp : DateTime.MinValue.AddHours(9);
-                        names[j] = (string)tvObject["results"][j]["name"];
-                        names[j] = names[j].fixBrokenQuotes();
-                        ids[j] = (string)tvObject["results"][j]["id"];
-                        overviews[j] = (string)tvObject["results"][j]["overview"];
-                        overviews[j] = overviews[j].fixBrokenQuotes();
-                    }
-
-                    string[][] info = new string[][] { names, ids, overviews };
-                    tvShow.Id = OptionDialog.Show(tvShow.Name, tvShow.Seasons[0].Episodes[0].Path, info, dates);
-                }
-                else
-                {
-                    tvShow.Id = (int)tvObject["results"][0]["id"];
-                }
-
-                string tvShowUrl = apiTvShowUrl.Replace("{tv_id}", tvShow.Id.ToString());
-                using HttpResponseMessage tvShowResponse = await client.GetAsync(tvShowUrl);
-                using HttpContent tvShowContent = tvShowResponse.Content;
-                string tvShowString = await tvShowContent.ReadAsStringAsync();
-                tvObject = JObject.Parse(tvShowString);
-
-                DateTime tempDate;
-                tvShow.Date = DateTime.TryParse((string)tvObject["first_air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
-                tvShow.Overview = (string)tvObject["overview"];
-                tvShow.Overview = tvShow.Overview.fixBrokenQuotes();
-                tvShow.Poster = (string)tvObject["poster_path"];
-                tvShow.Backdrop = (string)tvObject["backdrop_path"];
-                int[] runtime = JObject.Parse(tvShowString)["episode_run_time"].Select(x => (int)x).ToArray();
-                if (runtime.Length != 0)
-                {
-                    tvShow.RunningTime = runtime[0];
-                }
-                else
-                {
-                    tvShow.RunningTime = -1;
-                }
-
-                var genres = tvObject["genres"];
-                foreach (var genre in genres)
-                {
-                    string cartoonExceptionStr = ConfigurationManager.AppSettings["CartoonExceptions"];
-                    string[] cartoonExceptions = cartoonExceptionStr.Split(";");
-                    if ((int)genre["id"] == 16 && !cartoonExceptions.Contains(tvShow.Name))
-                    {
-                        tvShow.Cartoon = true;
-                    }
-                }
-
-                if (tvShow.Backdrop != null)
-                {
-                    tvShow.Backdrop = await DownloadImage(tvShow.Backdrop, tvShow.Name, false);
-                }
-
-                if (tvShow.Poster != null)
-                {
-                    tvShow.Poster = await DownloadImage(tvShow.Poster, tvShow.Name, false);
-                }
+                await BuildTvShowGeneralData(tvShow, client);
             }
             await BuildSeasonCache(tvShow, client);
+
+            if (tvShow.MultiLang)
+            {
+                for (int i = 0; i < tvShow.MultiLangSeasons.Count; i++)
+                {
+                    Season[] currSeason = tvShow.Seasons;
+                    tvShow.Seasons = tvShow.MultiLangSeasons[i];
+                    // Build Season cache again some translated shows have different episodes # per season
+                    await BuildSeasonCache(tvShow, client);
+                    tvShow.MultiLangSeasons[i] = tvShow.Seasons;
+                    tvShow.Seasons = currSeason;
+                }
+                await ApplyMultiLangTvShowTranslations(tvShow, client);
+            }
+        }
+
+        private static async Task ApplyMultiLangTvShowTranslations(TvShow tvShow, HttpClient client)
+        {
+            bool skippedEnglish = false;
+            string[] lang = Directory.GetDirectories(tvShow.Path);
+            int langIndex = 0;
+            for (int i = 0; i < lang.Length; i++)
+            {
+                if (!skippedEnglish && lang[i].EndsWith("\\en"))
+                {
+                    skippedEnglish = true;
+                    continue;
+                }
+
+                string[] langParts = lang[i].Split('\\');
+                string langKey = langParts[langParts.Length - 1];
+                string overview = await GetTranslation(langKey, tvShow.Overview, client);
+                if (!tvShow.MultiLangOverview.Contains(overview)) tvShow.MultiLangOverview.Add(overview);
+
+                for (int j = 0; j < tvShow.MultiLangSeasons[langIndex].Length; j++)
+                {
+                    Season[] multiLangSeasons = tvShow.MultiLangSeasons[j];
+                    for (int k = 0; k < multiLangSeasons.Length; k++)
+                    {
+                        Season multiLangSeason = multiLangSeasons[k];
+                        for (int l = 0; l < multiLangSeason.Episodes.Length; l++)
+                        {
+                            multiLangSeason.Episodes[l].Name = await GetTranslation(langKey, multiLangSeason.Episodes[l].Name, client);
+                            multiLangSeason.Episodes[l].Overview = await GetTranslation(langKey, multiLangSeason.Episodes[l].Overview, client);
+                        }
+                    }
+                }
+                langIndex++;
+            }
+        }
+
+        private static string GetLangCode(string key)
+        {
+            switch (key)
+            {
+                case "en":
+                    return "English";
+                case "it":
+                    return "Italian";
+            }
+            return "";
+        }
+
+        private static async Task<string> GetTranslation(string target, string msg, HttpClient client)
+        {
+            Dictionary<string, string> values = new Dictionary<string, string>
+                {
+                    { "q", msg },
+                    { "source", "en" },
+                    { "target", target }
+                };
+            FormUrlEncodedContent content = new FormUrlEncodedContent(values);
+            try
+            {
+                HttpResponseMessage response = await client.PostAsync("http://localhost:5000/translate", content);
+                string responseString = await response.Content.ReadAsStringAsync();
+                LibreTranslateResponse resp = JsonConvert.DeserializeObject<LibreTranslateResponse>(responseString);
+                return resp.TranslatedText;
+            }
+            catch
+            {
+                NotificationDialog.Show("Error", "LibreTranslate server not running");
+                Environment.Exit(1);
+            }
+            return "";
+        }
+
+        internal static void SwitchMultiLangTvIndex(TvShow tvShow, string lang)
+        {
+            int index = 0;
+            for (int i = 0; i < tvShow.MultiLangSeasons.Count; i++)
+            {
+                if (tvShow.MultiLangName[i].Contains(lang))
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            string currName = tvShow.Name;
+            tvShow.Name = tvShow.MultiLangName[index];
+            tvShow.MultiLangName[index] = currName;
+
+            string currOverview = tvShow.Overview;
+            tvShow.Overview = tvShow.MultiLangOverview[index];
+            tvShow.MultiLangOverview[index] = currOverview;
+
+            int currSeasonIdx = tvShow.CurrSeason;
+            tvShow.CurrSeason = tvShow.MultiLangCurrSeason[index];
+            tvShow.MultiLangCurrSeason[index] = currSeasonIdx;
+
+            Episode currLastWatched = tvShow.LastEpisode;
+            tvShow.LastEpisode = tvShow.MultiLangLastWatched[index];
+            tvShow.MultiLangLastWatched[index] = currLastWatched;
+
+            Season[] currSeason = tvShow.Seasons;
+            tvShow.Seasons = tvShow.MultiLangSeasons[index];
+            tvShow.MultiLangSeasons[index] = currSeason;
+        }
+
+        private static async Task BuildTvShowGeneralData(TvShow tvShow, HttpClient client)
+        {
+            string tvSearchUrl = apiTvSearchUrl + tvShow.Name;
+            using HttpResponseMessage tvSearchResponse = await client.GetAsync(tvSearchUrl);
+            using HttpContent tvSearchContent = tvSearchResponse.Content;
+            string tvResourceString = await tvSearchContent.ReadAsStringAsync();
+            JObject tvObject = JObject.Parse(tvResourceString);
+            int totalResults = (int)tvObject["total_results"];
+
+            if (totalResults == 0)
+            {
+                NotificationDialog.Show("Error", "No tv show found for: " + tvShow.Name);
+            }
+            else if (totalResults != 1)
+            {
+                int actualResults = (int)((JArray)tvObject["results"]).Count();
+                string[] names = new string[actualResults];
+                string[] ids = new string[actualResults];
+                string[] overviews = new string[actualResults];
+                DateTime?[] dates = new DateTime?[actualResults];
+
+                for (int j = 0; j < actualResults; j++)
+                {
+                    DateTime temp;
+                    dates[j] = DateTime.TryParse((string)tvObject["results"][j]["first_air_date"], out temp) ? temp : DateTime.MinValue.AddHours(9);
+                    names[j] = (string)tvObject["results"][j]["name"];
+                    names[j] = names[j].fixBrokenQuotes();
+                    ids[j] = (string)tvObject["results"][j]["id"];
+                    overviews[j] = (string)tvObject["results"][j]["overview"];
+                    overviews[j] = overviews[j].fixBrokenQuotes();
+                }
+
+                string[][] info = new string[][] { names, ids, overviews };
+                tvShow.Id = OptionDialog.Show(tvShow.Name, tvShow.Seasons[0].Episodes[0].Path, info, dates);
+            }
+            else
+            {
+                tvShow.Id = (int)tvObject["results"][0]["id"];
+            }
+
+            string tvShowUrl = apiTvShowUrl.Replace("{tv_id}", tvShow.Id.ToString());
+            using HttpResponseMessage tvShowResponse = await client.GetAsync(tvShowUrl);
+            using HttpContent tvShowContent = tvShowResponse.Content;
+            string tvShowString = await tvShowContent.ReadAsStringAsync();
+            tvObject = JObject.Parse(tvShowString);
+
+            DateTime tempDate;
+            tvShow.Date = DateTime.TryParse((string)tvObject["first_air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+            tvShow.Overview = (string)tvObject["overview"];
+            tvShow.Overview = tvShow.Overview.fixBrokenQuotes();
+            tvShow.Poster = (string)tvObject["poster_path"];
+            tvShow.Backdrop = (string)tvObject["backdrop_path"];
+            int[] runtime = JObject.Parse(tvShowString)["episode_run_time"].Select(x => (int)x).ToArray();
+            if (runtime.Length != 0)
+            {
+                tvShow.RunningTime = runtime[0];
+            }
+            else
+            {
+                tvShow.RunningTime = -1;
+            }
+
+            var genres = tvObject["genres"];
+            foreach (var genre in genres)
+            {
+                string cartoonExceptionStr = ConfigurationManager.AppSettings["CartoonExceptions"];
+                string[] cartoonExceptions = cartoonExceptionStr.Split(";");
+                if ((int)genre["id"] == 16 && !cartoonExceptions.Contains(tvShow.Name))
+                {
+                    tvShow.Cartoon = true;
+                }
+            }
+
+            if (tvShow.Backdrop != null)
+            {
+                tvShow.Backdrop = await DownloadImage(tvShow.Backdrop, tvShow.Name, false);
+            }
+
+            if (tvShow.Poster != null)
+            {
+                tvShow.Poster = await DownloadImage(tvShow.Poster, tvShow.Name, false);
+            }
         }
 
         private static async Task BuildSeasonCache(TvShow tvShow, HttpClient client)
@@ -207,7 +332,6 @@ namespace LVP_WPF
             {
                 Season season = tvShow.Seasons[j];
                 if (season.Id == -1) continue;
-                string seasonLabel = tvShow.Seasons[j].Id == -1 ? "Extras" : (j + 1).ToString();
 
                 string seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
                 using HttpResponseMessage tvSeasonResponse = await client.GetAsync(seasonUrl);
@@ -222,7 +346,7 @@ namespace LVP_WPF
                     string seasonUrl1Idx = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
                     using HttpResponseMessage tvSeasonResponse1Idx = await client.GetAsync(seasonUrl1Idx);
                     using HttpContent tvSeasonContent1Idx = tvSeasonResponse1Idx.Content;
-                    seasonString = await tvSeasonContent1Idx.ReadAsStringAsync(); 
+                    seasonString = await tvSeasonContent1Idx.ReadAsStringAsync();
                     seasonObject = JObject.Parse(seasonString);
                 }
 
@@ -576,15 +700,25 @@ namespace LVP_WPF
             tvShow.MultiLangCurrSeason = new List<int>();
             tvShow.MultiLangSeasons = new List<Season[]>();
             tvShow.MultiLangOverview = new List<string>();
-            tvShow.MultiLangName = new List<string>(); 
+            tvShow.MultiLangName = new List<string>();
 
             string[] langFolders = Directory.GetDirectories(folder);
-            for (int i = 0; i < langFolders.Length; i++)
+            Array.Sort(langFolders);
+            //To-do: not assume en will be index 0
+            for (int i = 1; i < langFolders.Length; i++)
             {
                 string langFolder = langFolders[i];
+                string[] langParts = langFolder.Split('\\');
+                string langKey = langParts[langParts.Length - 1];
+                string language = GetLangCode(langKey);
+                tvShow.MultiLangName.Add(tvShow.Name + " (" + language + ")");
+                tvShow.MultiLangCurrSeason.Add(1);
+                tvShow.MultiLangLastWatched.Add(null);
+
                 string[] seasonEntries = Directory.GetDirectories(langFolder);
                 Array.Sort(seasonEntries, SeasonComparer);
-                tvShow.MultiLangSeasons[i] = ProcessTvShowSeasonDirectories(seasonEntries, tvShow);
+                tvShow.MultiLangSeasons.Add(ProcessTvShowSeasonDirectories(seasonEntries, tvShow));
+                
             }
             return tvShow;
         }
@@ -594,28 +728,37 @@ namespace LVP_WPF
             string[] path = targetDir.Split('\\');
             string name = path[path.Length - 1].Split('%')[0];
             TvShow show = new TvShow(name.Trim());
+            show.Path = targetDir;
 
             string[] seasonEntries = Directory.GetDirectories(targetDir);
             string[] seasonParts = seasonEntries[0].Split('\\');
             string folderName = seasonParts[seasonParts.Length - 1];
+
             if (folderName.Length == 2)
             {
+                //To-do: english not first folder
+                Array.Sort(seasonEntries);
+                seasonEntries = Directory.GetDirectories(seasonEntries[0]);
+                show.Seasons = ProcessTvShowSeasonDirectories(seasonEntries, show);
                 return ProcessMultiLangTvDirectory(targetDir, show);
             }
+            else
+            {
+                Array.Sort(seasonEntries, SeasonComparer);
+                show.Seasons = ProcessTvShowSeasonDirectories(seasonEntries, show);
+            }
 
-            Array.Sort(seasonEntries, SeasonComparer);
-            show.Seasons = ProcessTvShowSeasonDirectories(seasonEntries, show);
             return show;
         }
 
-        private static Season[] ProcessTvShowSeasonDirectories(string[] seasonEntries, TvShow show)
+        private static Season[] ProcessTvShowSeasonDirectories(string[] seasonEntries, TvShow tvShow)
         {
             Season[] seasons = new Season[seasonEntries.Length];
             for (int i = 0; i < seasonEntries.Length; i++)
             {
-                if (!seasonEntries[i].Contains("Extras") || !seasonEntries[i].Contains("Season"))
+                if (!seasonEntries[i].Contains("Extras") && !seasonEntries[i].Contains("Season") && !IsMultiLangSeasonFolder(seasonEntries[i]))
                 {
-                    NotificationDialog.Show("Error", show.Name + " contains unknown season folder, index: " + (i + 1));
+                    NotificationDialog.Show("Error", tvShow.Name + " contains unknown season folder, index: " + (i + 1));
                     GuiModel.RestoreSystemCursor();
                     Environment.Exit(0);
                 }
@@ -645,7 +788,7 @@ namespace LVP_WPF
                 }
                 catch
                 {
-                    NotificationDialog.Show("Error", "Episode is missing separator in " + show.Name + ", Season " + (i + 1));
+                    NotificationDialog.Show("Error", "Episode is missing separator in " + tvShow.Name + ", Season " + (i + 1));
                     GuiModel.RestoreSystemCursor();
                     Environment.Exit(0);
                 }
@@ -664,6 +807,15 @@ namespace LVP_WPF
                 seasons[i] = season;
             }
             return seasons;
+        }
+
+        private static bool IsMultiLangSeasonFolder(string folder)
+        {
+            string[] langKeys = ConfigurationManager.AppSettings["Languages"].Split(";");
+            string[] folderParts = folder.Split("\\");
+            string langKey = folderParts[folderParts.Length - 1];
+            if (langKeys.Contains(langKey)) return true;
+            return false;
         }
 
         internal static void ProcessExtrasDirectory(List<Episode> extras, string targetDir)
@@ -787,6 +939,11 @@ namespace LVP_WPF
             File.WriteAllText(jsonFile, jsonString);
         }
     }
+}
+
+public class LibreTranslateResponse
+{
+    public string TranslatedText { get; set; }
 }
 
 public static class StringExtension

@@ -22,33 +22,8 @@
                 </Grid.ColumnDefinitions>
 
                 <Button Name="closeButton" Grid.Column="1" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="CloseButton_Click" Foreground="White" 
-                        FontSize="28" Width="50" Height="50" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,20,20,0">
+                        FontSize="28" Width="50" Height="50" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,20,20,0" Style="{StaticResource CloseButton}">
                     <TextBlock Text="✖" Margin="0,-3,1,0"/>
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="5"/>
-                        </Style>
-                    </Button.Resources>
-                    <Button.Style>
-                        <Style TargetType="{x:Type Button}">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type Button}">
-                                        <Border x:Name="Border" Background="{TemplateBinding Background}" BorderThickness="3" BorderBrush="White">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#FF26A0DA" TargetName="Border" />
-                                                <Setter Property="BorderBrush" Value="#3c7fb1" TargetName="Border"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
                 </Button>
                 <Button Name="playButton" FontSize="30" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="PlayButton_Click" Grid.Row="2" Foreground="White" 
                         Width="60" Height="60" HorizontalAlignment="Left" Margin="10,0,0,10">

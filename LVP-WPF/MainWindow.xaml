@@ -20,64 +20,16 @@
                     <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
                 </Grid.RowDefinitions>
-                <Button Name="closeButton" Panel.ZIndex="2" Click="CloseButton_Click" Foreground="White" Width="50" Height="50" HorizontalAlignment="Right" Margin="0,0,20,10">
+                <Button Name="closeButton" Panel.ZIndex="2" Click="CloseButton_Click" Foreground="White" Width="50" Height="50" HorizontalAlignment="Right" Margin="0,0,20,10" Style="{StaticResource CloseButton}">
                     <TextBlock Text="✖" Margin="0,-3,1,0" FontSize="28" FontFamily="Segoe UI"/>
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="5"/>
-                        </Style>
-                    </Button.Resources>
-                    <Button.Style>
-                        <Style TargetType="{x:Type Button}">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type Button}">
-                                        <Border x:Name="Border" Background="{TemplateBinding Background}" BorderThickness="3" BorderBrush="White">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#FF26A0DA" TargetName="Border" />
-                                                <Setter Property="BorderBrush" Value="#3c7fb1" TargetName="Border"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
                 </Button>
                 <Label Name="tvHeader" Content="TV" Foreground="White"/>
-                <ListView PreviewMouseLeftButtonUp="ListView_Click" Grid.Row="1" ItemsSource="{Binding TvShows}" Name="TvShowListView" Background="Black" BorderBrush="Black">
+                <ListView ItemContainerStyle="{StaticResource MainGridListItem}" PreviewMouseLeftButtonUp="ListView_Click" Grid.Row="1" ItemsSource="{Binding TvShows}" Name="TvShowListView" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Name="TvShowGrid" Columns="6" HorizontalAlignment="Center"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="{x:Type ListViewItem}">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                                        <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
-                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <MultiTrigger>
-                                                <MultiTrigger.Conditions>
-                                                    <Condition Property="IsMouseOver" Value="True" />
-                                                </MultiTrigger.Conditions>
-                                                <Setter TargetName="Bd" Property="BorderThickness" Value="5"/>
-                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FF26A0DA" />
-                                            </MultiTrigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Setter Property="BorderThickness" Value="5"/>
-                        </Style>
-                    </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Vertical">
@@ -90,35 +42,12 @@
                     <Label Content="Cartoons" Foreground="White" ></Label>
                 </Expander>-->
                 <Label Name="cartoonsHeader" PreviewMouseDown="CartoonsHeader_Click" Grid.Row="2" Content="Cartoons" Foreground="White"></Label>
-                <ListView PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Cartoons}" Grid.Row="3" Name="CartoonsListView" Background="Black" BorderBrush="Black">
+                <ListView ItemContainerStyle="{StaticResource MainGridListItem}" PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Cartoons}" Grid.Row="3" Name="CartoonsListView" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="6" HorizontalAlignment="Center"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="{x:Type ListViewItem}">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                                        <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
-                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <MultiTrigger>
-                                                <MultiTrigger.Conditions>
-                                                    <Condition Property="IsMouseOver" Value="True" />
-                                                </MultiTrigger.Conditions>
-                                                <Setter TargetName="Bd" Property="BorderThickness" Value="5"/>
-                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FF26A0DA" />
-                                            </MultiTrigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Setter Property="BorderThickness" Value="5"/>
-                        </Style>
-                    </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Vertical">
@@ -128,35 +57,12 @@
                     </ListView.ItemTemplate>
                 </ListView>
                 <Label Name="movieHeader" Grid.Row="4" Content="Movies" Foreground="White"></Label>
-                <ListView  PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Movies}" Grid.Row="5" Name="MovieListView" Background="Black" BorderBrush="Black" Margin="0,0,0,20">
+                <ListView ItemContainerStyle="{StaticResource MainGridListItem}" PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Movies}" Grid.Row="5" Name="MovieListView" Background="Black" BorderBrush="Black" Margin="0,0,0,20">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="6" HorizontalAlignment="Center"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
-                    <ListView.ItemContainerStyle>
-                        <Style TargetType="{x:Type ListViewItem}">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
-                                        <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
-                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <MultiTrigger>
-                                                <MultiTrigger.Conditions>
-                                                    <Condition Property="IsMouseOver" Value="True" />
-                                                </MultiTrigger.Conditions>
-                                                <Setter TargetName="Bd" Property="BorderThickness" Value="5"/>
-                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FF26A0DA" />
-                                            </MultiTrigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Setter Property="BorderThickness" Value="5"/>
-                        </Style>
-                    </ListView.ItemContainerStyle>
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Vertical">

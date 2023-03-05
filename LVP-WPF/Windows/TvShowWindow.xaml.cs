@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
@@ -66,6 +67,7 @@ namespace LVP_WPF.Windows
 
         private void TvShowWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            GetLanguageInfo(tvShow);
             TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
             TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
             MainWindow.gui.episodeScrollViewer = this.scrollViewer;
@@ -79,6 +81,40 @@ namespace LVP_WPF.Windows
                 TcpSerialListener.layoutPoint.tvControlList.Add(img);
             }
             TcpSerialListener.layoutPoint.Select("TvShowWindow");
+        }
+
+        private void GetLanguageInfo(TvShow tvShow)
+        {
+            if (!tvShow.MultiLang) return;
+            langComboBox.Visibility = Visibility.Visible;
+
+            string lang = "";
+            if (tvShow.Name.Contains("("))
+            {
+                string item = tvShow.Name.Split("(")[1];
+                item = item.Split(")")[0];
+                langComboBox.Items.Add(item);
+                lang = item;
+            }
+            else
+            {
+                langComboBox.Items.Add("English");
+                lang = "English";
+            }
+
+            foreach (string name in tvShow.MultiLangName)
+            {
+                if (!name.Contains("("))
+                {
+                    langComboBox.Items.Add("English");
+                }
+                else
+                {
+                    langComboBox.Items.Add(name.Replace(tvShow.Name, "").Replace("(", "").Replace(")", ""));
+                }
+            }
+            langComboBox.SelectedValue = lang;
+            langComboBox.SelectionChanged += LangComboBox_SelectionChanged;
         }
 
         static private EpisodeWindowBox[] CreateEpisodeListItems(Episode[] episodes)
@@ -182,7 +218,7 @@ namespace LVP_WPF.Windows
                 UpdateTvWindowSeasonChange(seasonIndex);
             }
             TvShowWindow_Fade(1.0);
-            /*
+
             await Task.Delay(500); // wait for content
             TcpSerialListener.layoutPoint.tvControlList.Clear();
             TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
@@ -193,7 +229,7 @@ namespace LVP_WPF.Windows
                 ListViewItem container = (ListViewItem)generator.ContainerFromItem(episodes[j]);
                 Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
                 TcpSerialListener.layoutPoint.tvControlList.Add(img);
-            }*/
+            }
             loadGrid.Visibility = Visibility.Hidden;
         }
 
@@ -408,6 +444,26 @@ namespace LVP_WPF.Windows
             {
 
                 scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
+            }
+        }
+
+        private void LangComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (langComboBox.SelectedIndex == 0)
+            {
+                PlayerWindow.subtitleFile = false;
+            }
+            else
+            {
+                PlayerWindow.subtitleFile = true;
+            }
+
+            if (!tvShow.Name.Contains(langComboBox.SelectedValue.ToString()))
+            {
+                Cache.SwitchMultiLangTvIndex(tvShow, langComboBox.SelectedValue.ToString());
+                this.ShowName = tvShow.Name.Contains("(") ? tvShow.Name : tvShow.Name + " (" + tvShow.Date.GetValueOrDefault().Year + ")";
+                this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
+                UpdateTvWindowSeasonChange(tvShow.CurrSeason);
             }
         }
     }

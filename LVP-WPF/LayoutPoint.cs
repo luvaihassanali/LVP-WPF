@@ -338,6 +338,7 @@ namespace LVP_WPF.Windows
                 if (count == 3)
                 {
                     rowIndex++;
+                    if (rowIndex >= seasonWindowGrid.Count) break;
                     count = 0;
                 }
 
@@ -515,6 +516,7 @@ namespace LVP_WPF.Windows
                 if (count == 6)
                 {
                     rowIndex++;
+                    if (rowIndex >= mainWindowGrid.Count) break;
                     count = 0;
                 }
 
@@ -542,6 +544,7 @@ namespace LVP_WPF.Windows
                 if (count == 6)
                 {
                     rowIndex++;
+                    if (rowIndex >= mainWindowGrid.Count) break;
                     count = 0;
                 }
 
