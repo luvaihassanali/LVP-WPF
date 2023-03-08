@@ -322,16 +322,16 @@ namespace LVP_WPF.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to AppStarting=\Resources\blue_cursors_xl\blue_working_xl.ani
+        ///   Looks up a localized string similar to AppStarting=\Resources\blue_cursors_xl\butterfly.ani
         ///Arrow=\Resources\blue_cursors_xl\butterfly.ani
-        ///Hand=\Resources\blue_cursors_xl\blue_link_xl.cur
+        ///Hand=\Resources\blue_cursors_xl\butterfly.cur
         ///Help=\Resources\blue_cursors_xl\blue_helpsel_xl.cur
         ///No=\Resources\blue_cursors_xl\blue_unavail_xl.cur
         ///NWPen=\Resources\blue_cursors_xl\blue_pen_xl.cur
         ///SizeAll=\Resources\blue_cursors_xl\blue_move_xl.cur
         ///SizeNESW=\Resources\blue_cursors_xl\blue_nesw_xl.cur
         ///SizeNS=\Resources\blue_cursors_xl\blue_ns_xl.cur
-        ///SizeNWSE=\Resources\blue_cursors_xl\blue_nw [rest of string was truncated]&quot;;.
+        ///SizeNWSE=\Resources\blue_cursors_xl\blue_nwse_xl.cur [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string keys_custom {
             get {

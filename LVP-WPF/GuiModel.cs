@@ -61,6 +61,7 @@ namespace LVP_WPF
         public ScrollViewer mainScrollViewer;
         public ScrollViewer episodeScrollViewer;
         public ScrollViewer seasonScrollViewer;
+        public ScrollViewer langScrollViewer;
 
         public GuiModel()
         {
@@ -124,7 +125,6 @@ namespace LVP_WPF
             }
             return null;
         }
-
 
         internal static void RestoreSystemCursor()
         {

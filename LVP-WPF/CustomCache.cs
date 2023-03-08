@@ -66,7 +66,7 @@ namespace LVP_WPF
                     episode.Id = id;
                     episode.Overview = overview;
                     episode.Date = DateTime.Parse(date);
-                    //To-do: episode.Backdrop
+                    //To-do: libvlc screen snip episode.Backdrop
                     index++;
                 }
             }

@@ -6,11 +6,6 @@
         mc:Ignorable="d"
         Title="MovieWindow" Background="Black" Height="1050" Width="1152" WindowStartupLocation="CenterScreen" UseLayoutRounding="true"
         RenderOptions.BitmapScalingMode="HighQuality" AllowsTransparency="True" WindowStyle="None" FontFamily="Segoe UI" FontSize="42" Loaded="MovieWindow_Loaded" Icon="/Resources/movie.ico">
-
-    <Window.Resources>
-        
-    </Window.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="648"/>
@@ -22,9 +17,8 @@
         <Image Name="PlayOverlay" Panel.ZIndex="2" Opacity="0" PreviewMouseLeftButtonDown="Play_Click" MouseEnter="Backdrop_MouseEnter" MouseLeave="Backdrop_MouseLeave" Source="{Binding Overlay}"/>
         <Image Name="movieBackdrop" Source="{Binding Backdrop}"/>
         <ComboBox Name="subTrackComboBox" Visibility="Hidden" FontFamily="Segoe UI Black" FontSize="22" Height="50" ScrollViewer.VerticalScrollBarVisibility="Disabled" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                  Width="300" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,10" SelectionChanged="SubTrackComboBox_SelectionChanged">
-        </ComboBox>
-        <Grid Grid.Row="1">
+                  Width="300" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,10,10" SelectionChanged="SubTrackComboBox_SelectionChanged" PreviewMouseDown="LangComboBox_MouseDown" PreviewKeyDown="LangComboBox_PreviewKeyDown"></ComboBox>
+            <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>

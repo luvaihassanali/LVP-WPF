@@ -71,7 +71,7 @@ namespace LVP_WPF
                     }
                 }
             }
-            //To-do* test ingest
+
             for (int i = 0; i < prevMedia.TvShows.Length; i++)
             {
                 for (int l = 0; l < this.tvShows.Length; l++)
@@ -163,12 +163,11 @@ namespace LVP_WPF
         }
     }
 
-    //To-do: move common vars into media class
     public class Media
     {
         private int id;
         private string path;
-        //To-do: change to auto property
+        //To-do: move other common vars into Media class and update variables to auto property
         public string Name { get; set; }
 
         public int Id
@@ -326,7 +325,6 @@ namespace LVP_WPF
             set => runningTime = value;
         }
 
-        //To-do update vars to 
         public bool MultiLang { get; set; }
         public string MutliLangString { get; set; }
         public List<string> MultiLangName { get; set; }
@@ -335,7 +333,6 @@ namespace LVP_WPF
         public List<int> MultiLangCurrSeason { get; set; }
         public List<Episode> MultiLangLastWatched { get; set; }
 
-        //To-do** test compare
         internal bool Compare(TvShow localShow)
         {
             if (!this.Name.Split(" (")[0].Equals(localShow.Name.Split(" (")[0])) return false;
@@ -350,7 +347,7 @@ namespace LVP_WPF
 
                 if (this.MultiLangSeasons.Count != localShow.MultiLangSeasons.Count) return false;
 
-                // TO-do: map seasons and compare each one. Adding/removing from multi lang tv show won't trigger update
+                // To-do: map seasons and compare each one. Adding/removing from multi lang tv show won't trigger update
                 /*for (int i = 0; i < this.MultiLangSeasons.Count; i++)
                 {
                     Season[] a = this.MultiLangSeasons[i];

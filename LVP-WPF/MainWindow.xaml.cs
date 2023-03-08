@@ -65,7 +65,7 @@ namespace LVP_WPF
                 tcpWorker.StartThread();
             });
 
-            inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30)); //(TimeSpan.FromSeconds(5));
+            inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30));
             inactivityTimer.Inactivity += InactivityDetected;
             PlayerWindow.InitiaizeLibVlcCore();
 
@@ -157,13 +157,6 @@ namespace LVP_WPF
             this.Close();
         }
 
-        private void InactivityDetected(object sender, EventArgs e)
-        {
-            if (gui.isPlaying) return;
-            GuiModel.Log("Inactivity shutdown");
-            Application.Current.Shutdown();
-        }
-
         private void ListView_Click(object sender, RoutedEventArgs e)
         {
             loadGrid.Visibility = Visibility.Visible;
@@ -235,6 +228,13 @@ namespace LVP_WPF
 
                 scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
             }
+        }
+
+        private void InactivityDetected(object sender, EventArgs e)
+        {
+            if (gui.isPlaying) return;
+            GuiModel.Log("Inactivity shutdown");
+            Application.Current.Shutdown();
         }
     }
 }

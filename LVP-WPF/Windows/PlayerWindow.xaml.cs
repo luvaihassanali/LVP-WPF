@@ -21,7 +21,7 @@ namespace LVP_WPF.Windows
     {
         static private Media currMedia;
         static private TvShowWindow? tvShowWindow;
-        static internal LibVLC libVLC = new LibVLC("--freetype-font=Segoe UI"); //TO-do: change size?
+        static internal LibVLC libVLC = new LibVLC("--freetype-font=Segoe UI");
         static public int subtitleTrack = Int32.MaxValue;
         static public bool subtitleFile = false;
         private MediaPlayer mediaPlayer;
@@ -83,7 +83,7 @@ namespace LVP_WPF.Windows
             pollingTimer = new DispatcherTimer();
             pollingTimer.Interval = TimeSpan.FromSeconds(3);
             pollingTimer.Tick += PollingTimer_Tick;
-            inactivityTimer = new InactivityTimer(TimeSpan.FromSeconds(5));
+            inactivityTimer = new InactivityTimer(TimeSpan.FromSeconds(5)); // TimeSpan.FromHours(2));
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
@@ -287,7 +287,7 @@ namespace LVP_WPF.Windows
 
         private LibVLCSharp.Shared.Media CreateMedia(Media m)
         {
-            //To-do: Add application and vlc .exe to Graphics Settings with High Performance NVIDIA GPU preference
+            // Add application and vlc .exe to Graphics Settings with High Performance NVIDIA GPU preference
             LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(libVLC, m.Path, FromType.FromPath);
             media.AddOption(":avcodec-hw=auto");
             media.AddOption(":no-mkv-preload-local-dir");

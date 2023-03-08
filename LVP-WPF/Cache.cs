@@ -34,7 +34,7 @@ namespace LVP_WPF
         private static List<string> tvPathList = new List<string>();
         private static List<string> moviePathList = new List<string>();
         private static int mediaCount = 0;
-        public static bool update;
+        public static bool update = false;
 
         internal static async Task Initialize(ProgressBar p, MediaElement c)
         {
@@ -111,7 +111,12 @@ namespace LVP_WPF
 
             Array.Sort(MainWindow.model.Movies, Movie.SortMoviesAlphabetically());
             Array.Sort(MainWindow.model.TvShows, TvShow.SortTvShowsAlphabetically());
-            SaveData();
+            SaveData(); 
+            Process[] libreTranslateProc = Process.GetProcessesByName("libretranslate");
+            if (libreTranslateProc.Length != 0)
+            {
+                libreTranslateProc[0].Kill();
+            }
         }
 
         private static async Task BuildTvShowCache(TvShow tvShow, HttpClient client)
@@ -202,8 +207,19 @@ namespace LVP_WPF
             }
             catch
             {
-                NotificationDialog.Show("Error", "LibreTranslate server not running");
-                Environment.Exit(1);
+                string path = ConfigurationManager.AppSettings["LibreTranslatePath"] + "libretranslate.exe";
+                if (path.Contains("%APPDATA%")) { path = path.Replace("%APPDATA%", Environment.GetEnvironmentVariable("APPDATA")); }
+
+                if (!File.Exists(path))
+                {
+                    NotificationDialog.Show("Error", "LibreTranslate exe does not exist at path " + path);
+                }
+
+                Process libreTranslateProc = new Process();
+                libreTranslateProc.StartInfo.FileName = path;
+                libreTranslateProc.StartInfo.UseShellExecute = true;
+                libreTranslateProc.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
+                libreTranslateProc.Start();
             }
             return "";
         }
@@ -252,6 +268,7 @@ namespace LVP_WPF
 
             if (totalResults == 0)
             {
+                Cache.SaveData();
                 NotificationDialog.Show("Error", "No tv show found for: " + tvShow.Name);
             }
             else if (totalResults != 1)
@@ -365,7 +382,6 @@ namespace LVP_WPF
                 catch
                 {
                     NotificationDialog.Show("Error", "Season first index error: " + tvShow.Name + ", ID = " + tvShow.Id);
-                    Environment.Exit(1);
                 }
 
                 if (season.Poster == null)
@@ -396,7 +412,6 @@ namespace LVP_WPF
                     {
                         string message = "Episode index out of TMDB episodes range S" + seasonIndex.ToString() + "E" + (k + 1).ToString();
                         NotificationDialog.Show("Error: " + tvShow.Name, message);
-                        continue;
                     }
                     Episode episode = episodes[k];
 
@@ -520,10 +535,8 @@ namespace LVP_WPF
 
             if (numMovieObjects == 0)
             {
-                NotificationDialog.Show("Error", "No movie found for: " + movie.Name);
-                GuiModel.RestoreSystemCursor();
                 Cache.SaveData();
-                Environment.Exit(0);
+                NotificationDialog.Show("Error", "No movie found for: " + movie.Name);
             }
             else if (numMovieObjects != 1)
             {
@@ -704,7 +717,7 @@ namespace LVP_WPF
 
             string[] langFolders = Directory.GetDirectories(folder);
             Array.Sort(langFolders);
-            //To-do: not assume en will be index 0
+            //To-do: not assume en will be index 0 (i = 1)
             for (int i = 1; i < langFolders.Length; i++)
             {
                 string langFolder = langFolders[i];
@@ -736,7 +749,7 @@ namespace LVP_WPF
 
             if (folderName.Length == 2)
             {
-                //To-do: english not first folder
+                //To-do: english not first folder so show.Seasons not english default
                 Array.Sort(seasonEntries);
                 seasonEntries = Directory.GetDirectories(seasonEntries[0]);
                 show.Seasons = ProcessTvShowSeasonDirectories(seasonEntries, show);
@@ -759,8 +772,6 @@ namespace LVP_WPF
                 if (!seasonEntries[i].Contains("Extras") && !seasonEntries[i].Contains("Season") && !IsMultiLangSeasonFolder(seasonEntries[i]))
                 {
                     NotificationDialog.Show("Error", tvShow.Name + " contains unknown season folder, index: " + (i + 1));
-                    GuiModel.RestoreSystemCursor();
-                    Environment.Exit(0);
                 }
 
                 if (seasonEntries[i].Contains("Extras"))
@@ -788,9 +799,7 @@ namespace LVP_WPF
                 }
                 catch
                 {
-                    NotificationDialog.Show("Error", "Episode is missing separator in " + tvShow.Name + ", Season " + (i + 1));
-                    GuiModel.RestoreSystemCursor();
-                    Environment.Exit(0);
+                    NotificationDialog.Show("Error", "Episode is missing separator in " + tvShow.Name + ", Season " + (i + 1));;
                 }
                 season.Episodes = new Episode[episodeEntries.Length];
 
@@ -903,16 +912,12 @@ namespace LVP_WPF
             if (!Directory.Exists(tvDirPath))
             {
                 NotificationDialog.Show("Error", "TV folder on " + driveLetter + " drive not found.");
-                GuiModel.RestoreSystemCursor();
-                Environment.Exit(0);
             }
 
             string movieDirPath = driveLetter + ":\\media\\movie";
             if (!Directory.Exists(movieDirPath))
             {
                 NotificationDialog.Show("Error", "Movie folder on " + driveLetter + " drive not found.");
-                GuiModel.RestoreSystemCursor();
-                Environment.Exit(0);
             }
 
             tvPathList.AddRange(Directory.GetDirectories(tvDirPath));

@@ -395,7 +395,6 @@ namespace MouseMoverClient
                     default:
                         Log("Unknown msg received: " + msg);
                         break;
-                        //To-do: Add restart case
                 }
             }
         }

@@ -155,9 +155,9 @@ UpArrow=C:\Windows\cursors\aero_up.cur
 Wait=C:\Windows\cursors\aero_busy.ani</value>
   </data>
   <data name="keys_custom" xml:space="preserve">
-    <value>AppStarting=\Resources\blue_cursors_xl\blue_working_xl.ani
+    <value>AppStarting=\Resources\blue_cursors_xl\butterfly.ani
 Arrow=\Resources\blue_cursors_xl\butterfly.ani
-Hand=\Resources\blue_cursors_xl\blue_link_xl.cur
+Hand=\Resources\blue_cursors_xl\butterfly.cur
 Help=\Resources\blue_cursors_xl\blue_helpsel_xl.cur
 No=\Resources\blue_cursors_xl\blue_unavail_xl.cur
 NWPen=\Resources\blue_cursors_xl\blue_pen_xl.cur

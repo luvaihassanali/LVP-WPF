@@ -1,13 +1,19 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LibVLCSharp.Shared;
 using LVP_WPF.Dialogs;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
+using System.Linq;
+using System.Reflection.Emit;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
@@ -69,6 +75,10 @@ namespace LVP_WPF.Windows
         {
             GetLanguageInfo(tvShow);
             TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
+            if (tvShow.MultiLang)
+            {
+                TcpSerialListener.layoutPoint.tvControlList.Add(this.langComboBox);
+            }
             TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
             MainWindow.gui.episodeScrollViewer = this.scrollViewer;
             MainWindow.gui.tvMovieCloseButton = this.closeButton;
@@ -87,6 +97,7 @@ namespace LVP_WPF.Windows
         {
             if (!tvShow.MultiLang) return;
             langComboBox.Visibility = Visibility.Visible;
+            TcpSerialListener.layoutPoint.langComboBoxItems.Clear();
 
             string lang = "";
             if (tvShow.Name.Contains("("))
@@ -115,6 +126,20 @@ namespace LVP_WPF.Windows
             }
             langComboBox.SelectedValue = lang;
             langComboBox.SelectionChanged += LangComboBox_SelectionChanged;
+
+            langComboBox.IsDropDownOpen = true;
+            for (int i = 0; i < langComboBox.Items.Count; i++)
+            {
+                ComboBoxItem item = (ComboBoxItem)langComboBox.ItemContainerGenerator.ContainerFromIndex(i);
+                Point pos = item.PointToScreen(new Point(0d, 0d));
+                TcpSerialListener.layoutPoint.langComboBoxItems.Add(item);
+                TcpSerialListener.layoutPoint.langComboBoxItemPts.Add(pos);
+            }
+
+            ScrollViewer langScrollViewer = (ScrollViewer)langComboBox.Template.FindName("DropDownSV", langComboBox);
+            langScrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
+            MainWindow.gui.langScrollViewer = langScrollViewer;
+            langComboBox.IsDropDownOpen = false;
         }
 
         static private EpisodeWindowBox[] CreateEpisodeListItems(Episode[] episodes)
@@ -222,7 +247,12 @@ namespace LVP_WPF.Windows
             await Task.Delay(500); // wait for content
             TcpSerialListener.layoutPoint.tvControlList.Clear();
             TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
+            if (tvShow.MultiLang)
+            {
+                TcpSerialListener.layoutPoint.tvControlList.Add(this.langComboBox);
+            }
             TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
+
             ItemContainerGenerator generator = EpisodeListView.ItemContainerGenerator;
             for (int j = 0; j < episodes.Length; j++)
             {
@@ -314,6 +344,8 @@ namespace LVP_WPF.Windows
             {
                 TcpSerialListener.layoutPoint.incomingSerialMsg = false;
             }
+            TcpSerialListener.layoutPoint.langComboBoxItems.Clear();
+            TcpSerialListener.layoutPoint.langComboBoxItemPts.Clear();
         }
 
         internal static void PlayRandomCartoons()
@@ -465,6 +497,16 @@ namespace LVP_WPF.Windows
                 this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
                 UpdateTvWindowSeasonChange(tvShow.CurrSeason);
             }
+        }
+
+        private void LangComboBox_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            TcpSerialListener.layoutPoint.Select("languageDropdown");
+        }
+
+        private void LangComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            e.Handled = true;
         }
     }
 }

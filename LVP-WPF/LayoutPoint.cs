@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Media;
 
 namespace LVP_WPF.Windows
 {
@@ -19,6 +15,7 @@ namespace LVP_WPF.Windows
         public bool tvShowWindowActive = false;
         public bool seasonWindowActive = false;
         public bool playerWindowActive = false;
+        public bool lanuageDropdownActive = false;
         public bool incomingSerialMsg = false;
         public (int x, int y) currPoint = (0, 0);
         public (int x, int y) returnPointA = (0, 0);
@@ -28,9 +25,14 @@ namespace LVP_WPF.Windows
         public List<int[]> mainWindowGrid = new List<int[]>();
         public List<Image[]> mainWindowControlGrid = new List<Image[]>();
         public Image movieBackdrop = null;
+        public ComboBox movieLangComboBox = null;
+        public List<ComboBoxItem> langComboBoxItems = new List<ComboBoxItem>();
+        public List<Point> langComboBoxItemPts = new List<Point>();
 
+        public int movieIndex = 0;
         public int tvIndex = 0;
         public int seasonIndex = 0;
+        public int langIndex = 0;
         public List<object> tvControlList = new List<object>();
         public List<Image> seasonControlList = new List<Image>();
         public List<int[]> seasonWindowGrid = new List<int[]>();
@@ -54,13 +56,21 @@ namespace LVP_WPF.Windows
         public void Move((int x, int y) pos)
         {
             if (playerWindowActive) return;
-            if (seasonWindowActive)
+            if (lanuageDropdownActive)
+            {
+                MoveLangPoint(pos.x);
+            }
+            else if (seasonWindowActive)
             {
                 MoveSeasonPoint((pos.x, pos.y));
             }
             else if (tvShowWindowActive)
             {
                 MoveTvPoint(pos.x);
+            }
+            else if (movieWindowActive)
+            {
+                MoveMoviePoint(pos.x);
             }
             else if (mainWindowActive)
             {
@@ -71,26 +81,24 @@ namespace LVP_WPF.Windows
         public void Select(string controlName, bool isMovie = false)
         {
             if (TvShowWindow.cartoonShuffle) return;
+
             if (mainWindowActive)
             {
-                mainWindowActive = false;
-                returnPointA = currPoint;
-                if (isMovie)
-                {
-                    movieWindowActive = true;
-                    currControl = movieBackdrop;
-                    CenterMouseOverControl(currControl, backdrop: true);
-                }
-                else
-                {
-                    tvShowWindowActive = true;
-                    currPoint = (tvIndex, -1);
-                    currControl = tvControlList[currPoint.x];
-                    CenterMouseOverControl(currControl, backdrop: true);
-                }
+                SelectMainWindow(isMovie);
                 return;
             }
 
+            if (controlName.Equals("languageDropdown"))
+            {
+                SelectLangDropDown();
+                return;
+            }
+
+            SelectChildWindow(controlName, isMovie);
+        }
+
+        private void SelectChildWindow(string controlName, bool isMovie)
+        {
             if (seasonWindowActive)
             {
                 seasonWindowActive = false;
@@ -121,89 +129,152 @@ namespace LVP_WPF.Windows
             }
         }
 
-        internal async void CloseCurrWindow(bool click = true)
+        private void SelectLangDropDown()
         {
+            if (!lanuageDropdownActive)
+            {
+                returnPointB = currPoint;
+                lanuageDropdownActive = true;
+                currPoint = (langIndex, -1);
+                currControl = langComboBoxItems[currPoint.x];
+                CenterMouseOverComboBoxItem(langComboBoxItemPts[currPoint.x], (ComboBoxItem)currControl);
+            }
+            else
+            {
+                langIndex = 0;
+                lanuageDropdownActive = false;
+                currPoint = returnPointB;
+                currControl = tvShowWindowActive ? tvControlList[currPoint.x] : movieLangComboBox;
+                CenterMouseOverControl(currControl);
+            }
+        }
+
+        private void SelectMainWindow(bool isMovie)
+        {
+            mainWindowActive = false;
+            returnPointA = currPoint;
+            if (isMovie)
+            {
+                movieWindowActive = true;
+                movieIndex = 0;
+                currPoint = (movieIndex, -1);
+                currControl = movieBackdrop;
+                CenterMouseOverControl(currControl);
+            }
+            else
+            {
+                tvShowWindowActive = true;
+                currPoint = (tvIndex, -1);
+                currControl = tvControlList[currPoint.x];
+                CenterMouseOverControl(currControl);
+            }
+        }
+
+        internal void CloseCurrWindow(bool click = true)
+        {
+            if (seasonWindowActive || lanuageDropdownActive) return;
             if (click) incomingSerialMsg = true;
             try
             {
                 if (mainWindowActive)
                 {
-                    gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToHome(); });
-                    GuiModel.DoEvents();
-                    CenterMouseOverControl(gui.mainCloseButton);
-                    await Task.Delay(150);
-                    TcpSerialListener.DoMouseClick();
-                    await Task.Delay(150);
+                    CloseMainWindow();
                 }
 
                 if (playerWindowActive)
                 {
-                    playerWindowActive = false;
-
-                    if (click)
-                    {
-                        CenterMouseOverControl(gui.playerCloseButton);
-                        await Task.Delay(150);
-                        TcpSerialListener.DoMouseClick();
-                        await Task.Delay(150);
-                    }
-
-                    if (movieWindowActive)
-                    {
-                        currControl = movieBackdrop;
-                        CenterMouseOverControl(currControl, backdrop: true);
-                    }
-                    else if (tvShowWindowActive)
-                    {
-                        currPoint = returnPointB;
-                        currControl = tvControlList[currPoint.x];
-                        CenterMouseOverControl(currControl, backdrop: true);
-                    }
+                    ClosePlayerWindow(click);
                     return;
                 }
 
                 if (tvShowWindowActive)
                 {
-                    tvControlList.Clear();
-                    tvIndex = 0;
-                    tvShowWindowActive = false;
-                    mainWindowActive = true;
-
-                    if (click)
-                    {
-                        gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
-                        GuiModel.DoEvents();
-                        CenterMouseOverControl(gui.tvMovieCloseButton);
-                        await Task.Delay(150);
-                        TcpSerialListener.DoMouseClick();
-                        await Task.Delay(150);
-                    }
-
-                    currPoint = returnPointA;
-                    currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
-                    CenterMouseOverControl(currControl);
+                    CloseTvWindow(click);
                 }
-                else if (movieWindowActive)
-                {
-                    movieWindowActive = false;
-                    mainWindowActive = true;
 
-                    if (click)
-                    {
-                        CenterMouseOverControl(gui.tvMovieCloseButton);
-                        await Task.Delay(150);
-                        TcpSerialListener.DoMouseClick();
-                        await Task.Delay(150);
-                    }
-                    currPoint = returnPointA;
-                    currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
-                    CenterMouseOverControl(currControl);
+                if (movieWindowActive)
+                {
+                    CloseMovieWindow(click);
                 }
             }
             catch (Exception ex)
             {
                 GuiModel.Log(ex.Message);
             }
+        }
+
+        private void CloseMovieWindow(bool click)
+        {
+            movieWindowActive = false;
+            mainWindowActive = true;
+
+            if (click)
+            {
+                CenterMouseOverControl(gui.tvMovieCloseButton);
+                Task.Delay(150).Wait();
+                TcpSerialListener.DoMouseClick();
+                Task.Delay(150).Wait();
+            }
+            currPoint = returnPointA;
+            currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
+            CenterMouseOverControl(currControl);
+        }
+
+        private void CloseTvWindow(bool click)
+        {
+            tvShowWindowActive = false;
+            mainWindowActive = true;
+            tvControlList.Clear();
+            tvIndex = 0;
+
+            if (click)
+            {
+                gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
+                GuiModel.DoEvents();
+                CenterMouseOverControl(gui.tvMovieCloseButton);
+                Task.Delay(150).Wait();
+                TcpSerialListener.DoMouseClick();
+                Task.Delay(150).Wait();
+            }
+
+            currPoint = returnPointA;
+            currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
+            CenterMouseOverControl(currControl);
+        }
+
+        private void ClosePlayerWindow(bool click)
+        {
+            playerWindowActive = false;
+
+            if (click)
+            {
+                CenterMouseOverControl(gui.playerCloseButton);
+                Task.Delay(150).Wait();
+                TcpSerialListener.DoMouseClick();
+                Task.Delay(150).Wait();
+            }
+
+            if (movieWindowActive)
+            {
+                currControl = movieBackdrop;
+                CenterMouseOverControl(currControl);
+            }
+            else if (tvShowWindowActive)
+            {
+                currPoint = returnPointB;
+                currControl = tvControlList[currPoint.x];
+                CenterMouseOverControl(currControl);
+            }
+        }
+
+        private void CloseMainWindow()
+        {
+            gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToHome(); });
+            GuiModel.DoEvents();
+            CenterMouseOverControl(gui.mainCloseButton);
+            Task.Delay(150).Wait();
+            TcpSerialListener.DoMouseClick();
+            Task.Delay(150).Wait();
         }
 
         private void MoveTvPoint(int x)
@@ -214,6 +285,28 @@ namespace LVP_WPF.Windows
             currPoint = (newIndex, currPoint.y);
             currControl = tvControlList[newIndex];
             CenterMouseOverControl(currControl, newIndex, MainWindow.gui.episodeScrollViewer);
+        }
+
+        private void MoveLangPoint(int x)
+        {
+            int newIndex = currPoint.x + x;
+            if (newIndex < 0 || newIndex >= langComboBoxItems.Count) return;
+
+            currPoint = (newIndex, currPoint.y);
+            currControl = langComboBoxItems[newIndex];
+            //CenterMouseOverComboBoxItem(langComboBoxItemPts[newIndex], (ComboBoxItem)currControl);
+            CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.langScrollViewer);
+        }
+
+        private void MoveMoviePoint(int x)
+        {
+
+            int newIndex = currPoint.x + x;
+            if (newIndex < 0 || newIndex > 1) return;
+
+            currPoint = (newIndex, currPoint.y);
+            currControl = newIndex == 0 ? movieBackdrop : movieLangComboBox;
+            CenterMouseOverControl(currControl, newIndex);
         }
 
         private (int x, int y) GetCurrSeasonPoint(int seasonFormIndex)
@@ -561,26 +654,31 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void CenterMouseOverControl(object control, int row = -1, ScrollViewer scrollViewer = null, bool backdrop = false)
+        private void CenterMouseOverControl(object control, int row = -1, ScrollViewer scrollViewer = null)
         {
-            if (backdrop == true)
+            if (control as ComboBoxItem != null)
             {
-                CenterMouse();
-                return;
+                ComboBoxItem comboBoxItem = (ComboBoxItem)control;
+                CenterMouseOverComboBoxItem(comboBoxItem, row, scrollViewer);
+            }
+            if (control as ComboBox != null)
+            {
+                ComboBox comboBox = (ComboBox)control;
+                CenterMouseOverComboBox(comboBox);
             }
             if (control as Button != null)
             {
                 Button button = (Button)control;
                 CenterMouseOverButton(button);
             }
-            else if (control as Image != null)
+            if (control as Image != null)
             {
                 Image image = (Image)control;
-                CenterMouseOverImage(image, row, scrollViewer, backdrop);
+                CenterMouseOverImage(image, row, scrollViewer);
             }
         }
 
-        private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null, bool backdrop = false)
+        private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null)
         {
             image.Dispatcher.Invoke(() =>
             {
@@ -590,7 +688,9 @@ namespace LVP_WPF.Windows
                     {
                         scrollViewer.ScrollToHome();
                     }
-                    else if ((seasonWindowActive && row == seasonWindowGrid.Count - 1) || (tvShowWindowActive && row == tvControlList.Count - 1) || (mainWindowActive && row == mainWindowGrid.Count - 1))
+                    else if ((seasonWindowActive && row == seasonWindowGrid.Count - 1) ||
+                            (tvShowWindowActive && row == tvControlList.Count - 1) ||
+                            (mainWindowActive && row == mainWindowGrid.Count - 1))
                     {
                         scrollViewer.ScrollToBottom();
                     }
@@ -620,9 +720,52 @@ namespace LVP_WPF.Windows
             });
         }
 
-        internal void CenterMouse()
+        private void CenterMouseOverComboBox(ComboBox comboBox)
         {
-            TcpSerialListener.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
+            comboBox.Dispatcher.Invoke(() =>
+            {
+                Point target = comboBox.PointToScreen(new Point(0, 0));
+                target.X += comboBox.ActualWidth / 2;
+                target.Y += comboBox.ActualHeight / 2;
+                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+            });
+        }
+
+        private void CenterMouseOverComboBoxItem(ComboBoxItem comboBoxItem, int row = -1, ScrollViewer scrollViewer = null)
+        {
+            if (scrollViewer != null)
+            {
+                if (row == 0)
+                {
+                    scrollViewer.ScrollToHome();
+                }
+                else if (row == langComboBoxItems.Count)
+                {
+                    scrollViewer.ScrollToBottom();
+                }
+                else
+                {
+                    gui.scrollViewerAdjust = true;
+                    comboBoxItem.BringIntoView();
+                }
+                GuiModel.DoEvents();
+            }
+
+            comboBoxItem.Dispatcher.Invoke(() =>
+            {
+                Point target = comboBoxItem.PointToScreen(new Point(0d, 0d));
+                target.X += comboBoxItem.ActualWidth / 2;
+                target.Y += comboBoxItem.ActualHeight / 2;
+                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+                //To-do: fix highlight when BringIntoView()
+            });
+        }
+
+        private void CenterMouseOverComboBoxItem(Point p, ComboBoxItem c)
+        {
+            p.X += c.ActualWidth / 2;
+            p.Y += c.ActualHeight / 2;
+            TcpSerialListener.SetCursorPos((int)p.X, (int)p.Y);
         }
 
         private void PrintGrid()

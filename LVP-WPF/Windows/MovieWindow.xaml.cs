@@ -51,7 +51,8 @@ namespace LVP_WPF.Windows
         private BitmapImage backdrop;
         [ObservableProperty]
         private BitmapImage overlay;
-
+        private ScrollViewer langScrollViewer = null;
+        private double scrollViewerOffset = 0;
         private bool srtFileExists = false;
 
         public MovieWindow()
@@ -93,6 +94,20 @@ namespace LVP_WPF.Windows
             GetLanguageInfo(movie);
             MainWindow.gui.tvMovieCloseButton = this.closeButton;
             TcpSerialListener.layoutPoint.movieBackdrop = this.movieBackdrop;
+            if (subTrackComboBox.Items.Count > 1)
+            {
+                TcpSerialListener.layoutPoint.movieLangComboBox = this.subTrackComboBox;
+
+                subTrackComboBox.IsDropDownOpen = true;
+                for (int i = 0; i < subTrackComboBox.Items.Count; i++)
+                {
+                    ComboBoxItem item = (ComboBoxItem)subTrackComboBox.ItemContainerGenerator.ContainerFromIndex(i);
+                    Point pos = item.PointToScreen(new Point(0d, 0d));
+                    TcpSerialListener.layoutPoint.langComboBoxItems.Add(item);
+                    TcpSerialListener.layoutPoint.langComboBoxItemPts.Add(pos);
+                }
+                subTrackComboBox.IsDropDownOpen = false;
+            }
             TcpSerialListener.layoutPoint.Select("MovieWindow", true);
         }
 
@@ -133,6 +148,39 @@ namespace LVP_WPF.Windows
             subTrackComboBox.Items.Add("English");
             subTrackComboBox.Visibility = Visibility.Visible;
             subTrackComboBox.SelectedIndex = 0;
+
+            subTrackComboBox.IsDropDownOpen = true;
+            for (int i = 0; i < subTrackComboBox.Items.Count; i++)
+            {
+                ComboBoxItem item = (ComboBoxItem)subTrackComboBox.ItemContainerGenerator.ContainerFromIndex(i);
+                TcpSerialListener.layoutPoint.langComboBoxItems.Add(item);
+            }
+
+            langScrollViewer = (ScrollViewer)subTrackComboBox.Template.FindName("DropDownSV", subTrackComboBox);
+            langScrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
+            MainWindow.gui.langScrollViewer = langScrollViewer;
+            subTrackComboBox.IsDropDownOpen = true;
+            
+        }
+
+        private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            scrollViewerOffset = e.VerticalOffset;
+            if (e.VerticalOffset == 0)
+            {
+                closeButton.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                closeButton.Visibility = Visibility.Hidden;
+            }
+
+            if (MainWindow.gui.scrollViewerAdjust)
+            {
+                MainWindow.gui.scrollViewerAdjust = false;
+                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
+                langScrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
+            }
         }
 
         private void SubTrackComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -151,6 +199,16 @@ namespace LVP_WPF.Windows
                 }
                 PlayerWindow.subtitleTrack = subTrackComboBox.SelectedIndex - 1;
             }
+        }
+
+        private void LangComboBox_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            TcpSerialListener.layoutPoint.Select("languageDropdown");
+        }
+
+        private void LangComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            e.Handled = true;
         }
     }
 }
