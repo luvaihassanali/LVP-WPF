@@ -12,18 +12,13 @@ namespace MediaIndexUtil
         public Form1()
         {
             InitializeComponent();
-            PopulateTreeView();
+            PopulateTreeView("..\\");
             treeView1_NodeMouseClick(null, null);
         }
 
-        private void PopulateTreeView()
+        private void PopulateTreeView(string path)
         {
-#if DEBUG
-            string path = Environment.GetEnvironmentVariable("USERPROFILE");
-            DirectoryInfo info = new DirectoryInfo(path + "\\Desktop");
-#else
-            DirectoryInfo info = new DirectoryInfo(@"../");
-#endif
+            DirectoryInfo info = new DirectoryInfo(path);
             if (info.Exists)
             {
                 rootNode = new TreeNode(info.Name);
@@ -347,6 +342,20 @@ namespace MediaIndexUtil
                     File.WriteAllText(treeSubFolder.FullName + "\\" + filename + ".txt", "blank");
                 }
             }
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            folderBrowserDialog1.ShowDialog();
+            string path = folderBrowserDialog1.SelectedPath;
+            DirectoryInfo info = new DirectoryInfo(path);
+
+            listView1.Items.Clear();
+            listView2.Items.Clear();
+            treeView1.Nodes.Clear();
+
+            PopulateTreeView(path);
+            treeView1_NodeMouseClick(null, null);
         }
     }
 }

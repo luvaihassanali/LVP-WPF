@@ -46,6 +46,8 @@
             this.columnHeader4 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader6 = new System.Windows.Forms.ColumnHeader();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
+            this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
+            this.button4 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -95,6 +97,7 @@
             // 
             // splitContainer2.Panel1
             // 
+            this.splitContainer2.Panel1.Controls.Add(this.button4);
             this.splitContainer2.Panel1.Controls.Add(this.treeView1);
             // 
             // splitContainer2.Panel2
@@ -144,7 +147,7 @@
             // columnHeader2
             // 
             this.columnHeader2.Text = "Path";
-            this.columnHeader2.Width = 280;
+            this.columnHeader2.Width = 100;
             // 
             // button3
             // 
@@ -223,6 +226,16 @@
             this.checkBox1.Text = "SRT";
             this.checkBox1.UseVisualStyleBackColor = true;
             // 
+            // button4
+            // 
+            this.button4.Location = new System.Drawing.Point(247, 465);
+            this.button4.Name = "button4";
+            this.button4.Size = new System.Drawing.Size(24, 23);
+            this.button4.TabIndex = 1;
+            this.button4.Text = "/";
+            this.button4.UseVisualStyleBackColor = true;
+            this.button4.Click += new System.EventHandler(this.button4_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
@@ -262,5 +275,7 @@
         private CheckBox checkBox1;
         private Button button2;
         private Button button3;
+        private Button button4;
+        private FolderBrowserDialog folderBrowserDialog1;
     }
 }
