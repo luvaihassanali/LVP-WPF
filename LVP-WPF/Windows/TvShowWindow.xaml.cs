@@ -119,6 +119,7 @@ namespace LVP_WPF.Windows
                 item = item.Split(")")[0];
                 langComboBox.Items.Add(item);
                 lang = item;
+                PlayerWindow.subtitleFile = true;
             }
             else
             {
