@@ -82,6 +82,20 @@ namespace LVP_WPF.Windows
             TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
             MainWindow.gui.episodeScrollViewer = this.scrollViewer;
             MainWindow.gui.tvMovieCloseButton = this.closeButton;
+            GenerateEpisodeItemContainers();
+            TcpSerialListener.layoutPoint.Select("TvShowWindow");
+        }
+
+        private async Task GenerateEpisodeItemContainers()
+        {
+            await Task.Delay(500); // wait for content
+            TcpSerialListener.layoutPoint.tvControlList.Clear();
+            TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
+            if (tvShow.MultiLang)
+            {
+                TcpSerialListener.layoutPoint.tvControlList.Add(this.langComboBox);
+            }
+            TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
 
             ItemContainerGenerator generator = EpisodeListView.ItemContainerGenerator;
             for (int j = 0; j < episodes.Length; j++)
@@ -90,7 +104,6 @@ namespace LVP_WPF.Windows
                 Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
                 TcpSerialListener.layoutPoint.tvControlList.Add(img);
             }
-            TcpSerialListener.layoutPoint.Select("TvShowWindow");
         }
 
         private void GetLanguageInfo(TvShow tvShow)
@@ -241,25 +254,13 @@ namespace LVP_WPF.Windows
             {
                 tvShow.CurrSeason = seasonIndex;
                 UpdateTvWindowSeasonChange(seasonIndex);
+                await GenerateEpisodeItemContainers();
+            }
+            else
+            {
+                await Task.Delay(100);
             }
             TvShowWindow_Fade(1.0);
-
-            await Task.Delay(500); // wait for content
-            TcpSerialListener.layoutPoint.tvControlList.Clear();
-            TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
-            if (tvShow.MultiLang)
-            {
-                TcpSerialListener.layoutPoint.tvControlList.Add(this.langComboBox);
-            }
-            TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
-
-            ItemContainerGenerator generator = EpisodeListView.ItemContainerGenerator;
-            for (int j = 0; j < episodes.Length; j++)
-            {
-                ListViewItem container = (ListViewItem)generator.ContainerFromItem(episodes[j]);
-                Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
-                TcpSerialListener.layoutPoint.tvControlList.Add(img);
-            }
             loadGrid.Visibility = Visibility.Hidden;
         }
 
@@ -284,7 +285,6 @@ namespace LVP_WPF.Windows
 
         internal void UpdateTvWindowSeasonChange(int seasonIndex)
         {
-            scrollViewer.ScrollToHome();
             this.EpisodeListView.ItemsSource = null;
             Episode[] episodes;
 
@@ -384,8 +384,10 @@ namespace LVP_WPF.Windows
             ResetSeasons(tvShow, seasons);
         }
 
-        private void ResetSeasons(TvShow tvShow, int[] seasons)
+        private async void ResetSeasons(TvShow tvShow, int[] seasons)
         {
+            loadGrid.Visibility = Visibility.Visible;
+            TvShowWindow_Fade(0.1);
             bool fill = false;
             if (seasons[seasons.Length - 1] == Int32.MaxValue) // fill
             {
@@ -444,6 +446,10 @@ namespace LVP_WPF.Windows
                 tvShow.LastEpisode = null;
             }
             UpdateTvWindowSeasonChange(tvShow.CurrSeason);
+            await GenerateEpisodeItemContainers();
+            scrollViewer.ScrollToHome();
+            TvShowWindow_Fade(1.0);
+            loadGrid.Visibility = Visibility.Hidden;
         }
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -479,8 +485,10 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void LangComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void LangComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            loadGrid.Visibility = Visibility.Visible;
+            TvShowWindow_Fade(0.1);
             if (langComboBox.SelectedIndex == 0)
             {
                 PlayerWindow.subtitleFile = false;
@@ -496,15 +504,31 @@ namespace LVP_WPF.Windows
                 this.ShowName = tvShow.Name.Contains("(") ? tvShow.Name : tvShow.Name + " (" + tvShow.Date.GetValueOrDefault().Year + ")";
                 this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
                 UpdateTvWindowSeasonChange(tvShow.CurrSeason);
+                await GenerateEpisodeItemContainers();
             }
+            else
+            {
+                await Task.Delay(100);
+            }
+            TvShowWindow_Fade(1.0);
+            loadGrid.Visibility = Visibility.Hidden;
         }
 
-        private void LangComboBox_MouseDown(object sender, MouseButtonEventArgs e)
+        private async void LangComboBox_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (langComboBox.IsDropDownOpen)
+            {
+                await Task.Delay(100);
+            }
             TcpSerialListener.layoutPoint.Select("languageDropdown");
         }
 
         private void LangComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            e.Handled = true;
+        }
+
+        private void EpisodeListView_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             e.Handled = true;
         }

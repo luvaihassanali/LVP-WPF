@@ -113,7 +113,7 @@ namespace LVP_WPF
             }
         }
 
-        private void PollConnections()
+        private async void PollConnections()
         {
             if (esp8266Enabled) DebugLog("Pinging server...");
             connectionEstablished = false;
@@ -146,7 +146,7 @@ namespace LVP_WPF
                 }
 
                 CheckSerialConnection();
-                try { Task.Delay(500).Wait(); }
+                try { await Task.Delay(500); }
                 catch { }
             }
 

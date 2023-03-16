@@ -159,7 +159,7 @@ namespace LVP_WPF.Windows
             langScrollViewer = (ScrollViewer)subTrackComboBox.Template.FindName("DropDownSV", subTrackComboBox);
             langScrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
             MainWindow.gui.langScrollViewer = langScrollViewer;
-            subTrackComboBox.IsDropDownOpen = true;
+            subTrackComboBox.IsDropDownOpen = false;
             
         }
 
@@ -201,8 +201,12 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void LangComboBox_MouseDown(object sender, MouseButtonEventArgs e)
+        private async void LangComboBox_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (subTrackComboBox.IsDropDownOpen)
+            {
+                await Task.Delay(100);
+            }
             TcpSerialListener.layoutPoint.Select("languageDropdown");
         }
 

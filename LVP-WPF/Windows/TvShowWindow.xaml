@@ -61,7 +61,7 @@
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <ListView Grid.Row="3" Name="EpisodeListView" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Background="Black" BorderBrush="Black"
-                                  PreviewMouseMove="EpisodeListView_MouseMove" MouseLeave="EpisodeListView_MouseLeave" SelectionChanged="EpisodeBox_SelectionChanged" >
+                                  PreviewMouseMove="EpisodeListView_MouseMove" MouseLeave="EpisodeListView_MouseLeave" SelectionChanged="EpisodeBox_SelectionChanged" PreviewKeyDown="EpisodeListView_PreviewKeyDown" >
                             <ListView.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>

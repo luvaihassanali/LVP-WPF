@@ -234,7 +234,9 @@ namespace LVP_WPF.Windows
                                     LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
                                     GuiModel.Log("Play: " + currMedia.Path);
                                     ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                    tvShowWindow.Dispatcher.BeginInvoke(() => { tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason); });
+                                    tvShowWindow.Dispatcher.BeginInvoke(() => { 
+                                        tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
+                                    });
                                     return;
                                 }
                             }
@@ -492,13 +494,13 @@ namespace LVP_WPF.Windows
             pollingTimer.Stop();
         }
 
-        private void InactivityDetected(object sender, EventArgs e)
+        private async void InactivityDetected(object sender, EventArgs e)
         {
             if (mediaPlayer.IsPlaying) return;
             else
             {
                 // Double check after 10s to make sure media player was not in process of changing to new video
-                Task.Delay(10000).Wait();
+                await Task.Delay(10000);
                 if (mediaPlayer.IsPlaying) return;
             }
 

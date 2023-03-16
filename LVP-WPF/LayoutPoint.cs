@@ -131,6 +131,7 @@ namespace LVP_WPF.Windows
 
         private void SelectLangDropDown()
         {
+            Task.Delay(100).Wait();
             if (!lanuageDropdownActive)
             {
                 returnPointB = currPoint;
@@ -144,7 +145,15 @@ namespace LVP_WPF.Windows
                 langIndex = 0;
                 lanuageDropdownActive = false;
                 currPoint = returnPointB;
-                currControl = tvShowWindowActive ? tvControlList[currPoint.x] : movieLangComboBox;
+                if (tvShowWindowActive)
+                {
+                    currPoint = (1, -1);
+                    currControl = tvControlList[currPoint.x];
+                }
+                else
+                {
+                    currControl = movieLangComboBox;
+                }
                 CenterMouseOverControl(currControl);
             }
         }
@@ -203,7 +212,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void CloseMovieWindow(bool click)
+        private async void CloseMovieWindow(bool click)
         {
             movieWindowActive = false;
             mainWindowActive = true;
@@ -211,16 +220,16 @@ namespace LVP_WPF.Windows
             if (click)
             {
                 CenterMouseOverControl(gui.tvMovieCloseButton);
-                Task.Delay(150).Wait();
+                await Task.Delay(150);
                 TcpSerialListener.DoMouseClick();
-                Task.Delay(150).Wait();
+                await Task.Delay(150);
             }
             currPoint = returnPointA;
             currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
             CenterMouseOverControl(currControl);
         }
 
-        private void CloseTvWindow(bool click)
+        private async void CloseTvWindow(bool click)
         {
             tvShowWindowActive = false;
             mainWindowActive = true;
@@ -232,9 +241,9 @@ namespace LVP_WPF.Windows
                 gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
                 GuiModel.DoEvents();
                 CenterMouseOverControl(gui.tvMovieCloseButton);
-                Task.Delay(150).Wait();
+                await Task.Delay(150);
                 TcpSerialListener.DoMouseClick();
-                Task.Delay(150).Wait();
+                await Task.Delay(150);
             }
 
             currPoint = returnPointA;
@@ -242,16 +251,16 @@ namespace LVP_WPF.Windows
             CenterMouseOverControl(currControl);
         }
 
-        private void ClosePlayerWindow(bool click)
+        private async void ClosePlayerWindow(bool click)
         {
             playerWindowActive = false;
 
             if (click)
             {
                 CenterMouseOverControl(gui.playerCloseButton);
-                Task.Delay(150).Wait();
+                await Task.Delay(150);
                 TcpSerialListener.DoMouseClick();
-                Task.Delay(150).Wait();
+                await Task.Delay(150);
             }
 
             if (movieWindowActive)
@@ -267,14 +276,14 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void CloseMainWindow()
+        private async void CloseMainWindow()
         {
             gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToHome(); });
             GuiModel.DoEvents();
             CenterMouseOverControl(gui.mainCloseButton);
-            Task.Delay(150).Wait();
+            await Task.Delay(150);
             TcpSerialListener.DoMouseClick();
-            Task.Delay(150).Wait();
+            await Task.Delay(150);
         }
 
         private void MoveTvPoint(int x)
@@ -731,8 +740,9 @@ namespace LVP_WPF.Windows
             });
         }
 
-        private void CenterMouseOverComboBoxItem(ComboBoxItem comboBoxItem, int row = -1, ScrollViewer scrollViewer = null)
+        private async void CenterMouseOverComboBoxItem(ComboBoxItem comboBoxItem, int row = -1, ScrollViewer scrollViewer = null)
         {
+            await Task.Delay(100);
             if (scrollViewer != null)
             {
                 if (row == 0)
@@ -757,7 +767,6 @@ namespace LVP_WPF.Windows
                 target.X += comboBoxItem.ActualWidth / 2;
                 target.Y += comboBoxItem.ActualHeight / 2;
                 TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
-                //To-do: fix highlight when BringIntoView()
             });
         }
 

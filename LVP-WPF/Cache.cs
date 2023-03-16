@@ -34,6 +34,7 @@ namespace LVP_WPF
         private static List<string> tvPathList = new List<string>();
         private static List<string> moviePathList = new List<string>();
         private static int mediaCount = 0;
+        private static bool libreTranslateExec = false;
         public static bool update = false;
 
         internal static async Task Initialize(ProgressBar p, MediaElement c)
@@ -111,11 +112,15 @@ namespace LVP_WPF
 
             Array.Sort(MainWindow.model.Movies, Movie.SortMoviesAlphabetically());
             Array.Sort(MainWindow.model.TvShows, TvShow.SortTvShowsAlphabetically());
-            SaveData(); 
-            Process[] libreTranslateProc = Process.GetProcessesByName("libretranslate");
-            if (libreTranslateProc.Length != 0)
+            SaveData();
+
+            if (libreTranslateExec)
             {
-                libreTranslateProc[0].Kill();
+                Process[] libreTranslateProc = Process.GetProcessesByName("libretranslate");
+                if (libreTranslateProc.Length != 0)
+                {
+                    libreTranslateProc[0].Kill();
+                }
             }
         }
 
@@ -160,7 +165,7 @@ namespace LVP_WPF
                 string overview = await GetTranslation(langKey, tvShow.Overview, client);
                 if (!tvShow.MultiLangOverview.Contains(overview)) tvShow.MultiLangOverview.Add(overview);
 
-                for (int j = 0; j < tvShow.MultiLangSeasons[langIndex].Length; j++)
+                for (int j = 0; j < tvShow.MultiLangSeasons.Count; j++)
                 {
                     Season[] multiLangSeasons = tvShow.MultiLangSeasons[j];
                     for (int k = 0; k < multiLangSeasons.Length; k++)
@@ -189,23 +194,10 @@ namespace LVP_WPF
             return "";
         }
 
+        // pip install libretranslate
         private static async Task<string> GetTranslation(string target, string msg, HttpClient client)
         {
-            Dictionary<string, string> values = new Dictionary<string, string>
-                {
-                    { "q", msg },
-                    { "source", "en" },
-                    { "target", target }
-                };
-            FormUrlEncodedContent content = new FormUrlEncodedContent(values);
-            try
-            {
-                HttpResponseMessage response = await client.PostAsync("http://localhost:5000/translate", content);
-                string responseString = await response.Content.ReadAsStringAsync();
-                LibreTranslateResponse resp = JsonConvert.DeserializeObject<LibreTranslateResponse>(responseString);
-                return resp.TranslatedText;
-            }
-            catch
+            if (!libreTranslateExec)
             {
                 string path = ConfigurationManager.AppSettings["LibreTranslatePath"] + "libretranslate.exe";
                 if (path.Contains("%APPDATA%")) { path = path.Replace("%APPDATA%", Environment.GetEnvironmentVariable("APPDATA")); }
@@ -220,8 +212,32 @@ namespace LVP_WPF
                 libreTranslateProc.StartInfo.UseShellExecute = true;
                 libreTranslateProc.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
                 libreTranslateProc.Start();
+
+                await Task.Delay(2000);
+                libreTranslateExec = true;
             }
-            return "";
+
+            Dictionary<string, string> values = new Dictionary<string, string>
+            {
+                { "q", msg },
+                { "source", "en" },
+                { "target", target }
+            };
+
+            FormUrlEncodedContent content = new FormUrlEncodedContent(values);
+            try
+            {
+                HttpResponseMessage response = await client.PostAsync("http://localhost:5000/translate", content);
+                string responseString = await response.Content.ReadAsStringAsync();
+                LibreTranslateResponse resp = JsonConvert.DeserializeObject<LibreTranslateResponse>(responseString);
+                return resp.TranslatedText;
+            }
+            catch (Exception ex)
+            {
+                NotificationDialog.Show("Error", ex.Message);
+            }
+            NotificationDialog.Show("Error", "LibreTranslate failure");
+            throw new Exception("LibreTranslate failure");
         }
 
         internal static void SwitchMultiLangTvIndex(TvShow tvShow, string lang)
@@ -731,7 +747,7 @@ namespace LVP_WPF
                 string[] seasonEntries = Directory.GetDirectories(langFolder);
                 Array.Sort(seasonEntries, SeasonComparer);
                 tvShow.MultiLangSeasons.Add(ProcessTvShowSeasonDirectories(seasonEntries, tvShow));
-                
+
             }
             return tvShow;
         }
@@ -799,7 +815,7 @@ namespace LVP_WPF
                 }
                 catch
                 {
-                    NotificationDialog.Show("Error", "Episode is missing separator in " + tvShow.Name + ", Season " + (i + 1));;
+                    NotificationDialog.Show("Error", "Episode is missing separator in " + tvShow.Name + ", Season " + (i + 1)); ;
                 }
                 season.Episodes = new Episode[episodeEntries.Length];
 

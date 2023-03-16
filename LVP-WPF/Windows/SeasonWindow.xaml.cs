@@ -97,5 +97,10 @@ namespace LVP_WPF.Windows
                 scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
             }
         }
+
+        private void SeasonListView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            e.Handled = true;
+        }
     }
 }

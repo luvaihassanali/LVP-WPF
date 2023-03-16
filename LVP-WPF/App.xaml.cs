@@ -19,21 +19,27 @@ namespace LVP_WPF
             switch (e.Key)
             {
                 case Key.Up:
+                    System.Diagnostics.Debug.WriteLine("up");
                     TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.up);
                     break;
                 case Key.Down:
+                    System.Diagnostics.Debug.WriteLine("down");
                     TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.down);
                     break;
                 case Key.Left:
+                    System.Diagnostics.Debug.WriteLine("left");
                     TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.left);
                     break;
                 case Key.Right:
+                    System.Diagnostics.Debug.WriteLine("right");
                     TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.right);
                     break;
                 case Key.Enter:
+                    System.Diagnostics.Debug.WriteLine("enter");
                     TcpSerialListener.DoMouseClick();
                     break;
                 case Key.Escape:
+                    System.Diagnostics.Debug.WriteLine("esc");
                     TcpSerialListener.layoutPoint.CloseCurrWindow();
                     break;
             }

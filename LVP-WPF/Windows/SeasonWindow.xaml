@@ -10,7 +10,7 @@
 
     <Grid>
         <Grid>
-            <ListView ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseLeftButtonUp="SeasonListView_Click" Name="SeasonListView" Background="Black" BorderBrush="Black">
+            <ListView ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseLeftButtonUp="SeasonListView_Click" Name="SeasonListView" Background="Black" BorderBrush="Black" PreviewKeyDown="SeasonListView_PreviewKeyDown">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid Columns="3" HorizontalAlignment="Left" VerticalAlignment="Top"/>
