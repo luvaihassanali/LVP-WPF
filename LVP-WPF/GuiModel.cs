@@ -17,8 +17,7 @@ using System.Windows.Shapes;
 
 namespace LVP_WPF
 {
-    [ObservableObject]
-    public partial class GuiModel
+    public partial class GuiModel : ObservableObject
     {
         [DllImport("user32.dll")]
         static extern void mouse_event(Int32 dwFlags, Int32 dx, Int32 dy, Int32 dwData, UIntPtr dwExtraInfo);
@@ -50,6 +49,7 @@ namespace LVP_WPF
         static public int centerY = 540;
         static private bool loggingEnabled;
         static private string logPath;
+        static public string fontSize;
         public bool isPlaying = false;
         public bool scrollViewerAdjust = false;
         public Button mainCloseButton;
@@ -68,6 +68,8 @@ namespace LVP_WPF
             loggingEnabled = bool.Parse(ConfigurationManager.AppSettings["LoggingEnabled"]);
             hideCursor = bool.Parse(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
             logPath = AppDomain.CurrentDomain.BaseDirectory;
+            fontSize = "--freetype-fontsize=" + ConfigurationManager.AppSettings["FontSize"];
+
 #if DEBUG
             logPath = "%USERPROFILE%\\Desktop\\LVP-WPF.log";
 #else
@@ -232,9 +234,7 @@ namespace LVP_WPF
         }
     }
 
-
-    [ObservableObject]
-    public partial class EpisodeWindowBox
+    public partial class EpisodeWindowBox : ObservableObject
     {
         private int id;
         private string description;

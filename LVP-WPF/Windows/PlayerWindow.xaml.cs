@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
 using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.Security;
 using System.Threading;
@@ -21,7 +22,7 @@ namespace LVP_WPF.Windows
     {
         static private Media currMedia;
         static private TvShowWindow? tvShowWindow;
-        static internal LibVLC libVLC = new LibVLC("--freetype-font=Segoe UI");
+        static internal LibVLC libVLC = new LibVLC("--freetype-font=Segoe UI", GuiModel.fontSize);
         static public int subtitleTrack = Int32.MaxValue;
         static public bool subtitleFile = false;
         private MediaPlayer mediaPlayer;
@@ -294,6 +295,7 @@ namespace LVP_WPF.Windows
             LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(libVLC, m.Path, FromType.FromPath);
             media.AddOption(":avcodec-hw=auto");
             media.AddOption(":no-mkv-preload-local-dir");
+
             if (subtitleFile)
             {
                 string[] pathParts = m.Path.Split("\\");
