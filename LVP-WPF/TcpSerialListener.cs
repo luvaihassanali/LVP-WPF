@@ -26,9 +26,6 @@ namespace LVP_WPF
         [DllImport("User32.dll")]
         public static extern bool SetCursorPos(int X, int Y);
 
-        [DllImport("user32.dll")]
-        private static extern int ShowCursor(bool show);
-
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
 
@@ -38,26 +35,37 @@ namespace LVP_WPF
         private const int MOUSEEVENTF_RIGHTUP = 0x10;
         private const int MOUSEEVENTF_WHEEL = 0x0800;
 
-        private bool connectionEstablished = false;
-        private string esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
-        private int esp8266ServerPort = 3000;
-        private bool esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
-        private bool workerThreadRunning = false;
+        private bool connectionEstablished;
+        private string esp8266ServerIp;
+        private int esp8266ServerPort;
+        private bool esp8266Enabled;
         private int joystickX;
         private int joystickY;
+        private bool workerThreadRunning;
+
         private GuiModel gui;
-        static public LayoutPoint layoutPoint;
-        static System.Timers.Timer pollingTimer = null;
+        public static LayoutPoint layoutPoint;
+        private static System.Timers.Timer pollingTimer;
+
         private SerialPort serialPort;
-        public bool serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
+        public bool serialPortEnabled;
         private TcpClient tcpClient;
-        private Thread workerThread = null;
+        private Thread workerThread;
 
         public TcpSerialListener(GuiModel g)
         {
             gui = g;
+            connectionEstablished = false;
+            workerThreadRunning = false; 
+            esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
+            esp8266ServerPort = Int32.Parse(ConfigurationManager.AppSettings["Esp8266Port"]);
+            esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
+            serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
+
             layoutPoint = new LayoutPoint(g);
             if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
+
+
         }
 
         public void StartThread()
@@ -113,7 +121,7 @@ namespace LVP_WPF
             }
         }
 
-        private async void PollConnections()
+        private void PollConnections()
         {
             if (esp8266Enabled) DebugLog("Pinging server...");
             connectionEstablished = false;
@@ -141,13 +149,11 @@ namespace LVP_WPF
                     }
                     else
                     {
-                        DebugLog("Destination host unreachable");
+                        //DebugLog("Destination host unreachable");
                     }
                 }
 
                 CheckSerialConnection();
-                try { await Task.Delay(500); }
-                catch { }
             }
 
             pingSender.Dispose();
@@ -164,7 +170,7 @@ namespace LVP_WPF
 
                 result = tcpClient.BeginConnect(esp8266ServerIp, esp8266ServerPort, null, null);
                 success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(2));
-                
+
                 while (!success)
                 {
                     DebugLog("Cannot connect to server. Trying again");
@@ -176,7 +182,7 @@ namespace LVP_WPF
                 try
                 {
                     stream = tcpClient.GetStream();
-                    DebugLog("Connected.");
+                    DebugLog("Connected to server");
                 }
                 catch (Exception ex)
                 {
@@ -190,45 +196,7 @@ namespace LVP_WPF
 
                 while (true)
                 {
-                    int i;
-                    byte[] bytes = new byte[256];
-                    string buffer = null;
-
-                    while ((i = stream.Read(bytes, 0, bytes.Length)) != 0 && workerThreadRunning)
-                    {
-                        buffer = Encoding.ASCII.GetString(bytes, 0, i);
-                        DebugLog("Received: " + buffer.Replace("\r\n", ""));
-
-                        if (buffer.Contains("initack"))
-                        {
-                            DebugLog("initack received");
-                            SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
-                            DoMouseClick();
-                            if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
-                            StopTimer();
-                            StartTimer();
-                        }
-
-                        if (buffer.Contains("ka"))
-                        {
-                            StopTimer();
-                            DebugLog("Sending ack");
-                            data = Encoding.ASCII.GetBytes("ack");
-                            stream = tcpClient.GetStream();
-                            stream.Write(data, 0, data.Length);
-                            StartTimer();
-                        }
-
-                        if (!buffer.Contains("ok") && !buffer.Contains("ka") && !buffer.Contains("initack"))
-                        {
-                            ParseTcpDataIn(buffer);
-                        }
-                    }
-
-                    DebugLog("Stream end. Press any key");
-                    stream.Close();
-                    tcpClient.EndConnect(result);
-                    tcpClient.Close();
+                    RunServerWorker(stream, result, data);
                 }
             }
             catch (Exception e)
@@ -245,10 +213,52 @@ namespace LVP_WPF
             }
         }
 
+        private void RunServerWorker(NetworkStream stream, IAsyncResult result, byte[] data)
+        {
+            byte[] bytes = new byte[256];
+            int i;
+            string buffer;
+
+            while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+            {
+                buffer = Encoding.ASCII.GetString(bytes, 0, i);
+                DebugLog("Received: " + buffer.Replace("\r\n", ""));
+
+                if (buffer.Contains("initack"))
+                {
+                    DebugLog("initack received");
+                    SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+                    DoMouseClick();
+                    StopTimer();
+                    StartTimer();
+                }
+
+                if (buffer.Contains("ka"))
+                {
+                    StopTimer();
+                    DebugLog("Sending ack");
+                    data = Encoding.ASCII.GetBytes("ack");
+                    stream = tcpClient.GetStream();
+                    stream.Write(data, 0, data.Length);
+                    StartTimer();
+                }
+
+                if (!buffer.Contains("ok") && !buffer.Contains("ka") && !buffer.Contains("initack"))
+                {
+                    ParseTcpDataIn(buffer);
+                }
+            }
+
+            DebugLog("!! Stream end !!");
+            stream.Close();
+            tcpClient.EndConnect(result);
+            tcpClient.Close();
+        }
+
         private void ParseTcpDataIn(string data)
         {
             if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
-            
+
             string[] dataSplit = data.Split(',');
             if (dataSplit.Length > 6)
             {
@@ -438,7 +448,7 @@ namespace LVP_WPF
                         }
                         catch
                         {
-                            GuiModel.Log("No device connected");
+                            //GuiModel.Log("No device connected");
                         }
                     }
                 }

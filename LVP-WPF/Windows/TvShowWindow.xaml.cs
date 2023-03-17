@@ -531,6 +531,7 @@ namespace LVP_WPF.Windows
             loadGrid.Visibility = Visibility.Hidden;
         }
 
+        // To-do if 3+ langs then need to preserve same order as build cache (alphabetical?)
         internal void SwitchMultiLangTvIndex(TvShow tvShow, string lang)
         {
             int index = 0;

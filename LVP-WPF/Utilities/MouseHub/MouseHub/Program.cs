@@ -4,7 +4,6 @@ using System.Drawing;
 using System.IO.Ports;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,70 +14,51 @@ namespace MouseMoverClient
 {
     class Program
     {
-        [DllImport("kernel32.dll", ExactSpelling = true)]
-        private static extern IntPtr GetConsoleWindow();
-
-        private static IntPtr MyConsole = GetConsoleWindow();
-
-        [DllImport("user32.dll", SetLastError = true)]
-        internal static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-        
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-        public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
-
-        [DllImport("user32.dll")]
-        static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
-
-        [DllImport("user32.dll")]
-        static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
-        public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
+        private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
 
         private const int MOUSEEVENTF_LEFTDOWN = 0x02;
         private const int MOUSEEVENTF_LEFTUP = 0x04;
         private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
         private const int MOUSEEVENTF_RIGHTUP = 0x10;
-        private const int SWP_NOSIZE = 0x0001;
-        private const int GWL_EXSTYLE = -20;
-        private const int WS_EX_LAYERED = 0x80000;
-        private const uint LWA_ALPHA = 0x2;
 
-        static bool connectionEstablished = true;
-        static string esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
-        static int opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
-        static int esp8266ServerPort = 3000;
-        static int joystickX;
-        static int joystickY;
-        static TcpClient tcpClient;
-        static SerialPort serialPort;
-        static System.Timers.Timer pollingTimer;
+        private static bool connectionEstablished;
+        private static string esp8266ServerIp;
+        private static int esp8266ServerPort;
+        private static int joystickX;
+        private static int joystickY;
+        private static int opacity;
 
-        static async Task Main(string[] args)
+        private static TcpClient tcpClient;
+        private static SerialPort serialPort;
+        private static System.Timers.Timer pollingTimer;
+
+        private static void Main(string[] args)
         {
+            connectionEstablished = false;
+            esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
+            esp8266ServerPort = Int32.Parse(ConfigurationManager.AppSettings["Esp8266Port"]);
+            opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
+
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
-            ConsoleHelper.SetCurrentFont("Segoe Mono Boot", 32);
+            ConsoleHelper.SetCurrentFont("Segoe Mono Boot", 30);
             Console.Title = "";
             Console.ForegroundColor = ConsoleColor.White;
             Console.BackgroundColor = ConsoleColor.Blue;
+            Console.CursorSize = 100;
             Console.SetWindowSize(50, 12);
             Console.SetBufferSize(50, 12);
-            SetWindowPos(MyConsole, 0, 600, 680, 0, 0, SWP_NOSIZE); // Console.SetWindowPosition();
-            SetWindowLong(MyConsole, GWL_EXSTYLE, GetWindowLong(MyConsole, GWL_EXSTYLE) | WS_EX_LAYERED); // https://stackoverflow.com/questions/24110600/transparent-console-dllimport
-            
-            SetLayeredWindowAttributes(MyConsole, 0, (byte)opacity, LWA_ALPHA); // Opacity = 0.5 = (255/2) = 128, 75 = 191, 80 = 204, 90 = 230
-            // Hide title bar
-            int style = GetWindowLong(MyConsole, -16);
-            style &= -12582913;
-            SetWindowLong(MyConsole, -16, style);
-            SetWindowPos(MyConsole, 0, 0, 0, 0, 0, 0x27);
+            ConsoleHelper.SetWindowPosition(600, 680);
+            ConsoleHelper.SetWindowTransparency(opacity);
+            ConsoleHelper.HideTitleBar();
+            ConsoleHelper.DisableQuickEditMode();
 
             pollingTimer = new System.Timers.Timer(6000); // esp timeout is 5s
             pollingTimer.Elapsed += OnTimedEventAsync;
             pollingTimer.AutoReset = false;
 
             InitializeSerialPort();
-            await StartListener();
+            StartListener();
 
             if (tcpClient != null)
             {
@@ -100,11 +80,13 @@ namespace MouseMoverClient
             Console.ReadLine();
         }
 
-        static async Task StartListener()
+        private static void StartListener()
         {
+            int cursorPos = 49;
             Log("Starting listener");
             while (!Console.KeyAvailable)
             {
+
                 Log("Pinging server...");
                 connectionEstablished = false;
 
@@ -122,28 +104,32 @@ namespace MouseMoverClient
                     {
                         reply = pingSender.Send(esp8266ServerIp, timeout, buffer, options);
                     }
-                    catch
-                    { }
+                    catch { }
 
                     if (reply != null && reply.Status == IPStatus.Success)
                     {
+                        Console.SetCursorPosition(0, Console.CursorTop);
                         Log("Ping success");
                         ConnectToServer();
                         connectionEstablished = true;
                     }
                     else
                     {
-                        Log("Destination host unreachable");
+                        //Log("Destination host unreachable");
+                        Console.CursorVisible = true;
+                        Console.SetCursorPosition(cursorPos, Console.CursorTop);
+                        cursorPos--;
+                        if (cursorPos == 0) cursorPos = 49;
                     }
 
                     CheckSerialConnection();
-                    await Task.Delay(500);
                 }
             }
+
             Log("Stopping listener");
         }
 
-        static private void CheckSerialConnection()
+        private static void CheckSerialConnection()
         {
             if (serialPort != null)
             {
@@ -156,13 +142,13 @@ namespace MouseMoverClient
                     }
                     catch
                     {
-                        Log("Serial port disconnected");
+                        //Log("Serial port disconnected");
                     }
                 }
             }
         }
 
-        static void ConnectToServer()
+        private static void ConnectToServer()
         {
             Log("Initializing TCP connection");
             try
@@ -186,7 +172,7 @@ namespace MouseMoverClient
                 try
                 {
                     stream = tcpClient.GetStream();
-                    Log("Connected.");
+                    Log("Connected to server");
                 }
                 catch (InvalidOperationException)
                 {
@@ -200,44 +186,7 @@ namespace MouseMoverClient
 
                 while (true)
                 {
-                    int i;
-                    byte[] bytes = new byte[256];
-                    string buffer = null;
-
-                    while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
-                    {
-                        buffer = Encoding.ASCII.GetString(bytes, 0, i);
-                        Log("Received: " + buffer.Replace("\r\n", ""));
-
-                        if (buffer.Contains("initack"))
-                        {
-                            // Send cursor to centre of screen
-                            Cursor.Position = new Point(960, 540);
-                            DoMouseClick();
-                            StopTimer();
-                            StartTimer();
-                        }
-
-                        if (buffer.Contains("ka"))
-                        {
-                            StopTimer();
-                            Log("Sending ack");
-                            data = Encoding.ASCII.GetBytes("ack");
-                            stream = tcpClient.GetStream();
-                            stream.Write(data, 0, data.Length);
-                            StartTimer();
-                        }
-
-                        if (!buffer.Contains("ok") && !buffer.Contains("ka") && !buffer.Contains("initack"))
-                        {
-                            ParseTcpDataIn(buffer);
-                        }
-                    }
-
-                    Log("Stream end. Press any key");
-                    stream.Close();
-                    tcpClient.EndConnect(result);
-                    tcpClient.Close();
+                    RunServerWorker(stream, result, data);
                 }
             }
             catch (Exception e)
@@ -254,7 +203,49 @@ namespace MouseMoverClient
             }
         }
 
-        static void ParseTcpDataIn(string data)
+        private static void RunServerWorker(NetworkStream stream, IAsyncResult result, byte[] data)
+        {
+            byte[] bytes = new byte[256];
+            int i;
+            string buffer;
+
+            while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+            {
+                buffer = Encoding.ASCII.GetString(bytes, 0, i);
+                Log("Received: " + buffer.Replace("\r\n", ""));
+
+                if (buffer.Contains("initack"))
+                {
+                    Log("initack received");
+                    Cursor.Position = new Point(960, 540); // Send cursor to centre of screen
+                    DoMouseClick();
+                    StopTimer();
+                    StartTimer();
+                }
+
+                if (buffer.Contains("ka"))
+                {
+                    StopTimer();
+                    Log("Sending ack");
+                    data = Encoding.ASCII.GetBytes("ack");
+                    stream = tcpClient.GetStream();
+                    stream.Write(data, 0, data.Length);
+                    StartTimer();
+                }
+
+                if (!buffer.Contains("ok") && !buffer.Contains("ka") && !buffer.Contains("initack"))
+                {
+                    ParseTcpDataIn(buffer);
+                }
+            }
+
+            Log("!! Stream end !!");
+            stream.Close();
+            tcpClient.EndConnect(result);
+            tcpClient.Close();
+        }
+
+        private static void ParseTcpDataIn(string data)
         {
             string[] dataSplit = data.Split(',');
             if (dataSplit.Length > 6)
@@ -288,7 +279,7 @@ namespace MouseMoverClient
             DoMouseMove();
         }
 
-        static async void DoMouseMove()
+        private static async void DoMouseMove()
         {
             //joystickX = -joystickX;
             joystickY = -joystickY;
@@ -308,41 +299,41 @@ namespace MouseMoverClient
             }
         }
 
-        static void DoMouseClick()
+        private static void DoMouseClick()
         {
             uint X = (uint)Cursor.Position.X;
             uint Y = (uint)Cursor.Position.Y;
             mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, X, Y, 0, 0);
         }
 
-        static void DoMouseRightClick()
+        private static void DoMouseRightClick()
         {
             uint X = (uint)Cursor.Position.X;
             uint Y = (uint)Cursor.Position.Y;
             mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, X, Y, 0, 0);
         }
 
-        static void StartTimer()
+        private static void StartTimer()
         {
             pollingTimer.Enabled = true;
             pollingTimer.Start();
         }
 
-        static void StopTimer()
+        private static void StopTimer()
         {
             pollingTimer.Enabled = false;
             pollingTimer.Stop();
         }
 
-        static async void OnTimedEventAsync(Object source, ElapsedEventArgs e)
+        private static void OnTimedEventAsync(Object source, ElapsedEventArgs e)
         {
             Log("Polling timer stopped");
             pollingTimer.Enabled = false;
             pollingTimer.Stop();
-            await StartListener();
+            StartListener();
         }
 
-        static public void InitializeSerialPort()
+        private static void InitializeSerialPort()
         {
             serialPort = new SerialPort();
             string portNumber = ConfigurationManager.AppSettings["SerialPort"];
@@ -365,7 +356,7 @@ namespace MouseMoverClient
             }
         }
 
-        static private void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        private static void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             SerialPort serialPort = (SerialPort)sender;
             if (e.EventType == SerialData.Chars)
@@ -390,7 +381,7 @@ namespace MouseMoverClient
                         p.StartInfo.FileName = path;
                         p.StartInfo.WorkingDirectory = path.Replace("LVP-WPF.exe", "");
                         p.Start();
-                        StartMatrix();
+                        ConsoleHelper.StartMatrix();
                         break;
                     default:
                         Log("Unknown msg received: " + msg);
@@ -399,7 +390,197 @@ namespace MouseMoverClient
             }
         }
 
-        private static void StartMatrix()
+        private static void Log(string message)
+        {
+            Console.WriteLine("{0}: {1}", DateTime.Now.ToString("> HH:mm:ss.fff"), message);
+        }
+    }
+
+    // https://stackoverflow.com/questions/13656846/how-to-programmatic-disable-c-sharp-console-applications-quick-edit-mode/36720802#36720802
+    // https://stackoverflow.com/questions/6554536/possible-to-get-set-console-font-size-in-c-sharp-net#:~:text=After%20running%20the%20application%20(Ctrl,option%20to%20adjust%20the%20size.
+    #region ConsoleHelper
+
+    public static class ConsoleHelper
+    {
+        // General
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern IntPtr GetStdHandle(int nStdHandle);
+
+        // Set window position
+
+        private const int SWP_NOSIZE = 0x0001;
+
+        internal static void SetWindowPosition(int x, int y)
+        {
+            SetWindowPos(MyConsole, 0, 600, 680, 0, 0, SWP_NOSIZE);
+        }
+
+        // Transparency
+
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_LAYERED = 0x80000;
+        private const uint LWA_ALPHA = 0x2;
+
+        [DllImport("user32.dll")]
+        static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
+
+        internal static void SetWindowTransparency(int opacity)
+        {
+            SetWindowLong(MyConsole, GWL_EXSTYLE, GetWindowLong(MyConsole, GWL_EXSTYLE) | WS_EX_LAYERED); // https://stackoverflow.com/questions/24110600/transparent-console-dllimport
+            // Opacity = 0.5 = (255/2) = 128, 75 = 191, 80 = 204, 90 = 230
+            SetLayeredWindowAttributes(MyConsole, 0, (byte)opacity, LWA_ALPHA);
+        }
+
+        // Font 
+
+        private const int FixedWidthTrueType = 54;
+        private const int StandardOutputHandle = -11;
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool SetCurrentConsoleFontEx(IntPtr hConsoleOutput, bool MaximumWindow, ref FontInfo ConsoleCurrentFontEx);
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        internal static extern bool GetCurrentConsoleFontEx(IntPtr hConsoleOutput, bool MaximumWindow, ref FontInfo ConsoleCurrentFontEx);
+
+        private static readonly IntPtr ConsoleOutputHandle = GetStdHandle(StandardOutputHandle);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct FontInfo
+        {
+            internal int cbSize;
+            internal int FontIndex;
+            internal short FontWidth;
+            public short FontSize;
+            public int FontFamily;
+            public int FontWeight;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string FontName;
+        }
+
+        internal static FontInfo[] SetCurrentFont(string font, short fontSize = 0)
+        {
+            FontInfo before = new FontInfo
+            {
+                cbSize = Marshal.SizeOf<FontInfo>()
+            };
+
+            if (GetCurrentConsoleFontEx(ConsoleOutputHandle, false, ref before))
+            {
+
+                FontInfo set = new FontInfo
+                {
+                    cbSize = Marshal.SizeOf<FontInfo>(),
+                    FontIndex = 0,
+                    FontFamily = FixedWidthTrueType,
+                    FontName = font,
+                    FontWeight = 400,
+                    FontSize = fontSize > 0 ? fontSize : before.FontSize
+                };
+
+                // Get some settings from current font.
+                if (!SetCurrentConsoleFontEx(ConsoleOutputHandle, false, ref set))
+                {
+                    var ex = Marshal.GetLastWin32Error();
+                    Console.WriteLine("Set error " + ex);
+                    throw new System.ComponentModel.Win32Exception(ex);
+                }
+
+                FontInfo after = new FontInfo
+                {
+                    cbSize = Marshal.SizeOf<FontInfo>()
+                };
+                GetCurrentConsoleFontEx(ConsoleOutputHandle, false, ref after);
+
+                return new[] { before, set, after };
+            }
+            else
+            {
+                var er = Marshal.GetLastWin32Error();
+                Console.WriteLine("Get error " + er);
+                throw new System.ComponentModel.Win32Exception(er);
+            }
+        }
+
+        // Disable quick edit mode
+
+        private const uint ENABLE_QUICK_EDIT = 0x0040;
+        // STD_INPUT_HANDLE (DWORD): -10 is the standard input device
+        private const int STD_INPUT_HANDLE = -10;
+
+        [DllImport("kernel32.dll")]
+        private static extern bool GetConsoleMode(IntPtr hConsoleHandle, out uint lpMode);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool SetConsoleMode(IntPtr hConsoleHandle, uint dwMode);
+
+        internal static bool DisableQuickEditMode()
+        {
+
+            IntPtr consoleHandle = GetStdHandle(STD_INPUT_HANDLE);
+
+            // get current console mode
+            uint consoleMode;
+            if (!GetConsoleMode(consoleHandle, out consoleMode))
+            {
+                // ERROR: Unable to get console mode.
+                return false;
+            }
+
+            // Clear the quick edit bit in the mode flags
+            consoleMode &= ~ENABLE_QUICK_EDIT;
+
+            // set the new mode
+            if (!SetConsoleMode(consoleHandle, consoleMode))
+            {
+                // ERROR: Unable to set console mode
+                return false;
+            }
+
+            return true;
+        }
+
+        // Hide title bar
+
+        [DllImport("kernel32.dll", ExactSpelling = true)]
+        private static extern IntPtr GetConsoleWindow();
+
+        private static IntPtr MyConsole = GetConsoleWindow();
+
+        [DllImport("user32.dll", SetLastError = true)]
+        internal static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowPos")]
+        internal static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
+
+        internal static void HideTitleBar()
+        {
+            int style = GetWindowLong(MyConsole, -16);
+            style &= -12582913;
+            SetWindowLong(MyConsole, -16, style);
+            SetWindowPos(MyConsole, 0, 0, 0, 0, 0, 0x27);
+        }
+
+        // Matrix
+
+        private static int matrixCounter;
+        private static Random randomPosition = new Random();
+        private static int flowSpeed = 50;
+        private static int fastFlow = flowSpeed + 30;
+        private static int textFlow = flowSpeed + 500;
+        private static ConsoleColor baseColor = ConsoleColor.DarkBlue;
+        private static ConsoleColor fadedColor = ConsoleColor.White;
+
+        private static int divisor = 10;
+        private static int modVal = 9;
+        private static int yPad = 2;
+        private static int yPad1 = 2;
+
+        internal static void StartMatrix()
         {
             Console.CursorVisible = false;
             int width, height;
@@ -413,7 +594,7 @@ namespace MouseMoverClient
             }
         }
 
-        public static int YPositionFields(int yPosition, int height)
+        private static int YPositionFields(int yPosition, int height)
         {
             if (yPosition < 0) return yPosition + height;
             else if (yPosition < height) return yPosition;
@@ -430,19 +611,6 @@ namespace MouseMoverClient
 
             for (int x = 0; x < width; ++x) { y[x] += randomPosition.Next(height); }
         }
-
-        static int matrixCounter;
-        static Random randomPosition = new Random();
-        static int flowSpeed = 50;
-        static int fastFlow = flowSpeed + 30;
-        static int textFlow = flowSpeed + 500;
-        static ConsoleColor baseColor = ConsoleColor.DarkBlue;
-        static ConsoleColor fadedColor = ConsoleColor.White;
-
-        static int divisor = 10;
-        static int modVal = 9;
-        static int yPad = 2;
-        static int yPad1 = 2;
 
         private static void ColumnUpdate(int width, int height, int[] y)
         {
@@ -511,7 +679,7 @@ namespace MouseMoverClient
             }
         }
 
-        static char Asciicharacters
+        private static char Asciicharacters
         {
             get
             {
@@ -522,90 +690,6 @@ namespace MouseMoverClient
                 else if (t <= 6) return (char)('A' + randomPosition.Next(27));
                 else return (char)(randomPosition.Next(32, 255));
 
-            }
-        }
-
-        static void Log(string message)
-        {
-            Console.WriteLine("{0}: {1}", DateTime.Now.ToString("> HH:mm:ss.fff"), message);
-        }
-    }
-
-    // https://stackoverflow.com/questions/6554536/possible-to-get-set-console-font-size-in-c-sharp-net#:~:text=After%20running%20the%20application%20(Ctrl,option%20to%20adjust%20the%20size.
-    #region ConsoleHelper
-
-    public static class ConsoleHelper
-    {
-        private const int FixedWidthTrueType = 54;
-        private const int StandardOutputHandle = -11;
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern IntPtr GetStdHandle(int nStdHandle);
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool SetCurrentConsoleFontEx(IntPtr hConsoleOutput, bool MaximumWindow, ref FontInfo ConsoleCurrentFontEx);
-
-        [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        internal static extern bool GetCurrentConsoleFontEx(IntPtr hConsoleOutput, bool MaximumWindow, ref FontInfo ConsoleCurrentFontEx);
-
-        private static readonly IntPtr ConsoleOutputHandle = GetStdHandle(StandardOutputHandle);
-
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        public struct FontInfo
-        {
-            internal int cbSize;
-            internal int FontIndex;
-            internal short FontWidth;
-            public short FontSize;
-            public int FontFamily;
-            public int FontWeight;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-            public string FontName;
-        }
-
-        public static FontInfo[] SetCurrentFont(string font, short fontSize = 0)
-        {
-            FontInfo before = new FontInfo
-            {
-                cbSize = Marshal.SizeOf<FontInfo>()
-            };
-
-            if (GetCurrentConsoleFontEx(ConsoleOutputHandle, false, ref before))
-            {
-
-                FontInfo set = new FontInfo
-                {
-                    cbSize = Marshal.SizeOf<FontInfo>(),
-                    FontIndex = 0,
-                    FontFamily = FixedWidthTrueType,
-                    FontName = font,
-                    FontWeight = 400,
-                    FontSize = fontSize > 0 ? fontSize : before.FontSize
-                };
-
-                // Get some settings from current font.
-                if (!SetCurrentConsoleFontEx(ConsoleOutputHandle, false, ref set))
-                {
-                    var ex = Marshal.GetLastWin32Error();
-                    Console.WriteLine("Set error " + ex);
-                    throw new System.ComponentModel.Win32Exception(ex);
-                }
-
-                FontInfo after = new FontInfo
-                {
-                    cbSize = Marshal.SizeOf<FontInfo>()
-                };
-                GetCurrentConsoleFontEx(ConsoleOutputHandle, false, ref after);
-
-                return new[] { before, set, after };
-            }
-            else
-            {
-                var er = Marshal.GetLastWin32Error();
-                Console.WriteLine("Get error " + er);
-                throw new System.ComponentModel.Win32Exception(er);
             }
         }
     }
