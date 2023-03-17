@@ -88,15 +88,16 @@ namespace LVP_WPF
                         this.tvShows[l].CurrSeason = prevMedia.tvShows[i].CurrSeason;
                         this.tvShows[l].LastEpisode = prevMedia.tvShows[i].LastEpisode;
                         this.tvShows[l].RunningTime = prevMedia.tvShows[i].RunningTime;
-                        if (prevMedia.tvShows[i].MultiLang)
+                        IngestSeason(prevMedia, i, l);
+
+                        if (this.tvShows[l].MultiLang)
                         {
-                            this.tvShows[l].MultiLang = prevMedia.tvShows[i].MultiLang;
                             this.tvShows[l].MultiLangCurrSeason = prevMedia.tvShows[i].MultiLangCurrSeason;
                             this.tvShows[l].MultiLangOverview = prevMedia.tvShows[i].MultiLangOverview;
                             this.tvShows[l].MultiLangName = prevMedia.tvShows[i].MultiLangName;
-                            this.tvShows[i].MultiLangLastWatched = prevMedia.tvShows[i].MultiLangLastWatched;
-                            IngestSeason(prevMedia, i, l);
-                            for (int a = 0; a < prevMedia.TvShows[i].MultiLangSeasons.Count; a++)
+                            this.tvShows[l].MultiLangLastWatched = prevMedia.tvShows[i].MultiLangLastWatched;
+
+                            for (int a = 0; a < prevMedia.tvShows[i].MultiLangSeasons.Count; a++)
                             {
                                 IngestSeasonMultiLang(prevMedia, i, l, a);
                             }
@@ -117,11 +118,17 @@ namespace LVP_WPF
                 this.tvShows[l].MultiLangSeasons[a][j].Id = prevMedia.TvShows[i].MultiLangSeasons[a][j].Id;
                 this.tvShows[l].MultiLangSeasons[a][j].Poster = prevMedia.TvShows[i].MultiLangSeasons[a][j].Poster;
                 this.tvShows[l].MultiLangSeasons[a][j].Date = prevMedia.TvShows[i].MultiLangSeasons[a][j].Date;
-                this.tvShows[l].CurrSeason = prevMedia.TvShows[i].CurrSeason;
 
                 for (int k = 0; k < prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes.Length; k++)
                 {
-                    if (this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Name.Equals(prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Name))
+                    string currFilePath = this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Path;
+                    string prevFilePath = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Path;
+                    int currIdx = currFilePath.LastIndexOf("\\");
+                    int prevIdx = prevFilePath.LastIndexOf("\\");
+                    string currFileName = currFilePath.Substring(currIdx);
+                    string prevFileName = prevFilePath.Substring(prevIdx);                    
+
+                    if (currFileName.Equals(prevFileName))
                     {
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Id = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Id;
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Name = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Name;
@@ -131,6 +138,7 @@ namespace LVP_WPF
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Path = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Path;
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].SavedTime = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].SavedTime;
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Length = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Length;
+                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Translated = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Translated;
                     }
                 }
             }
@@ -348,7 +356,7 @@ namespace LVP_WPF
                 if (this.MultiLangSeasons.Count != localShow.MultiLangSeasons.Count) return false;
 
                 // To-do: map seasons and compare each one. Adding/removing from multi lang tv show won't trigger update
-                /*for (int i = 0; i < this.MultiLangSeasons.Count; i++)
+                for (int i = 0; i < this.MultiLangSeasons.Count; i++)
                 {
                     Season[] a = this.MultiLangSeasons[i];
                     Season[] b = localShow.MultiLangSeasons[i];
@@ -356,8 +364,14 @@ namespace LVP_WPF
                     for (int j = 0; j < a.Length; j++)
                     {
                         if (a[j].Episodes.Length != b[j].Episodes.Length) return false;
+                        for (int k = 0; k < a[j].Episodes.Length; k ++)
+                        {
+                            Episode c = a[j].Episodes[k];
+                            Episode d = b[j].Episodes[k];
+                            if (!c.Path.Equals(d.Path)) return false;
+                        }
                     }
-                }*/
+                }
                 return true;
             }
 
@@ -436,6 +450,7 @@ namespace LVP_WPF
     public class Episode : Media
     {
         private bool multiEpisode = false;
+        private bool translated = false;
         private string backdrop;
         private string overview;
         DateTime? date;
@@ -449,6 +464,12 @@ namespace LVP_WPF
             Path = p;
             savedTime = 0;
             multiEpisode = me;
+        }
+
+        public bool Translated
+        {
+            get => translated;
+            set => translated = value;
         }
 
         public string Backdrop

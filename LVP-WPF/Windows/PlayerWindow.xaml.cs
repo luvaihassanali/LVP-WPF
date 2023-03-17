@@ -83,7 +83,7 @@ namespace LVP_WPF.Windows
             pollingTimer = new DispatcherTimer();
             pollingTimer.Interval = TimeSpan.FromSeconds(3);
             pollingTimer.Tick += PollingTimer_Tick;
-            inactivityTimer = new InactivityTimer(TimeSpan.FromSeconds(5)); // TimeSpan.FromHours(2));
+            inactivityTimer = new InactivityTimer(TimeSpan.FromHours(2));
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
@@ -106,7 +106,8 @@ namespace LVP_WPF.Windows
             TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
         }
 
-        private void PlayerWindow_Closed(object sender, EventArgs e)
+
+        private void PlayerWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             timelineSlider.ValueChanged -= Slider_ValueChanged;
             if (pollingTimer != null)
@@ -312,12 +313,12 @@ namespace LVP_WPF.Windows
 
         private void Control_MouseEnter(object sender, EventArgs e)
         {
-            pollingTimer.Stop();
+            if (pollingTimer != null) pollingTimer.Stop();
         }
 
         private void Control_MouseLeave(object sender, EventArgs e)
         {
-            pollingTimer.Start();
+            if (pollingTimer != null) pollingTimer.Start();
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -504,8 +505,14 @@ namespace LVP_WPF.Windows
                 if (mediaPlayer.IsPlaying) return;
             }
 
-            GuiModel.Log("Inactivity shutdown player");
             this.Dispatcher.Invoke(() => { this.Close(); });
+            foreach (Window w in Application.Current.Windows)
+            {
+                if (w as TvShowWindow != null) w.Close();
+            }
+
+            await Task.Delay(1000);
+            GuiModel.Log("Inactivity shutdown player");
             Application.Current.Shutdown();
         }
     }

@@ -74,11 +74,11 @@ namespace LVP_WPF
             if (bool.Parse(ConfigurationManager.AppSettings["Snow"])) snow.Visibility = Visibility.Visible;
         }
 
-        private void MainWindow_Closed(object sender, EventArgs e)
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            inactivityTimer.Dispose();
             Cache.SaveData();
             GuiModel.RestoreSystemCursor();
-            inactivityTimer.Dispose();
 
             if (tcpWorker != null)
             {
@@ -98,6 +98,10 @@ namespace LVP_WPF
 #endif
                 Process.Start(path);
             }
+        }
+
+        private void MainWindow_Closed(object sender, EventArgs e)
+        {
         }
 
         internal async Task AssignControlContext()
@@ -230,9 +234,14 @@ namespace LVP_WPF
             }
         }
 
-        private void InactivityDetected(object sender, EventArgs e)
+        private async void InactivityDetected(object sender, EventArgs e)
         {
             if (gui.isPlaying) return;
+            foreach (Window w in Application.Current.Windows)
+            {
+                if (w as TvShowWindow != null) w.Close();
+            }
+            await Task.Delay(1000);
             GuiModel.Log("Inactivity shutdown");
             Application.Current.Shutdown();
         }

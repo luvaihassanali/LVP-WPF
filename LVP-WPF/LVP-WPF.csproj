@@ -194,15 +194,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.0.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" />
     <PackageReference Include="FontAwesome.WPF" Version="4.7.0.9" />
-    <PackageReference Include="LibVLCSharp" Version="3.6.7" />
-    <PackageReference Include="LibVLCSharp.WPF" Version="3.6.7" />
-    <PackageReference Include="Microsoft.VisualStudio.SlowCheetah" Version="4.0.8">
+    <PackageReference Include="LibVLCSharp" Version="3.6.8" />
+    <PackageReference Include="LibVLCSharp.WPF" Version="3.6.8" />
+    <PackageReference Include="Microsoft.VisualStudio.SlowCheetah" Version="4.0.30">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.18" />

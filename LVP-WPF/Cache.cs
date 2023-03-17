@@ -37,7 +37,7 @@ namespace LVP_WPF
         private static bool libreTranslateExec = false;
         public static bool update = false;
 
-        internal static async Task Initialize(ProgressBar p, MediaElement c)
+        internal static async Task Initialize(ProgressBar pb, MediaElement me)
         {
             string driveString = ConfigurationManager.AppSettings["Drives"];
             if (driveString.Equals(String.Empty)) return;
@@ -56,13 +56,16 @@ namespace LVP_WPF
                 MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
             }
 
-            //GuiModel.Log("Media count: " + mediaCount.ToString());
+
+            //To-do test when season is italian?
+            //Multi episode srt rename
+            GuiModel.Log("Media count: " + mediaCount.ToString());
             update = CheckForUpdates();
             if (update)
             {
                 //To-do: Detect file extension changes and episode deletions
-                p.Visibility = Visibility.Visible;
-                c.Visibility = Visibility.Visible;
+                pb.Visibility = Visibility.Visible;
+                me.Visibility = Visibility.Visible;
                 MainWindow.gui.ProgressBarMax = mediaCount;
                 await BuildCache();
             }
@@ -162,6 +165,7 @@ namespace LVP_WPF
 
                 string[] langParts = lang[i].Split('\\');
                 string langKey = langParts[langParts.Length - 1];
+
                 string overview = await GetTranslation(langKey, tvShow.Overview, client);
                 if (!tvShow.MultiLangOverview.Contains(overview)) tvShow.MultiLangOverview.Add(overview);
 
@@ -173,8 +177,11 @@ namespace LVP_WPF
                         Season multiLangSeason = multiLangSeasons[k];
                         for (int l = 0; l < multiLangSeason.Episodes.Length; l++)
                         {
+                            if (multiLangSeason.Episodes[l].Translated) continue;
                             multiLangSeason.Episodes[l].Name = await GetTranslation(langKey, multiLangSeason.Episodes[l].Name, client);
                             multiLangSeason.Episodes[l].Overview = await GetTranslation(langKey, multiLangSeason.Episodes[l].Overview, client);
+                            MainWindow.gui.ProgressBarValue++;
+                            multiLangSeason.Episodes[l].Translated = true;
                         }
                     }
                 }
@@ -238,39 +245,6 @@ namespace LVP_WPF
             }
             NotificationDialog.Show("Error", "LibreTranslate failure");
             throw new Exception("LibreTranslate failure");
-        }
-
-        internal static void SwitchMultiLangTvIndex(TvShow tvShow, string lang)
-        {
-            int index = 0;
-            for (int i = 0; i < tvShow.MultiLangSeasons.Count; i++)
-            {
-                if (tvShow.MultiLangName[i].Contains(lang))
-                {
-                    index = i;
-                    break;
-                }
-            }
-
-            string currName = tvShow.Name;
-            tvShow.Name = tvShow.MultiLangName[index];
-            tvShow.MultiLangName[index] = currName;
-
-            string currOverview = tvShow.Overview;
-            tvShow.Overview = tvShow.MultiLangOverview[index];
-            tvShow.MultiLangOverview[index] = currOverview;
-
-            int currSeasonIdx = tvShow.CurrSeason;
-            tvShow.CurrSeason = tvShow.MultiLangCurrSeason[index];
-            tvShow.MultiLangCurrSeason[index] = currSeasonIdx;
-
-            Episode currLastWatched = tvShow.LastEpisode;
-            tvShow.LastEpisode = tvShow.MultiLangLastWatched[index];
-            tvShow.MultiLangLastWatched[index] = currLastWatched;
-
-            Season[] currSeason = tvShow.Seasons;
-            tvShow.Seasons = tvShow.MultiLangSeasons[index];
-            tvShow.MultiLangSeasons[index] = currSeason;
         }
 
         private static async Task BuildTvShowGeneralData(TvShow tvShow, HttpClient client)
@@ -418,7 +392,6 @@ namespace LVP_WPF
 
                 for (int k = 0; k < episodes.Length; k++)
                 {
-                    MainWindow.gui.ProgressBarValue++;
                     if (episodes[k].Id != 0)
                     {
                         jEpIndex++;
@@ -509,8 +482,22 @@ namespace LVP_WPF
                             char drive = newPath[0];
                             string drivePath = drive + ":";
                             newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
-
                             File.Move(oldPath, newPath);
+                            if (tvShow.MultiLang)
+                            {
+                                int separatorIndex = oldPath.LastIndexOf(".");
+                                string oldSrtPath = oldPath.Substring(0, separatorIndex) + ".srt";
+                                if (File.Exists(oldSrtPath))
+                                {
+                                    int newSeparatorIndex = newPath.LastIndexOf(".");
+                                    string newSrtPath = newPath.Substring(0, separatorIndex) + "srt";
+                                    File.Move(oldSrtPath, newSrtPath);
+                                }
+                                else
+                                {
+                                    NotificationDialog.Show("Error", "No srt file found for " + newPath);
+                                }
+                            }
                         }
                         catch (Exception e)
                         {
@@ -533,6 +520,7 @@ namespace LVP_WPF
                         episode.Backdrop = await DownloadImage(episode.Backdrop, tvShow.Name, false);
                     }
                     jEpIndex++;
+                    MainWindow.gui.ProgressBarValue++;
                 }
                 seasonIndex++;
             }
@@ -822,6 +810,7 @@ namespace LVP_WPF
                 for (int j = 0; j < episodeEntries.Length; j++)
                 {
                     mediaCount++;
+                    if (tvShow.MultiLang) mediaCount++;
                     string[] namePath = episodeEntries[j].Split('\\');
                     string[] episodeNameNumber = namePath[namePath.Length - 1].Split(new[] { '%' }, 2);
                     int fileSuffixIndex = episodeNameNumber[1].LastIndexOf('.');

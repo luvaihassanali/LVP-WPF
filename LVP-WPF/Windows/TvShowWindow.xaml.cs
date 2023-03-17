@@ -7,9 +7,11 @@ using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
+using System.Printing;
 using System.Reflection.Emit;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -64,6 +66,7 @@ namespace LVP_WPF.Windows
         [ObservableProperty]
         private BitmapImage overlay;
         private double scrollViewerOffset = 0;
+        private bool langChanged = false;
 
         public TvShowWindow()
         {
@@ -82,8 +85,18 @@ namespace LVP_WPF.Windows
             TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
             MainWindow.gui.episodeScrollViewer = this.scrollViewer;
             MainWindow.gui.tvMovieCloseButton = this.closeButton;
-            GenerateEpisodeItemContainers();
+            _ = GenerateEpisodeItemContainers();
             TcpSerialListener.layoutPoint.Select("TvShowWindow");
+        }
+
+        private void TvShowWindow_Closing(object sender, CancelEventArgs e)
+        {
+            if (langChanged)
+            {
+                GuiModel.Log("Starting to switch index back");
+                SwitchMultiLangTvIndex(tvShow, "English");
+                GuiModel.Log("Finished switching indexes back");
+            }
         }
 
         private async Task GenerateEpisodeItemContainers()
@@ -490,6 +503,7 @@ namespace LVP_WPF.Windows
         {
             loadGrid.Visibility = Visibility.Visible;
             TvShowWindow_Fade(0.1);
+                        
             if (langComboBox.SelectedIndex == 0)
             {
                 PlayerWindow.subtitleFile = false;
@@ -501,7 +515,8 @@ namespace LVP_WPF.Windows
 
             if (!tvShow.Name.Contains(langComboBox.SelectedValue.ToString()))
             {
-                Cache.SwitchMultiLangTvIndex(tvShow, langComboBox.SelectedValue.ToString());
+                SwitchMultiLangTvIndex(tvShow, langComboBox.SelectedValue.ToString());
+                langChanged = true;
                 this.ShowName = tvShow.Name.Contains("(") ? tvShow.Name : tvShow.Name + " (" + tvShow.Date.GetValueOrDefault().Year + ")";
                 this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
                 UpdateTvWindowSeasonChange(tvShow.CurrSeason);
@@ -511,8 +526,47 @@ namespace LVP_WPF.Windows
             {
                 await Task.Delay(100);
             }
+
             TvShowWindow_Fade(1.0);
             loadGrid.Visibility = Visibility.Hidden;
+        }
+
+        internal void SwitchMultiLangTvIndex(TvShow tvShow, string lang)
+        {
+            int index = 0;
+            for (int i = 0; i < tvShow.MultiLangSeasons.Count; i++)
+            {
+                if (lang.Equals("English") && tvShow.MultiLangName[i].Equals(tvShow.Name.Split("(")[0]))
+                {
+                    index = i;
+                    break;
+                } 
+                else if (tvShow.MultiLangName[i].Contains(lang))
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            string currName = tvShow.Name;
+            tvShow.Name = tvShow.MultiLangName[index];
+            tvShow.MultiLangName[index] = currName;
+
+            string currOverview = tvShow.Overview;
+            tvShow.Overview = tvShow.MultiLangOverview[index];
+            tvShow.MultiLangOverview[index] = currOverview;
+
+            int currSeasonIdx = tvShow.CurrSeason;
+            tvShow.CurrSeason = tvShow.MultiLangCurrSeason[index];
+            tvShow.MultiLangCurrSeason[index] = currSeasonIdx;
+
+            Episode currLastWatched = tvShow.LastEpisode;
+            tvShow.LastEpisode = tvShow.MultiLangLastWatched[index];
+            tvShow.MultiLangLastWatched[index] = currLastWatched;
+
+            Season[] currSeason = tvShow.Seasons;
+            tvShow.Seasons = tvShow.MultiLangSeasons[index];
+            tvShow.MultiLangSeasons[index] = currSeason;
         }
 
         private async void LangComboBox_MouseDown(object sender, MouseButtonEventArgs e)
