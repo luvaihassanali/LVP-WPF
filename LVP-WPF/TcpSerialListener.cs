@@ -61,11 +61,8 @@ namespace LVP_WPF
             esp8266ServerPort = Int32.Parse(ConfigurationManager.AppSettings["Esp8266Port"]);
             esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
             serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
-
             layoutPoint = new LayoutPoint(g);
             if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
-
-
         }
 
         public void StartThread()

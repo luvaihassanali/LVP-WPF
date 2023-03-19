@@ -1,19 +1,18 @@
-﻿using System.ComponentModel.Design.Serialization;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 namespace MediaIndexUtil
 {
     public partial class Form1 : Form
     {
-        private List<string[]> list = new List<string[]>();
+        private List<string[]> indexRenameList = new List<string[]>();
         private TreeNode rootNode = null;
-        private string currentDirectory = string.Empty;
+        private string currentFolder = string.Empty;
 
         public Form1()
         {
             InitializeComponent();
             PopulateTreeView("..\\");
-            treeView1_NodeMouseClick(null, null);
+            TreeView1_NodeMouseClick(null, null);
         }
 
         private void PopulateTreeView(string path)
@@ -46,7 +45,7 @@ namespace MediaIndexUtil
             }
         }
 
-        void treeView1_NodeMouseClick(object? sender, TreeNodeMouseClickEventArgs? e)
+        void TreeView1_NodeMouseClick(object? sender, TreeNodeMouseClickEventArgs? e)
         {
             TreeNode newSelected;
             if (sender == null)
@@ -67,16 +66,16 @@ namespace MediaIndexUtil
             listView1.Items.Clear();
 
             DirectoryInfo nodeDirInfo = (DirectoryInfo)newSelected.Tag;
-            currentDirectory = nodeDirInfo.FullName;
-
-            ListViewItem.ListViewSubItem[] subItems;
-            ListViewItem item;
-
+            currentFolder = nodeDirInfo.FullName;
             DirectoryInfo[] directories = nodeDirInfo.GetDirectories();
+
             Array.Sort(directories, delegate (DirectoryInfo d1, DirectoryInfo d2)
             {
                 return d1.Name.CompareTo(d2.Name);
             });
+
+            ListViewItem.ListViewSubItem[] subItems;
+            ListViewItem item;
             foreach (DirectoryInfo dir in directories)
             {
                 if (dir.Name.Contains("MediaIndexer")) continue;
@@ -85,11 +84,13 @@ namespace MediaIndexUtil
                 item.SubItems.AddRange(subItems);
                 listView1.Items.Add(item);
             }
+
             FileInfo[] files = nodeDirInfo.GetFiles();
             Array.Sort(files, delegate (FileInfo f1, FileInfo f2)
             {
                 return f1.Name.CompareTo(f2.Name);
             });
+
             foreach (FileInfo file in files)
             {
                 item = new ListViewItem(file.Name, 1);
@@ -97,24 +98,20 @@ namespace MediaIndexUtil
                 item.SubItems.AddRange(subItems);
                 listView1.Items.Add(item);
             }
-
             listView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
         }
 
-        private void listView1_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
+        private void ListView1_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
         {
-            if (listView1.SelectedItems.Count == 0)
-                return;
-
+            if (listView1.SelectedItems.Count == 0) return;
             ListViewItem item = listView1.SelectedItems[0];
-
             if (item.SubItems[1].Text == "Directory") return;
 
             string fullPath = item.SubItems[2].Text;
             string[] pathComponents = fullPath.Split("\\");
             string fileName = pathComponents[pathComponents.Length - 1];
             string[] fileComponents = fileName.Split('%');
-            list.Add(new string[] { fullPath, fileComponents[1].Trim(), fileName });
+            indexRenameList.Add(new string[] { fullPath, fileComponents[1].Trim(), fileName });
 
             ListViewItem newItem;
             ListViewItem.ListViewSubItem[] subItems;
@@ -124,31 +121,30 @@ namespace MediaIndexUtil
             listView2.Items.Add(newItem);
         }
 
-        private void listView2_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
+        private void ListView2_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
         {
-            if (listView2.SelectedItems.Count == 0)
-                return;
-
+            if (listView2.SelectedItems.Count == 0) return;
             string name = e.Item.SubItems[1].Text.Trim();
             listView2.Items.Remove(e.Item);
-            foreach (string[] entry in list)
+
+            foreach (string[] entry in indexRenameList)
             {
                 if (entry[1].Equals(name))
                 {
-                    list.Remove(entry);
+                    indexRenameList.Remove(entry);
                     break;
                 }
             }
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void RenameButton_Click(object sender, EventArgs e)
         {
             string targetIndex = textBox1.Text;
             TreeNode prevNode = treeView1.SelectedNode;
-            RenameFiles(list, targetIndex);
+            RenameFiles(indexRenameList, targetIndex);
             listView2.Items.Clear();
             textBox1.Clear();
-            treeView1_NodeMouseClick(prevNode, null);
+            TreeView1_NodeMouseClick(prevNode, null);
         }
 
         private void RenameFiles(List<string[]> list, string targetIndex)
@@ -180,11 +176,11 @@ namespace MediaIndexUtil
         private void RenameSrtFiles()
         {
             Cursor.Current = Cursors.WaitCursor;
-            string[] files = Directory.GetFiles(currentDirectory);
+            string[] files = Directory.GetFiles(currentFolder);
             Array.Sort(files);
             int lineNum = 0;
-            string log = "SRT Rename for directory: " + currentDirectory + "\n";
-            Trace.WriteLine("SRT Rename for directory: " + currentDirectory);
+            string log = "SRT Rename for directory: " + currentFolder + "\n";
+            Trace.WriteLine("SRT Rename for directory: " + currentFolder);
             for (int i = 0; i < files.Length - 1; i+=2)
             {
                 string f1;
@@ -236,6 +232,7 @@ namespace MediaIndexUtil
                     }
                 }
             }
+
             Trace.WriteLine("Finished");
             log += "Finished";
             File.WriteAllText("log.txt", log);
@@ -243,7 +240,7 @@ namespace MediaIndexUtil
             Cursor.Current = Cursors.Arrow;
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private void CompareButton_Click(object sender, EventArgs e)
         {
             using (var fbd = new FolderBrowserDialog())
             {
@@ -251,7 +248,7 @@ namespace MediaIndexUtil
 
                 if (result == DialogResult.OK && !string.IsNullOrWhiteSpace(fbd.SelectedPath))
                 {
-                    CompareDirectories(currentDirectory, fbd.SelectedPath);
+                    CompareDirectories(currentFolder, fbd.SelectedPath);
                 }
             }
         }
@@ -285,6 +282,7 @@ namespace MediaIndexUtil
             if (showDir1.Contains("Extras")) {
                 startIndex = 2;
             }
+
             int seasonIndex = 1;
             for (int i = startIndex; i < showDir1.Length; i++)
             {
@@ -315,13 +313,13 @@ namespace MediaIndexUtil
             return fileList1.Count() == fileList2.Count();
         }
 
-        private void button3_Click(object sender, EventArgs e)
+        private void TreeButton_Click(object sender, EventArgs e)
         {
             Cursor.Current = Cursors.WaitCursor;
-            if (currentDirectory.EndsWith("\\")) currentDirectory = currentDirectory.Substring(0, currentDirectory.Length - 1);
-            string[] directoryParts = currentDirectory.Split("\\");
+            if (currentFolder.EndsWith("\\")) currentFolder = currentFolder.Substring(0, currentFolder.Length - 1);
+            string[] directoryParts = currentFolder.Split("\\");
             DirectoryInfo treeFolder = Directory.CreateDirectory(directoryParts[directoryParts.Length - 1]);
-            CreateTree(currentDirectory, treeFolder);
+            CreateTree(currentFolder, treeFolder);
             Cursor.Current = Cursors.Arrow;
         }
 
@@ -344,18 +342,15 @@ namespace MediaIndexUtil
             }
         }
 
-        private void button4_Click(object sender, EventArgs e)
+        private void OpenFolderButton_Click(object sender, EventArgs e)
         {
             folderBrowserDialog1.ShowDialog();
             string path = folderBrowserDialog1.SelectedPath;
-            DirectoryInfo info = new DirectoryInfo(path);
-
             listView1.Items.Clear();
             listView2.Items.Clear();
             treeView1.Nodes.Clear();
-
             PopulateTreeView(path);
-            treeView1_NodeMouseClick(null, null);
+            TreeView1_NodeMouseClick(null, null);
         }
     }
 }

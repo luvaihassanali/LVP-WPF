@@ -29,9 +29,9 @@ namespace MouseMoverClient
         private static int joystickY;
         private static int opacity;
 
-        private static TcpClient tcpClient;
-        private static SerialPort serialPort;
         private static System.Timers.Timer pollingTimer;
+        private static SerialPort serialPort;
+        private static TcpClient tcpClient;
 
         private static void Main(string[] args)
         {
@@ -86,14 +86,13 @@ namespace MouseMoverClient
             Log("Starting listener");
             while (!Console.KeyAvailable)
             {
-
                 Log("Pinging server...");
                 connectionEstablished = false;
 
                 Ping pingSender = new Ping();
                 PingOptions options = new PingOptions();
                 options.DontFragment = true;
-                string data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; //32 bytes
+                string data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; // 32 bytes
                 byte[] buffer = Encoding.ASCII.GetBytes(data);
                 int timeout = 120;
 
@@ -398,26 +397,22 @@ namespace MouseMoverClient
 
     // https://stackoverflow.com/questions/13656846/how-to-programmatic-disable-c-sharp-console-applications-quick-edit-mode/36720802#36720802
     // https://stackoverflow.com/questions/6554536/possible-to-get-set-console-font-size-in-c-sharp-net#:~:text=After%20running%20the%20application%20(Ctrl,option%20to%20adjust%20the%20size.
+    
     #region ConsoleHelper
 
     public static class ConsoleHelper
     {
-        // General
-
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern IntPtr GetStdHandle(int nStdHandle);
 
-        // Set window position
-
+        // Set window position x=600,y=680
         private const int SWP_NOSIZE = 0x0001;
-
         internal static void SetWindowPosition(int x, int y)
         {
             SetWindowPos(MyConsole, 0, 600, 680, 0, 0, SWP_NOSIZE);
         }
 
         // Transparency
-
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_LAYERED = 0x80000;
         private const uint LWA_ALPHA = 0x2;
@@ -433,7 +428,6 @@ namespace MouseMoverClient
         }
 
         // Font 
-
         private const int FixedWidthTrueType = 54;
         private const int StandardOutputHandle = -11;
 
@@ -480,7 +474,7 @@ namespace MouseMoverClient
                     FontSize = fontSize > 0 ? fontSize : before.FontSize
                 };
 
-                // Get some settings from current font.
+                // Get settings from current font
                 if (!SetCurrentConsoleFontEx(ConsoleOutputHandle, false, ref set))
                 {
                     var ex = Marshal.GetLastWin32Error();
@@ -505,7 +499,6 @@ namespace MouseMoverClient
         }
 
         // Disable quick edit mode
-
         private const uint ENABLE_QUICK_EDIT = 0x0040;
         // STD_INPUT_HANDLE (DWORD): -10 is the standard input device
         private const int STD_INPUT_HANDLE = -10;
@@ -543,7 +536,6 @@ namespace MouseMoverClient
         }
 
         // Hide title bar
-
         [DllImport("kernel32.dll", ExactSpelling = true)]
         private static extern IntPtr GetConsoleWindow();
 
@@ -566,7 +558,6 @@ namespace MouseMoverClient
         }
 
         // Matrix
-
         private static int matrixCounter;
         private static Random randomPosition = new Random();
         private static int flowSpeed = 50;

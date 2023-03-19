@@ -33,21 +33,21 @@
             this.imageList1 = new System.Windows.Forms.ImageList(this.components);
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
+            this.OpenFolder_Button = new System.Windows.Forms.Button();
             this.treeView1 = new System.Windows.Forms.TreeView();
             this.listView1 = new System.Windows.Forms.ListView();
             this.columnHeader1 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader3 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader2 = new System.Windows.Forms.ColumnHeader();
-            this.button3 = new System.Windows.Forms.Button();
+            this.Tree_Button = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
-            this.button2 = new System.Windows.Forms.Button();
-            this.button1 = new System.Windows.Forms.Button();
+            this.Compare_Button = new System.Windows.Forms.Button();
+            this.Rename_Button = new System.Windows.Forms.Button();
             this.listView2 = new System.Windows.Forms.ListView();
             this.columnHeader4 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader6 = new System.Windows.Forms.ColumnHeader();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
-            this.button4 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -79,10 +79,10 @@
             // 
             // splitContainer1.Panel2
             // 
-            this.splitContainer1.Panel2.Controls.Add(this.button3);
+            this.splitContainer1.Panel2.Controls.Add(this.Tree_Button);
             this.splitContainer1.Panel2.Controls.Add(this.textBox1);
-            this.splitContainer1.Panel2.Controls.Add(this.button2);
-            this.splitContainer1.Panel2.Controls.Add(this.button1);
+            this.splitContainer1.Panel2.Controls.Add(this.Compare_Button);
+            this.splitContainer1.Panel2.Controls.Add(this.Rename_Button);
             this.splitContainer1.Panel2.Controls.Add(this.listView2);
             this.splitContainer1.Panel2.Controls.Add(this.checkBox1);
             this.splitContainer1.Size = new System.Drawing.Size(1097, 491);
@@ -97,7 +97,7 @@
             // 
             // splitContainer2.Panel1
             // 
-            this.splitContainer2.Panel1.Controls.Add(this.button4);
+            this.splitContainer2.Panel1.Controls.Add(this.OpenFolder_Button);
             this.splitContainer2.Panel1.Controls.Add(this.treeView1);
             // 
             // splitContainer2.Panel2
@@ -106,6 +106,18 @@
             this.splitContainer2.Size = new System.Drawing.Size(809, 491);
             this.splitContainer2.SplitterDistance = 274;
             this.splitContainer2.TabIndex = 0;
+            // 
+            // OpenFolder_Button
+            // 
+            this.OpenFolder_Button.BackColor = System.Drawing.SystemColors.MenuHighlight;
+            this.OpenFolder_Button.FlatStyle = System.Windows.Forms.FlatStyle.Popup;
+            this.OpenFolder_Button.ForeColor = System.Drawing.SystemColors.ButtonFace;
+            this.OpenFolder_Button.Location = new System.Drawing.Point(247, 465);
+            this.OpenFolder_Button.Name = "OpenFolder_Button";
+            this.OpenFolder_Button.Size = new System.Drawing.Size(24, 23);
+            this.OpenFolder_Button.TabIndex = 1;
+            this.OpenFolder_Button.UseVisualStyleBackColor = false;
+            this.OpenFolder_Button.Click += new System.EventHandler(this.OpenFolderButton_Click);
             // 
             // treeView1
             // 
@@ -117,7 +129,7 @@
             this.treeView1.SelectedImageIndex = 0;
             this.treeView1.Size = new System.Drawing.Size(274, 491);
             this.treeView1.TabIndex = 0;
-            this.treeView1.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.treeView1_NodeMouseClick);
+            this.treeView1.NodeMouseClick += new System.Windows.Forms.TreeNodeMouseClickEventHandler(this.TreeView1_NodeMouseClick);
             // 
             // listView1
             // 
@@ -133,7 +145,7 @@
             this.listView1.TabIndex = 0;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
-            this.listView1.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.listView1_ItemSelectionChanged);
+            this.listView1.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.ListView1_ItemSelectionChanged);
             // 
             // columnHeader1
             // 
@@ -149,16 +161,16 @@
             this.columnHeader2.Text = "Path";
             this.columnHeader2.Width = 100;
             // 
-            // button3
+            // Tree_Button
             // 
-            this.button3.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.button3.Location = new System.Drawing.Point(-1, 5);
-            this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(40, 25);
-            this.button3.TabIndex = 5;
-            this.button3.Text = "Tree";
-            this.button3.UseVisualStyleBackColor = true;
-            this.button3.Click += new System.EventHandler(this.button3_Click);
+            this.Tree_Button.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.Tree_Button.Location = new System.Drawing.Point(-1, 5);
+            this.Tree_Button.Name = "Tree_Button";
+            this.Tree_Button.Size = new System.Drawing.Size(40, 25);
+            this.Tree_Button.TabIndex = 5;
+            this.Tree_Button.Text = "Tree";
+            this.Tree_Button.UseVisualStyleBackColor = true;
+            this.Tree_Button.Click += new System.EventHandler(this.TreeButton_Click);
             // 
             // textBox1
             // 
@@ -169,27 +181,27 @@
             this.textBox1.TabIndex = 2;
             this.textBox1.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
             // 
-            // button2
+            // Compare_Button
             // 
-            this.button2.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.button2.Location = new System.Drawing.Point(44, 5);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(66, 25);
-            this.button2.TabIndex = 4;
-            this.button2.Text = "Compare";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.button2_Click);
+            this.Compare_Button.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.Compare_Button.Location = new System.Drawing.Point(44, 5);
+            this.Compare_Button.Name = "Compare_Button";
+            this.Compare_Button.Size = new System.Drawing.Size(66, 25);
+            this.Compare_Button.TabIndex = 4;
+            this.Compare_Button.Text = "Compare";
+            this.Compare_Button.UseVisualStyleBackColor = true;
+            this.Compare_Button.Click += new System.EventHandler(this.CompareButton_Click);
             // 
-            // button1
+            // Rename_Button
             // 
-            this.button1.Cursor = System.Windows.Forms.Cursors.Hand;
-            this.button1.Location = new System.Drawing.Point(218, 5);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(63, 25);
-            this.button1.TabIndex = 1;
-            this.button1.Text = "Rename";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.Rename_Button.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.Rename_Button.Location = new System.Drawing.Point(218, 5);
+            this.Rename_Button.Name = "Rename_Button";
+            this.Rename_Button.Size = new System.Drawing.Size(63, 25);
+            this.Rename_Button.TabIndex = 1;
+            this.Rename_Button.Text = "Rename";
+            this.Rename_Button.UseVisualStyleBackColor = true;
+            this.Rename_Button.Click += new System.EventHandler(this.RenameButton_Click);
             // 
             // listView2
             // 
@@ -204,7 +216,7 @@
             this.listView2.TabIndex = 1;
             this.listView2.UseCompatibleStateImageBehavior = false;
             this.listView2.View = System.Windows.Forms.View.Details;
-            this.listView2.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.listView2_ItemSelectionChanged);
+            this.listView2.ItemSelectionChanged += new System.Windows.Forms.ListViewItemSelectionChangedEventHandler(this.ListView2_ItemSelectionChanged);
             // 
             // columnHeader4
             // 
@@ -225,16 +237,6 @@
             this.checkBox1.TabIndex = 3;
             this.checkBox1.Text = "SRT";
             this.checkBox1.UseVisualStyleBackColor = true;
-            // 
-            // button4
-            // 
-            this.button4.Location = new System.Drawing.Point(247, 465);
-            this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(24, 23);
-            this.button4.TabIndex = 1;
-            this.button4.Text = "/";
-            this.button4.UseVisualStyleBackColor = true;
-            this.button4.Click += new System.EventHandler(this.button4_Click);
             // 
             // Form1
             // 
@@ -269,13 +271,13 @@
         private ColumnHeader columnHeader4;
         private ColumnHeader columnHeader6;
         private ColumnHeader columnHeader2;
-        private Button button1;
+        private Button Rename_Button;
         private TextBox textBox1;
         private ColumnHeader columnHeader3;
         private CheckBox checkBox1;
-        private Button button2;
-        private Button button3;
-        private Button button4;
+        private Button Compare_Button;
+        private Button Tree_Button;
+        private Button OpenFolder_Button;
         private FolderBrowserDialog folderBrowserDialog1;
     }
 }
