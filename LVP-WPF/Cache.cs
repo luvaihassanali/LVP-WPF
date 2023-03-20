@@ -648,7 +648,7 @@ namespace LVP_WPF
             return filePath;
         }
 
-#endregion
+        #endregion
 
         internal static bool CheckForUpdates()
         {
@@ -785,12 +785,19 @@ namespace LVP_WPF
                 {
                     mediaCount++;
                     if (tvShow.MultiLang) mediaCount++;
-                    string[] namePath = episodeEntries[j].Split('\\');
-                    string[] episodeNameNumber = namePath[namePath.Length - 1].Split(new[] { '%' }, 2);
-                    int fileSuffixIndex = episodeNameNumber[1].LastIndexOf('.');
-                    string episodeName = episodeNameNumber[1].Substring(0, fileSuffixIndex).Trim();
-                    Episode episode = new Episode(0, episodeName, episodeEntries[j]);
-                    season.Episodes[j] = episode;
+                    try
+                    {
+                        string[] namePath = episodeEntries[j].Split('\\');
+                        string[] episodeNameNumber = namePath[namePath.Length - 1].Split(new[] { '%' }, 2);
+                        int fileSuffixIndex = episodeNameNumber[1].LastIndexOf('.');
+                        string episodeName = episodeNameNumber[1].Substring(0, fileSuffixIndex).Trim();
+                        Episode episode = new Episode(0, episodeName, episodeEntries[j]);
+                        season.Episodes[j] = episode;
+                    }
+                    catch
+                    {
+                        NotificationDialog.Show("Error", "Episode is missing separator in " + tvShow.Name + ", Season " + (i + 1)); ;
+                    }
                 }
                 seasons[i] = season;
             }
