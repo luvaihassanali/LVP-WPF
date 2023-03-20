@@ -32,6 +32,7 @@ namespace LVP_WPF
         private static List<string> moviePathList = new List<string>();
         public static int mediaCount = 0;
         public static bool update = false;
+        private static bool launchTranslator = false;
 
         internal static async Task Initialize(ProgressBar pb, MediaElement me)
         {
@@ -109,6 +110,15 @@ namespace LVP_WPF
             Array.Sort(MainWindow.model.Movies, Movie.SortMoviesAlphabetically());
             Array.Sort(MainWindow.model.TvShows, TvShow.SortTvShowsAlphabetically());
             SaveData();
+
+            if (launchTranslator)
+            {
+                Process[] libreTranslateProc = Process.GetProcessesByName("libretranslate");
+                if (libreTranslateProc.Length != 0)
+                {
+                    libreTranslateProc[0].Kill();
+                }
+            }
         }
 
         private static async Task BuildTvShowCache(TvShow tvShow, HttpClient client)
@@ -188,10 +198,25 @@ namespace LVP_WPF
 
         private static async Task<string> GetTranslation(string target, string msg, HttpClient client)
         {
-            Process[] processes = Process.GetProcessesByName("Docker Desktop");
-            if (processes.Length == 0)
+            if (!launchTranslator)
             {
-                NotificationDialog.Show("Error", "LibreTranslate not running");
+                string path = ConfigurationManager.AppSettings["LibreTranslatePath"] + "libretranslate.exe";
+                if (path.Contains("%APPDATA%")) { path = path.Replace("%APPDATA%", Environment.GetEnvironmentVariable("APPDATA")); }
+                if (path.Contains("%LOCALAPPDATA%")) { path = path.Replace("%LOCALAPPDATA%", Environment.GetEnvironmentVariable("LOCALAPPDATA")); }
+            
+                if (!File.Exists(path))
+                {
+                    NotificationDialog.Show("Error", "LibreTranslate exe does not exist at path " + path);
+                }
+
+                Process libreTranslateProc = new Process();
+                libreTranslateProc.StartInfo.FileName = path;
+                libreTranslateProc.StartInfo.UseShellExecute = true;
+                libreTranslateProc.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
+                libreTranslateProc.Start();
+
+                await Task.Delay(2000);
+                launchTranslator = true;
             }
 
             Dictionary<string, string> values = new Dictionary<string, string>
@@ -779,7 +804,8 @@ namespace LVP_WPF
 
                 for (int j = 0; j < episodeEntries.Length; j++)
                 {
-                    mediaCount++;
+                    mediaCount++; 
+                    if (tvShow.MultiLang) mediaCount++;
                     try
                     {
                         string[] namePath = episodeEntries[j].Split('\\');
