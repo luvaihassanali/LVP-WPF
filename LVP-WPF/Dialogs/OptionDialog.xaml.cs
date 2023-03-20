@@ -48,7 +48,7 @@ namespace LVP_WPF
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
             GuiModel.RestoreSystemCursor();
-            //Cache.SaveData(); //To-do enable
+            Cache.SaveData();
             Environment.Exit(0);
         }
 

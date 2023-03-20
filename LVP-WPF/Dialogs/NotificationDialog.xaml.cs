@@ -1,7 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
-using System.Diagnostics;
-using System.Security.Policy;
 using System.Windows;
 
 namespace LVP_WPF
