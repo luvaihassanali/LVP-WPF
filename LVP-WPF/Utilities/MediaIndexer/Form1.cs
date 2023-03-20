@@ -6,7 +6,8 @@ namespace MediaIndexUtil
     {
         private List<string[]> indexRenameList = new List<string[]>();
         private TreeNode rootNode = null;
-        private string currentFolder = string.Empty;
+        private string currentFolder = String.Empty;
+        private string log = String.Empty;
 
         public Form1()
         {
@@ -256,7 +257,7 @@ namespace MediaIndexUtil
         private void CompareDirectories(string compareDir1, string compareDir2)
         {
             Cursor.Current = Cursors.WaitCursor;
-            string log = "Compare for directory: " + compareDir1 + " and " + compareDir2 + "\n";
+            log = "Compare for directory: " + compareDir1 + " and " + compareDir2 + "\n";
             Trace.WriteLine("Compare for directory: " + compareDir1 + " and " + compareDir2);
 
             string[] showDir1 = Directory.GetDirectories(compareDir1);
@@ -267,26 +268,24 @@ namespace MediaIndexUtil
                 Trace.WriteLine("Warning: Number of seasons not the same");
                 log += "Warning: Number of seasons not the same\n";
             }
-
-            if (showDir2.Length > showDir1.Length)
+            
+            foreach(string path in showDir1)
             {
-                string[] temp = showDir1;
-                showDir1 = showDir2;
-                showDir2 = temp;
+                if (path.Contains("Extras"))
+                {
+                    List<string> temp = new List<string>(showDir1);
+                    temp.Remove(path);
+                    showDir1 = temp.ToArray();
+                    break;
+                }
             }
-
-            // Assume folder will be named "Season " so MediaIndexer folder always at index 0
-            // Except if Extras then i = 2
-            int startIndex = 1;
-            // Assume never will be extras in 2nd lang folder
-            if (showDir1.Contains("Extras")) {
-                startIndex = 2;
-            }
+            Array.Sort(showDir1, SeasonComparer);
+            Array.Sort(showDir2, SeasonComparer);
 
             int seasonIndex = 1;
-            for (int i = startIndex; i < showDir1.Length; i++)
+            for (int i = 0; i < showDir1.Length; i++)
             {
-                if (CompareFiles(showDir1[i], showDir2[i]))
+                if (CompareFiles(showDir1[i], showDir2[i], ref log))
                 {
                     Trace.WriteLine("Season " + seasonIndex + " ✓" + " " + showDir1[i] + " and " + showDir2[i]);
                     log += "Season " + seasonIndex + " ✓" + " " + showDir1[i] + " and " + showDir2[i] + "\n";
@@ -306,11 +305,46 @@ namespace MediaIndexUtil
             Cursor.Current = Cursors.Arrow;
         }
 
-        private bool CompareFiles(string d1, string d2)
+        private int SeasonComparer(string seasonB, string seasonA)
         {
-            var fileList1 = Directory.GetFiles(d1).Where(name => !name.EndsWith(".srt"));
-            var fileList2 = Directory.GetFiles(d2).Where(name => !name.EndsWith(".srt"));
-            return fileList1.Count() == fileList2.Count();
+            if (seasonB.Contains("Extras"))
+            {
+                return -1;
+            }
+            else if (seasonA.Contains("Extras"))
+            {
+                return 1;
+            }
+            string[] seasonValuePathA = seasonA.Split();
+            string[] seasonValuePathB = seasonB.Split();
+            int seasonValueA = Int32.Parse(seasonValuePathA[seasonValuePathA.Length - 1]);
+            int seasonValueB = Int32.Parse(seasonValuePathB[seasonValuePathB.Length - 1]);
+            if (seasonValueA == seasonValueB) return 0;
+            if (seasonValueA < seasonValueB) return 1;
+            return -1;
+        }
+
+        private bool CompareFiles(string d1, string d2, ref string log)
+        {
+            List<string> fileList1 = Directory.GetFiles(d1).Where(name => !name.EndsWith(".srt")).ToList();
+            List<string> fileList2 = Directory.GetFiles(d2).Where(name => !name.EndsWith(".srt")).ToList();
+            var min = fileList1.Count < fileList2.Count ? fileList1.Count : fileList2.Count;
+            for (int i = 0; i < min; i++)
+            {
+                string[] n1Parts = fileList1[i].Split("\\");
+                string n1 = n1Parts[n1Parts.Length - 1];
+                n1 = n1.Split('.')[0];
+                string[] n2Parts = fileList2[i].Split("\\");
+                string n2 = n2Parts[n2Parts.Length - 1];
+                n2 = n2.Split('.')[0];
+                if (!n1.Trim().Equals(n2.Trim())) {
+                    log += "Not a match: " + n1 + " and " + n2 + "\n";
+                    Trace.WriteLine("Not a match: " + n1 + " and " + n2);
+                }
+            }
+            log += fileList1.Count + " " + fileList2.Count + "\n";
+            Trace.WriteLine(fileList1.Count + " " + fileList2.Count);
+            return fileList1.Count == fileList2.Count;
         }
 
         private void TreeButton_Click(object sender, EventArgs e)

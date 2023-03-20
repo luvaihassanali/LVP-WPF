@@ -729,6 +729,7 @@ namespace LVP_WPF
                 //To-do: english not first folder so show.Seasons not english default
                 Array.Sort(seasonEntries);
                 seasonEntries = Directory.GetDirectories(seasonEntries[0]);
+                Array.Sort(seasonEntries, SeasonComparer);
                 show.Seasons = ProcessTvShowSeasonDirectories(seasonEntries, show);
                 return ProcessMultiLangTvDirectory(targetDir, show);
             }

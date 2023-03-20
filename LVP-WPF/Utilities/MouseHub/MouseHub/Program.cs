@@ -357,6 +357,7 @@ namespace MouseMoverClient
 
         private static void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
+            Console.SetCursorPosition(0, Console.CursorTop);
             SerialPort serialPort = (SerialPort)sender;
             if (e.EventType == SerialData.Chars)
             {

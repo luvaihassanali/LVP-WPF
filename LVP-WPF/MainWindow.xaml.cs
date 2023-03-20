@@ -34,6 +34,7 @@ namespace LVP_WPF
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            //System.Threading.Thread.Sleep(30000);
             await Task.Run(() =>
             {
 #if RELEASE
