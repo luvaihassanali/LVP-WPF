@@ -30,7 +30,7 @@ namespace LVP_WPF
 
         private static List<string> tvPathList = new List<string>();
         private static List<string> moviePathList = new List<string>();
-        private static int mediaCount = 0;
+        public static int mediaCount = 0;
         public static bool update = false;
 
         internal static async Task Initialize(ProgressBar pb, MediaElement me)
@@ -52,13 +52,13 @@ namespace LVP_WPF
                 MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
             }
 
-            //GuiModel.Log("Media count: " + mediaCount.ToString());
             update = CheckForUpdates();
             if (update)
             {
                 //To-do: Detect file extension changes and episode deletions
                 pb.Visibility = Visibility.Visible;
                 me.Visibility = Visibility.Visible;
+                //GuiModel.Log("Media count: " + mediaCount.ToString());
                 MainWindow.gui.ProgressBarMax = mediaCount;
                 await BuildCache();
             }
@@ -183,11 +183,7 @@ namespace LVP_WPF
                     return "Italian";
             }
             return "";
-        }
 
-        private static void DockerLog(object sender, DataReceivedEventArgs e)
-        {
-            if (!String.IsNullOrEmpty(e.Data)) Trace.WriteLine("DockerLog: " + e.Data);
         }
 
         private static async Task<string> GetTranslation(string target, string msg, HttpClient client)
@@ -784,7 +780,6 @@ namespace LVP_WPF
                 for (int j = 0; j < episodeEntries.Length; j++)
                 {
                     mediaCount++;
-                    if (tvShow.MultiLang) mediaCount++;
                     try
                     {
                         string[] namePath = episodeEntries[j].Split('\\');
