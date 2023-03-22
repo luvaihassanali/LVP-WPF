@@ -977,6 +977,23 @@ namespace LVP_WPF
             return image;
         }
 
+        internal static BitmapImage[] LoadFlags(string path)
+        {
+            BitmapImage[] result = new BitmapImage[16];
+            string[] langFolders = Directory.GetDirectories(path);
+            int langIndex = 0;
+            for (int i = 0; i < langFolders.Length; i++)
+            {
+                string langKey = langFolders[i].Replace(path, "").Split("\\")[1];
+                if (langKey.Length != 2) return result;
+                if (langKey.Equals("en")) continue;
+                string imgPath = "Resources\\flags\\" + langKey.ToUpper() + ".png";
+                if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + imgPath)) NotificationDialog.Show("Error", "Flag image does not exist for language key: " + langKey.ToUpper());
+                result[langIndex++] = LoadImage(imgPath, 56);
+            }
+            return result;
+        }
+
         internal static void SaveData()
         {
             string jsonString = JsonConvert.SerializeObject(MainWindow.model);

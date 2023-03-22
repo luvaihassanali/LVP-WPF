@@ -29,7 +29,43 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type ListBoxItem}">
                         <Border x:Name="Bd" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
+                            <StackPanel Orientation="Vertical">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <!-- Row/Column Span == Int32.MaxValue -->
+                                    <Image Name="mainGridImage" Grid.ColumnSpan="2147483647" Grid.RowSpan="2147483647" Margin="0,3,0,3" Width="300" Height="450" Source="{Binding Image}" Stretch="Fill"/>
+                                    <Image Name="langImage1" Grid.Row="0" Grid.Column="0" Width="56" Height="38" Margin="8,0,0,0" Source="{Binding Flags[0]}" />
+                                    <Image Name="langImage2" Grid.Row="1" Grid.Column="0" Width="56" Height="38" Margin="8,0,0,0" Source="{Binding Flags[1]}" />
+                                    <Image Name="langImage3" Grid.Row="2" Grid.Column="0" Width="56" Height="38" Margin="8,0,0,0" Source="{Binding Flags[2]}" />
+                                    <Image Name="langImage4" Grid.Row="3" Grid.Column="0" Width="56" Height="38" Margin="8,0,0,0" Source="{Binding Flags[3]}" />
+                                    <Image Name="langImage5" Grid.Row="4" Grid.Column="0" Width="56" Height="38" Margin="8,0,0,0" Source="{Binding Flags[4]}" />
+                                    <Image Name="langImage6" Grid.Row="5" Grid.Column="0" Width="56" Height="38" Margin="8,0,0,0" Source="{Binding Flags[5]}" />
+                                    <Image Name="langImage7" Grid.Row="6" Grid.Column="0" Width="56" Height="38" Margin="8,0,0,0" Source="{Binding Flags[6]}" />
+                                    <Image Name="langImage8" Grid.Row="7" Grid.Column="0" Width="56" Height="38" Margin="8,0,0,0" Source="{Binding Flags[7]}" />
+                                    <Image Name="langImage9" Grid.Row="0" Grid.Column="2" Width="56" Height="38" Margin="0,0,8,0" Source="{Binding Flags[8]}" />
+                                    <Image Name="langImage10" Grid.Row="1" Grid.Column="2" Width="56" Height="38" Margin="0,0,8,0" Source="{Binding Flags[9]}" />
+                                    <Image Name="langImage11" Grid.Row="2" Grid.Column="2" Width="56" Height="38" Margin="0,0,8,0" Source="{Binding Flags[10]}" />
+                                    <Image Name="langImage12" Grid.Row="3" Grid.Column="2" Width="56" Height="38" Margin="0,0,8,0" Source="{Binding Flags[11]}" />
+                                    <Image Name="langImage13" Grid.Row="4" Grid.Column="2" Width="56" Height="38" Margin="0,0,8,0" Source="{Binding Flags[12]}" />
+                                    <Image Name="langImage14" Grid.Row="5" Grid.Column="2" Width="56" Height="38" Margin="0,0,8,0" Source="{Binding Flags[13]}" />
+                                    <Image Name="langImage15" Grid.Row="6" Grid.Column="2" Width="56" Height="38" Margin="0,0,8,0" Source="{Binding Flags[14]}" />
+                                    <Image Name="langImage16" Grid.Row="7" Grid.Column="2" Width="56" Height="38" Margin="0,0,8,0" Source="{Binding Flags[15]}" />
+                                </Grid>
+                            </StackPanel>
                         </Border>
                         <ControlTemplate.Triggers>
                             <MultiTrigger>

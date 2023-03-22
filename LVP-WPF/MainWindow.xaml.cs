@@ -112,7 +112,7 @@ namespace LVP_WPF
                     string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
                     await TvShowListView.Dispatcher.BeginInvoke(() =>
                     {
-                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
+                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300), Flags = Cache.LoadFlags(model.TvShows[i].Path) });
                     });
                     await Task.Delay(1);
                 }

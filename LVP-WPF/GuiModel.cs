@@ -171,6 +171,7 @@ namespace LVP_WPF
         private int id;
         private string title;
         private BitmapImage image;
+        private BitmapImage[] flags;
 
         public int Id
         {
@@ -188,6 +189,12 @@ namespace LVP_WPF
         {
             get { return image; }
             set { image = value; }
+        }
+
+        public BitmapImage[] Flags
+        {
+            get { return flags; }
+            set { flags = value; }
         }
     }
 

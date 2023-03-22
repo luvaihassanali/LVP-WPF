@@ -31,13 +31,6 @@
                             <UniformGrid Name="TvShowGrid" Columns="6" HorizontalAlignment="Center"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Vertical">
-                                <Image Name="mainGridImage" Margin="0,3,0,3" Width="300" Height="450" Source="{Binding Image}" Stretch="Fill"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
                 </ListView>
                 <!--<Expander Grid.Row="2" Header="Cartoons" Foreground="White">
                     <Label Content="Cartoons" Foreground="White" ></Label>
