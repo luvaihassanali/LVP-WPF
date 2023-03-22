@@ -93,9 +93,9 @@ namespace LVP_WPF.Windows
         {
             if (langChanged)
             {
-                GuiModel.Log("Starting to switch index back");
+                //GuiModel.Log("Starting to switch index back");
                 SwitchMultiLangTvIndex(tvShow, "English");
-                GuiModel.Log("Finished switching indexes back");
+                //GuiModel.Log("Finished switching indexes back");
             }
         }
 

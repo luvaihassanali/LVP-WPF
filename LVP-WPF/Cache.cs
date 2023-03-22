@@ -200,22 +200,26 @@ namespace LVP_WPF
         {
             if (!launchTranslator)
             {
-                string path = ConfigurationManager.AppSettings["LibreTranslatePath"] + "libretranslate.exe";
-                if (path.Contains("%APPDATA%")) { path = path.Replace("%APPDATA%", Environment.GetEnvironmentVariable("APPDATA")); }
-                if (path.Contains("%LOCALAPPDATA%")) { path = path.Replace("%LOCALAPPDATA%", Environment.GetEnvironmentVariable("LOCALAPPDATA")); }
-            
-                if (!File.Exists(path))
+                Process[] libreTranslateProc = Process.GetProcessesByName("libretranslate");
+                if (libreTranslateProc.Length == 0)
                 {
-                    NotificationDialog.Show("Error", "LibreTranslate exe does not exist at path " + path);
+                    string path = ConfigurationManager.AppSettings["LibreTranslatePath"] + "libretranslate.exe";
+                    if (path.Contains("%APPDATA%")) { path = path.Replace("%APPDATA%", Environment.GetEnvironmentVariable("APPDATA")); }
+                    if (path.Contains("%LOCALAPPDATA%")) { path = path.Replace("%LOCALAPPDATA%", Environment.GetEnvironmentVariable("LOCALAPPDATA")); }
+
+                    if (!File.Exists(path))
+                    {
+                        NotificationDialog.Show("Error", "LibreTranslate exe does not exist at path " + path);
+                    }
+
+                    Process libreTranslateNew = new Process();
+                    libreTranslateNew.StartInfo.FileName = path;
+                    libreTranslateNew.StartInfo.UseShellExecute = true;
+                    libreTranslateNew.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
+                    libreTranslateNew.Start();
                 }
 
-                Process libreTranslateProc = new Process();
-                libreTranslateProc.StartInfo.FileName = path;
-                libreTranslateProc.StartInfo.UseShellExecute = true;
-                libreTranslateProc.StartInfo.WindowStyle = ProcessWindowStyle.Minimized;
-                libreTranslateProc.Start();
-
-                await Task.Delay(2000);
+                await Task.Delay(3000);
                 launchTranslator = true;
             }
 
@@ -431,6 +435,24 @@ namespace LVP_WPF
                                     newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
                                     File.Move(oldPath, newPath);
                                     episode.Path = newPath;
+
+                                    if (tvShow.MultiLang)
+                                    {
+                                        int separatorIndex = oldPath.LastIndexOf(".");
+                                        string oldSrtPath = oldPath.Substring(0, separatorIndex) + ".srt";
+                                        if (File.Exists(oldSrtPath))
+                                        {
+                                            int newSeparatorIndex = newPath.LastIndexOf(".");
+                                            string newSrtPath = newPath.Substring(0, separatorIndex) + "srt";
+                                            string subMsg = "Renaming subtitles file " + oldSrtPath + " to " + newSrtPath;
+                                            InputDialog.Show("Warning: " + tvShow.Name, subMsg, tvShow, season.Id + 1);
+                                            File.Move(oldSrtPath, newSrtPath);
+                                        }
+                                        else
+                                        {
+                                            NotificationDialog.Show("Error", "No srt file found for " + newPath);
+                                        }
+                                    }
                                 }
                                 catch (Exception e)
                                 {
@@ -477,6 +499,7 @@ namespace LVP_WPF
                             string drivePath = drive + ":";
                             newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
                             File.Move(oldPath, newPath);
+
                             if (tvShow.MultiLang)
                             {
                                 int separatorIndex = oldPath.LastIndexOf(".");
@@ -485,6 +508,8 @@ namespace LVP_WPF
                                 {
                                     int newSeparatorIndex = newPath.LastIndexOf(".");
                                     string newSrtPath = newPath.Substring(0, separatorIndex) + "srt";
+                                    string subMsg = "Renaming subtitles file " + oldSrtPath + " to " + newSrtPath;
+                                    InputDialog.Show("Warning: " + tvShow.Name, subMsg, tvShow, season.Id + 1);
                                     File.Move(oldSrtPath, newSrtPath);
                                 }
                                 else
