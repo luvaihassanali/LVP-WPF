@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 
 namespace LVP_WPF
 {
@@ -34,7 +35,7 @@ namespace LVP_WPF
         public static bool update = false;
         private static bool launchTranslator = false;
 
-        internal static async Task Initialize(ProgressBar pb, MediaElement me)
+        internal static async Task Initialize(ProgressBar pb, MediaElement cofeeGif)
         {
             string driveString = ConfigurationManager.AppSettings["Drives"];
             if (driveString.Equals(String.Empty)) return;
@@ -58,7 +59,7 @@ namespace LVP_WPF
             {
                 //To-do: Detect file extension changes and episode deletions
                 pb.Visibility = Visibility.Visible;
-                me.Visibility = Visibility.Visible;
+                cofeeGif.Visibility = Visibility.Visible;
                 //GuiModel.Log("Media count: " + mediaCount.ToString());
                 MainWindow.gui.ProgressBarMax = mediaCount;
                 await BuildCache();
@@ -147,6 +148,7 @@ namespace LVP_WPF
         private static async Task ApplyMultiLangTvShowTranslations(TvShow tvShow, HttpClient client)
         {
             bool skippedEnglish = false;
+            bool overviewTranslated = false;
             string[] lang = Directory.GetDirectories(tvShow.Path);
             int langIndex = 0;
             for (int i = 0; i < lang.Length; i++)
@@ -160,9 +162,6 @@ namespace LVP_WPF
                 string[] langParts = lang[i].Split('\\');
                 string langKey = langParts[langParts.Length - 1];
 
-                string overview = await GetTranslation(langKey, tvShow.Overview, client);
-                if (!tvShow.MultiLangOverview.Contains(overview)) tvShow.MultiLangOverview.Add(overview);
-
                 for (int j = 0; j < tvShow.MultiLangSeasons.Count; j++)
                 {
                     Season[] multiLangSeasons = tvShow.MultiLangSeasons[j];
@@ -172,6 +171,16 @@ namespace LVP_WPF
                         for (int l = 0; l < multiLangSeason.Episodes.Length; l++)
                         {
                             if (multiLangSeason.Episodes[l].Translated) continue;
+
+                            if (!overviewTranslated)
+                            {
+                                overviewTranslated = true;
+                                string overview = await GetTranslation(langKey, tvShow.Overview, client);
+                                if (!tvShow.MultiLangOverview.Contains(overview)) tvShow.MultiLangOverview.Add(overview);
+                            }
+
+                            GuiModel.Log("Checking episode " + multiLangSeason.Episodes[l].Name);
+                            GuiModel.Log("Translating episode " + multiLangSeason.Episodes[l].Name);
                             multiLangSeason.Episodes[l].Name = await GetTranslation(langKey, multiLangSeason.Episodes[l].Name, client);
                             multiLangSeason.Episodes[l].Overview = await GetTranslation(langKey, multiLangSeason.Episodes[l].Overview, client);
                             MainWindow.gui.ProgressBarValue++;
@@ -198,6 +207,9 @@ namespace LVP_WPF
 
         private static async Task<string> GetTranslation(string target, string msg, HttpClient client)
         {
+#if DEBUG
+            return "debug-translate";
+#endif
             if (!launchTranslator)
             {
                 Process[] libreTranslateProc = Process.GetProcessesByName("libretranslate");
@@ -219,7 +231,8 @@ namespace LVP_WPF
                     libreTranslateNew.Start();
                 }
 
-                await Task.Delay(3000);
+                InputDialog.Show("Information", "LibreTranslate launched. Waiting 10 seconds till ready...");
+                await Task.Delay(10000);
                 launchTranslator = true;
             }
 
@@ -422,7 +435,7 @@ namespace LVP_WPF
 
                                 string oldPath = episode.Path;
                                 string newPath = oldPath.Replace(currMultiEpisodeName, jCurrMultiEpisodeName.fixBrokenQuotes());
-                                string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
+                                string invalid = new string(System.IO.Path.GetInvalidPathChars()) + '?' + ':' + '*';
                                 foreach (char c in invalid)
                                 {
                                     newPath = newPath.Replace(c.ToString(), "");
@@ -435,24 +448,7 @@ namespace LVP_WPF
                                     newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
                                     File.Move(oldPath, newPath);
                                     episode.Path = newPath;
-
-                                    if (tvShow.MultiLang)
-                                    {
-                                        int separatorIndex = oldPath.LastIndexOf(".");
-                                        string oldSrtPath = oldPath.Substring(0, separatorIndex) + ".srt";
-                                        if (File.Exists(oldSrtPath))
-                                        {
-                                            int newSeparatorIndex = newPath.LastIndexOf(".");
-                                            string newSrtPath = newPath.Substring(0, separatorIndex) + "srt";
-                                            string subMsg = "Renaming subtitles file " + oldSrtPath + " to " + newSrtPath;
-                                            InputDialog.Show("Warning: " + tvShow.Name, subMsg, tvShow, season.Id + 1);
-                                            File.Move(oldSrtPath, newSrtPath);
-                                        }
-                                        else
-                                        {
-                                            NotificationDialog.Show("Error", "No srt file found for " + newPath);
-                                        }
-                                    }
+                                    CheckSubtitleName(tvShow, season, oldPath, newPath);
                                 }
                                 catch (Exception e)
                                 {
@@ -487,7 +483,7 @@ namespace LVP_WPF
                         string oldPath = episode.Path;
                         jEpisodeName = (string)jEpisode["name"];
                         string newPath = oldPath.Replace(episode.Name, jEpisodeName.fixBrokenQuotes());
-                        string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
+                        string invalid = new string(System.IO.Path.GetInvalidPathChars()) + '?' + ':' + '*';
                         foreach (char c in invalid)
                         {
                             newPath = newPath.Replace(c.ToString(), "");
@@ -499,24 +495,7 @@ namespace LVP_WPF
                             string drivePath = drive + ":";
                             newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
                             File.Move(oldPath, newPath);
-
-                            if (tvShow.MultiLang)
-                            {
-                                int separatorIndex = oldPath.LastIndexOf(".");
-                                string oldSrtPath = oldPath.Substring(0, separatorIndex) + ".srt";
-                                if (File.Exists(oldSrtPath))
-                                {
-                                    int newSeparatorIndex = newPath.LastIndexOf(".");
-                                    string newSrtPath = newPath.Substring(0, separatorIndex) + "srt";
-                                    string subMsg = "Renaming subtitles file " + oldSrtPath + " to " + newSrtPath;
-                                    InputDialog.Show("Warning: " + tvShow.Name, subMsg, tvShow, season.Id + 1);
-                                    File.Move(oldSrtPath, newSrtPath);
-                                }
-                                else
-                                {
-                                    NotificationDialog.Show("Error", "No srt file found for " + newPath);
-                                }
-                            }
+                            CheckSubtitleName(tvShow, season, oldPath, newPath);
                         }
                         catch (Exception e)
                         {
@@ -542,6 +521,34 @@ namespace LVP_WPF
                     MainWindow.gui.ProgressBarValue++;
                 }
                 seasonIndex++;
+            }
+        }
+
+        private static void CheckSubtitleName(TvShow tvShow, Season season, string oldPath, string newPath)
+        {
+            if (tvShow.MultiLang)
+            {
+                int separatorIndex = oldPath.LastIndexOf(".");
+                string oldSrtPath = oldPath.Substring(0, separatorIndex) + ".srt";
+                if (File.Exists(oldSrtPath))
+                {
+                    int newSeparatorIndex = newPath.LastIndexOf(".");
+                    string newSrtPath = newPath.Substring(0, newSeparatorIndex) + ".srt";
+                    string[] temp = oldSrtPath.Split("\\");
+                    string oldSubFileName = temp[temp.Length - 1];
+                    temp = newSrtPath.Split("\\");
+                    string newSubFileName = temp[temp.Length - 1];
+                    string subMsg = "Renaming subtitle file " + oldSubFileName + " to " + newSubFileName + "' (Season " + season.Id + ").";
+                    InputDialog.Show("Warning: " + tvShow.Name, subMsg, tvShow, season.Id + 1);
+                    File.Move(oldSrtPath, newSrtPath);
+                }
+                else
+                {
+                    if (!oldPath.Contains("\\en\\"))
+                    {
+                        NotificationDialog.Show("Error", "No subtitle file found " + oldSrtPath + "' (Season " + season.Id + ").");
+                    }
+                }
             }
         }
 
@@ -609,7 +616,7 @@ namespace LVP_WPF
                 string extension = fileName.Split('.')[1];
                 string newFileName = ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(); ;
                 string newPath = oldPath.Replace(fileName, newFileName + "." + extension);
-                string invalid = new string(Path.GetInvalidPathChars()) + '?';
+                string invalid = new string(System.IO.Path.GetInvalidPathChars()) + '?';
                 foreach (char c in invalid)
                 {
                     newPath = newPath.Replace(c.ToString(), "");

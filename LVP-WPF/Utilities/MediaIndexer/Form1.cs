@@ -430,12 +430,12 @@ namespace MediaIndexUtil
                 if (CompareFiles(showDir1[i], showDir2[i], ref log))
                 {
                     Trace.WriteLine("Season " + seasonIndex + " ✓" + " " + showDir1[i] + " and " + showDir2[i]);
-                    log += "Season " + seasonIndex + " ✓" + " " + showDir1[i] + " and " + showDir2[i] + "\n";
+                    log += "Season " + seasonIndex + " ✓" + " " + showDir1[i] + " and " + showDir2[i] + "\n\n";
                 }
                 else
                 {
                     Trace.WriteLine("Season " + seasonIndex + " ✕" + " " + showDir1[i] + " and " + showDir2[i]);
-                    log += "Season " + seasonIndex + " ✕" + " " + showDir1[i] + " and " + showDir2[i] + "\n";
+                    log += "Season " + seasonIndex + " ✕" + " " + showDir1[i] + " and " + showDir2[i] + "\n\n";
                 }
                 seasonIndex++;
             }
@@ -473,7 +473,7 @@ namespace MediaIndexUtil
             try
             {
                 Array.Sort(fileList1, CompareIndex);
-                Array.Sort(fileList1, CompareIndex);
+                Array.Sort(fileList2, CompareIndex);
             }
             catch
             {

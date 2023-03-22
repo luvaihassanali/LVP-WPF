@@ -140,7 +140,7 @@ namespace LVP_WPF
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].SavedTime = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].SavedTime;
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Length = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Length;
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Translated = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Translated;
-                        Cache.mediaCount--;
+                        Cache.mediaCount -= 2;
                     }
                 }
             }
@@ -337,7 +337,6 @@ namespace LVP_WPF
         }
 
         public bool MultiLang { get; set; }
-        public string MutliLangString { get; set; }
         public List<string> MultiLangName { get; set; }
         public List<string> MultiLangOverview { get; set; }
         public List<Season[]> MultiLangSeasons { get; set; }

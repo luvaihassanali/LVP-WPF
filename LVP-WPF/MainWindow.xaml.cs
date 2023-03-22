@@ -101,10 +101,6 @@ namespace LVP_WPF
             }
         }
 
-        private void MainWindow_Closed(object sender, EventArgs e)
-        {
-        }
-
         internal async Task AssignControlContext()
         {
             TimeSpan delay = new TimeSpan(1);

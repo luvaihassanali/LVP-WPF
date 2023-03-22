@@ -363,11 +363,11 @@ namespace LVP_WPF
                 try
                 {
                     serialPort.Open();
-                    GuiModel.Log("Connected");
+                    GuiModel.Log("Serial port connected");
                 }
                 catch
                 {
-                    GuiModel.Log("No device connected");
+                    GuiModel.Log("No device connected to serial port");
                 }
             }
         }
@@ -441,7 +441,7 @@ namespace LVP_WPF
                         try
                         {
                             serialPort.Open();
-                            GuiModel.Log("Connected");
+                            GuiModel.Log("Seriak port connected");
                         }
                         catch
                         {
