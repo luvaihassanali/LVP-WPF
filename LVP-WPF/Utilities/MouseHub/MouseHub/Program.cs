@@ -107,7 +107,6 @@ namespace MouseMoverClient
 
                     if (reply != null && reply.Status == IPStatus.Success)
                     {
-                        Console.SetCursorPosition(0, Console.CursorTop);
                         Log("Ping success");
                         ConnectToServer();
                         connectionEstablished = true;
@@ -357,7 +356,6 @@ namespace MouseMoverClient
 
         private static void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            Console.SetCursorPosition(0, Console.CursorTop);
             SerialPort serialPort = (SerialPort)sender;
             if (e.EventType == SerialData.Chars)
             {
@@ -392,6 +390,7 @@ namespace MouseMoverClient
 
         private static void Log(string message)
         {
+            Console.SetCursorPosition(0, Console.CursorTop);
             Console.WriteLine("{0}: {1}", DateTime.Now.ToString("> HH:mm:ss.fff"), message);
         }
     }
