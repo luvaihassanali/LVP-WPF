@@ -179,8 +179,6 @@ namespace LVP_WPF
                                 if (!tvShow.MultiLangOverview.Contains(overview)) tvShow.MultiLangOverview.Add(overview);
                             }
 
-                            GuiModel.Log("Checking episode " + multiLangSeason.Episodes[l].Name);
-                            GuiModel.Log("Translating episode " + multiLangSeason.Episodes[l].Name);
                             multiLangSeason.Episodes[l].Name = await GetTranslation(langKey, multiLangSeason.Episodes[l].Name, client);
                             multiLangSeason.Episodes[l].Overview = await GetTranslation(langKey, multiLangSeason.Episodes[l].Overview, client);
                             MainWindow.gui.ProgressBarValue++;

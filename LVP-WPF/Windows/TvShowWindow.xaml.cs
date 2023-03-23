@@ -42,7 +42,8 @@ namespace LVP_WPF.Windows
         {
             tvShow = t;
             TvShowWindow window = new TvShowWindow();
-            window.ShowName = tvShow.Name + " (" + tvShow.Date.GetValueOrDefault().Year + ")";
+            window.ShowName = tvShow.Name.Contains("(") ? tvShow.Name.Split("(")[0] : tvShow.Name;
+            window.ShowName += " (" + tvShow.Date.GetValueOrDefault().Year + ")";
             window.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
             string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);

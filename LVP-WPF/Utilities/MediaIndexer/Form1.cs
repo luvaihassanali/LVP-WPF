@@ -470,15 +470,8 @@ namespace MediaIndexUtil
         {
             string[] fileList1 = Directory.GetFiles(d1).Where(name => !name.EndsWith(".srt")).ToArray();
             string[] fileList2 = Directory.GetFiles(d2).Where(name => !name.EndsWith(".srt")).ToArray();
-            try
-            {
-                Array.Sort(fileList1, CompareIndex);
-                Array.Sort(fileList2, CompareIndex);
-            }
-            catch
-            {
-                throw new Exception("Missing separator");
-            }
+            Array.Sort(fileList1, CompareIndex);
+            Array.Sort(fileList2, CompareIndex);
 
             var min = fileList1.Length < fileList2.Length ? fileList1.Length : fileList2.Length;
             for (int i = 0; i < min; i++)
@@ -511,8 +504,17 @@ namespace MediaIndexUtil
             if (s5Part.Contains("#")) s5Part = s5Part.Split('#')[0];
             if (s6Part.Contains("#")) s6Part = s6Part.Split('#')[0];
 
-            int indexA = Int32.Parse(s5Part);
-            int indexB = Int32.Parse(s6Part);
+            int indexA = -1;
+            int indexB = -2;
+            try
+            {
+                indexA = Int32.Parse(s5Part);
+                indexB = Int32.Parse(s6Part);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(s1 + " " + s2 + " " + ex.Message);
+            }
             if (indexA == indexB)
             {
                 return 0;
