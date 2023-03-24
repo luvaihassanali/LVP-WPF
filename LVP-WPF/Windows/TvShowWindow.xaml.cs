@@ -42,7 +42,7 @@ namespace LVP_WPF.Windows
         {
             tvShow = t;
             TvShowWindow window = new TvShowWindow();
-            window.ShowName = tvShow.Name.Contains("(") ? tvShow.Name.Split("(")[0] : tvShow.Name;
+            window.ShowName = tvShow.Name.Contains("(") ? tvShow.Name.Split(" (")[0] : tvShow.Name;
             window.ShowName += " (" + tvShow.Date.GetValueOrDefault().Year + ")";
             window.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
             string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
@@ -90,13 +90,12 @@ namespace LVP_WPF.Windows
             TcpSerialListener.layoutPoint.Select("TvShowWindow");
         }
 
-        private void TvShowWindow_Closing(object sender, CancelEventArgs e)
+        private async void TvShowWindow_Closing(object sender, CancelEventArgs e)
         {
             if (langChanged)
             {
-                //GuiModel.Log("Starting to switch index back");
                 SwitchMultiLangTvIndex(tvShow, "English");
-                //GuiModel.Log("Finished switching indexes back");
+                await Task.Delay(200);
             }
         }
 
@@ -129,7 +128,7 @@ namespace LVP_WPF.Windows
             string lang = "";
             if (tvShow.Name.Contains("("))
             {
-                string item = tvShow.Name.Split("(")[1];
+                string item = tvShow.Name.Split(" (")[1];
                 item = item.Split(")")[0];
                 langComboBox.Items.Add(item);
                 lang = item;
@@ -517,7 +516,6 @@ namespace LVP_WPF.Windows
             if (!tvShow.Name.Contains(langComboBox.SelectedValue.ToString()))
             {
                 SwitchMultiLangTvIndex(tvShow, langComboBox.SelectedValue.ToString());
-                langChanged = true;
                 this.ShowName = tvShow.Name.Contains("(") ? tvShow.Name : tvShow.Name + " (" + tvShow.Date.GetValueOrDefault().Year + ")";
                 this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
                 UpdateTvWindowSeasonChange(tvShow.CurrSeason);
@@ -538,18 +536,21 @@ namespace LVP_WPF.Windows
             int index = 0;
             for (int i = 0; i < tvShow.MultiLangSeasons.Count; i++)
             {
-                if (lang.Equals("English") && tvShow.MultiLangName[i].Equals(tvShow.Name.Split("(")[0]))
+                if (lang.Equals("English") && tvShow.MultiLangName[i].Equals(tvShow.Name.Split(" (")[0]))
                 {
+                    langChanged = false;
                     index = i;
                     break;
                 } 
                 else if (tvShow.MultiLangName[i].Contains(lang))
                 {
+                    langChanged = true;
                     index = i;
                     break;
                 }
             }
 
+            GuiModel.Log($"Switching language for {tvShow.Name} to {lang.Trim()}");
             string currName = tvShow.Name;
             tvShow.Name = tvShow.MultiLangName[index];
             tvShow.MultiLangName[index] = currName;

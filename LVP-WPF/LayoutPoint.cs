@@ -747,16 +747,24 @@ namespace LVP_WPF.Windows
             {
                 if (row == 0)
                 {
-                    scrollViewer.ScrollToHome();
+                    scrollViewer.Dispatcher.Invoke(() =>
+                    {
+                        scrollViewer.ScrollToHome();
+                    });
                 }
                 else if (row == langComboBoxItems.Count)
                 {
-                    scrollViewer.ScrollToBottom();
+                    scrollViewer.Dispatcher.Invoke(() =>
+                    {
+                        scrollViewer.ScrollToBottom();
+                    });
                 }
                 else
                 {
                     gui.scrollViewerAdjust = true;
-                    comboBoxItem.BringIntoView();
+                    comboBoxItem.Dispatcher.Invoke(() => { 
+                        comboBoxItem.BringIntoView();
+                    });
                 }
                 GuiModel.DoEvents();
             }
