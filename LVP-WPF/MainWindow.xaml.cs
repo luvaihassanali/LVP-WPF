@@ -3,6 +3,7 @@ using System;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -103,10 +104,17 @@ namespace LVP_WPF
 
         internal async Task AssignControlContext()
         {
+            string cartoonExceptionStr = ConfigurationManager.AppSettings["CartoonExceptions"];
+            string[] cartoonExceptions = cartoonExceptionStr.Split(";");
             TimeSpan delay = new TimeSpan(1);
 
             for (int i = 0; i < model.TvShows.Length; i++)
             {
+                if (model.TvShows[i].Cartoon && cartoonExceptions.Contains(model.TvShows[i].Name))
+                {
+                    model.TvShows[i].Cartoon = false;
+                }
+
                 if (!model.TvShows[i].Cartoon)
                 {
                     string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
