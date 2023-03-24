@@ -95,7 +95,7 @@ namespace LVP_WPF.Windows
             if (langChanged)
             {
                 SwitchMultiLangTvIndex(tvShow, "English");
-                await Task.Delay(200);
+                await Task.Delay(1000);
             }
         }
 
@@ -534,6 +534,8 @@ namespace LVP_WPF.Windows
         internal void SwitchMultiLangTvIndex(TvShow tvShow, string lang)
         {
             int index = 0;
+            lang = lang.Trim();
+
             for (int i = 0; i < tvShow.MultiLangSeasons.Count; i++)
             {
                 if (lang.Equals("English") && tvShow.MultiLangName[i].Equals(tvShow.Name.Split(" (")[0]))
@@ -550,7 +552,7 @@ namespace LVP_WPF.Windows
                 }
             }
 
-            GuiModel.Log($"Switching language for {tvShow.Name} to {lang.Trim()}");
+            GuiModel.Log($"Switching language for {tvShow.Name} to {lang}");
             string currName = tvShow.Name;
             tvShow.Name = tvShow.MultiLangName[index];
             tvShow.MultiLangName[index] = currName;

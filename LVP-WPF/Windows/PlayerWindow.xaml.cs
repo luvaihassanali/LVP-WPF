@@ -105,6 +105,7 @@ namespace LVP_WPF.Windows
             MainWindow.gui.playerCloseButton = this.closeButton;
             TcpSerialListener.layoutPoint.Select("PlayerWindow");
             TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+            pollingTimer.Start();
         }
 
 

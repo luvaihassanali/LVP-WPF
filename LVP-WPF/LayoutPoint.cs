@@ -142,7 +142,7 @@ namespace LVP_WPF.Windows
             }
             else
             {
-                langIndex = 0;
+                langIndex = currPoint.x;
                 lanuageDropdownActive = false;
                 currPoint = returnPointB;
                 if (tvShowWindowActive)
@@ -231,6 +231,7 @@ namespace LVP_WPF.Windows
 
         private async void CloseTvWindow(bool click)
         {
+            langIndex = 0;
             tvShowWindowActive = false;
             mainWindowActive = true;
             tvControlList.Clear();
