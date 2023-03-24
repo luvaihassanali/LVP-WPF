@@ -72,7 +72,7 @@ namespace LVP_WPF.Windows
             Core.Initialize();
         }
 
-        private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
+        private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
         {
             mediaPlayer.TimeChanged += MediaPlayer_TimeChanged;
             mediaPlayer.LengthChanged += MediaPlayer_LengthChanged;
@@ -105,7 +105,6 @@ namespace LVP_WPF.Windows
             MainWindow.gui.playerCloseButton = this.closeButton;
             TcpSerialListener.layoutPoint.Select("PlayerWindow");
             TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
-            pollingTimer.Start();
         }
 
 

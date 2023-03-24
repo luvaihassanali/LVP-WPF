@@ -26,7 +26,7 @@
                     <TextBlock Text="✖" Margin="0,-3,1,0"/>
                 </Button>
                 <Button Name="playButton" FontSize="30" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="PlayButton_Click" Grid.Row="2" Foreground="White" 
-                        Width="60" Height="60" HorizontalAlignment="Left" Margin="10,0,0,10">
+                        Width="60" Height="60" HorizontalAlignment="Left" Margin="10,0,0,20">
                     <TextBlock Name="buttonText" Text="▶️" Margin="6,-4,0,0" />
                     <Button.Resources>
                         <Style TargetType="Border">
