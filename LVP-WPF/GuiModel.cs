@@ -47,9 +47,8 @@ namespace LVP_WPF
         static public int hideCursorY = 1100;
         static public int centerX = 960;
         static public int centerY = 540;
-        static private bool loggingEnabled;
-        static private string logPath;
         static public string fontSize;
+        static public string fontStyle;
         public bool isPlaying = false;
         public bool scrollViewerAdjust = false;
         public Button mainCloseButton;
@@ -65,17 +64,9 @@ namespace LVP_WPF
 
         public GuiModel()
         {
-            loggingEnabled = bool.Parse(ConfigurationManager.AppSettings["LoggingEnabled"]);
             hideCursor = bool.Parse(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
-            logPath = AppDomain.CurrentDomain.BaseDirectory;
             fontSize = "--freetype-fontsize=" + ConfigurationManager.AppSettings["FontSize"];
-
-#if DEBUG
-            logPath = "%USERPROFILE%\\Desktop\\LVP-WPF.log";
-#else
-            logPath = ConfigurationManager.AppSettings["LogPath"] + "LVP-WPF.log";
-#endif
-            if (logPath.Contains("%USERPROFILE%")) { logPath = logPath.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
+            fontStyle = "--freetype-font=" + ConfigurationManager.AppSettings["FontStyle"];
         }
 
         public static void DoEvents()
@@ -151,18 +142,6 @@ namespace LVP_WPF
             }
             SystemParametersInfo(SPI_SETCURSORS, 0, 0, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
             SystemParametersInfo(0x2029, 0, 72, 0x01);
-        }
-
-        public static void Log(string message)
-        {
-            if (loggingEnabled)
-            {
-                using (StreamWriter sw = File.AppendText(logPath))
-                {
-                    sw.WriteLine("{0} - {1}: {2}", DateTime.Now.ToString("dd-MM-yy HH:mm:ss.fff"), (new StackTrace()).GetFrame(1).GetMethod().Name, message);
-                    Trace.WriteLine(String.Format("{0} - {1}: {2}", DateTime.Now.ToString("dd-MM-yy HH:mm:ss.fff"), (new StackTrace()).GetFrame(1).GetMethod().Name, message));
-                }
-            }
         }
     }
 

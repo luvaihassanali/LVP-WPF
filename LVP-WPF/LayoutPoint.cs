@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
@@ -208,7 +209,7 @@ namespace LVP_WPF.Windows
             }
             catch (Exception ex)
             {
-                GuiModel.Log(ex.Message);
+                Log.Error(ex.Message);
             }
         }
 
@@ -220,10 +221,11 @@ namespace LVP_WPF.Windows
             if (click)
             {
                 CenterMouseOverControl(gui.tvMovieCloseButton);
-                await Task.Delay(150);
+                await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
-                await Task.Delay(150);
+                await Task.Delay(200);
             }
+
             currPoint = returnPointA;
             currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
             CenterMouseOverControl(currControl);
@@ -242,9 +244,9 @@ namespace LVP_WPF.Windows
                 gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
                 GuiModel.DoEvents();
                 CenterMouseOverControl(gui.tvMovieCloseButton);
-                await Task.Delay(150);
+                await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
-                await Task.Delay(150);
+                await Task.Delay(200);
             }
 
             currPoint = returnPointA;
@@ -259,9 +261,9 @@ namespace LVP_WPF.Windows
             if (click)
             {
                 CenterMouseOverControl(gui.playerCloseButton);
-                await Task.Delay(150);
+                GuiModel.DoEvents();
+                await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
-                await Task.Delay(150);
             }
 
             if (movieWindowActive)
@@ -282,9 +284,8 @@ namespace LVP_WPF.Windows
             gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToHome(); });
             GuiModel.DoEvents();
             CenterMouseOverControl(gui.mainCloseButton);
-            await Task.Delay(150);
+            await Task.Delay(200);
             TcpSerialListener.DoMouseClick();
-            await Task.Delay(150);
         }
 
         private void MoveTvPoint(int x)
@@ -791,18 +792,18 @@ namespace LVP_WPF.Windows
             List<int[]> ctrl = seasonWindowActive ? seasonWindowGrid : mainWindowGrid;
             foreach (int[] row in ctrl)
             {
-                Trace.Write("[ ");
+                Debug.Write("[ ");
                 for (int i = 0; i < row.Length; i++)
                 {
-                    Trace.Write(row[i]);
+                    Debug.Write(row[i]);
                     if (i != row.Length - 1)
                     {
-                        Trace.Write(", ");
+                        Debug.Write(", ");
                     }
                 }
-                Trace.WriteLine(" ]");
+                Debug.WriteLine(" ]");
             }
-            Trace.WriteLine(Environment.NewLine);
+            Debug.WriteLine(Environment.NewLine);
         }
 
         private void PrintControlGrid()
@@ -810,7 +811,7 @@ namespace LVP_WPF.Windows
             List<Image[]> ctrl = seasonWindowActive ? seasonWindowControlGrid : mainWindowControlGrid;
             foreach (Image[] row in ctrl)
             {
-                Trace.Write("[ ");
+                Debug.Write("[ ");
                 for (int i = 0; i < row.Length; i++)
                 {
                     string itemName;
@@ -823,16 +824,16 @@ namespace LVP_WPF.Windows
                         string[] item = row[i].Source.ToString().Split("/");
                         itemName = item[item.Length - 2];
                     }
-                    Trace.Write(itemName);
+                    Debug.Write(itemName);
 
                     if (i != row.Length - 1)
                     {
-                        Trace.Write(", ");
+                        Debug.Write(", ");
                     }
                 }
-                Trace.WriteLine(" ]");
+                Debug.WriteLine(" ]");
             }
-            Trace.WriteLine(Environment.NewLine);
+            Debug.WriteLine(Environment.NewLine);
         }
 
     }

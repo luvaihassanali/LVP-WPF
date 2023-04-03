@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
+using Serilog;
 using System;
 using System.Configuration;
 using System.Diagnostics;
@@ -22,7 +23,7 @@ namespace LVP_WPF.Windows
     {
         static private Media currMedia;
         static private TvShowWindow? tvShowWindow;
-        static internal LibVLC libVLC = new LibVLC("--freetype-font=Segoe UI", GuiModel.fontSize);
+        static internal LibVLC libVLC = new LibVLC(GuiModel.fontStyle, GuiModel.fontSize);
         static public int subtitleTrack = Int32.MaxValue;
         static public bool subtitleFile = false;
         private MediaPlayer mediaPlayer;
@@ -88,7 +89,7 @@ namespace LVP_WPF.Windows
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
-            GuiModel.Log("Play: " + currMedia.Path);
+            Log.Information("Play: " + currMedia.Path);
             bool res = mediaPlayer.Play(currVLCMedia);
             if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
 
@@ -194,7 +195,7 @@ namespace LVP_WPF.Windows
 
                 currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                GuiModel.Log("Playing " + currMedia.Path);
+                Log.Information("Playing " + currMedia.Path);
                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                 return;
             }
@@ -229,12 +230,12 @@ namespace LVP_WPF.Windows
                                 }
                                 else
                                 {
-                                    GuiModel.Log(tvShow.Name + " season change from " + (i) + " to " + (i + 1));
+                                    Log.Information(tvShow.Name + " season change from " + (i) + " to " + (i + 1));
                                     season = tvShow.Seasons[i + 1];
                                     tvShow.CurrSeason = season.Id;
                                     currMedia = season.Episodes[0];
                                     LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                    GuiModel.Log("Play: " + currMedia.Path);
+                                    Log.Information("Play: " + currMedia.Path);
                                     ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                                     tvShowWindow.Dispatcher.BeginInvoke(() => { 
                                         tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
@@ -246,7 +247,7 @@ namespace LVP_WPF.Windows
                             {
                                 currMedia = season.Episodes[j + 1];
                                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                GuiModel.Log("Play: " + currMedia.Path);
+                                Log.Information("Play: " + currMedia.Path);
                                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                                 return;
                             }
@@ -264,7 +265,7 @@ namespace LVP_WPF.Windows
 
         private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
         {
-            GuiModel.Log("VLC ERROR: " + e.ToString());
+            Log.Error("VLC ERROR: " + e.ToString());
         }
 
         private void MediaPlayer_LengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e)
@@ -401,7 +402,7 @@ namespace LVP_WPF.Windows
                 }
                 catch (Exception ex)
                 {
-                    GuiModel.Log("Slider_ValueChanged: " + ex.Message);
+                    Log.Error("Slider_ValueChanged: " + ex.Message);
                 }
                 prevSliderValue = SliderValue;
             }
@@ -514,7 +515,7 @@ namespace LVP_WPF.Windows
             }
 
             await Task.Delay(1000);
-            GuiModel.Log("Inactivity shutdown player");
+            Log.Information("Inactivity shutdown player");
             Application.Current.Shutdown();
         }
     }

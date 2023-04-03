@@ -1,5 +1,6 @@
 ﻿using LVP_WPF.Windows;
 using Microsoft.Win32;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Configuration;
@@ -49,6 +50,7 @@ namespace LVP_WPF
 
         private SerialPort serialPort;
         public bool serialPortEnabled;
+        private int serialPortExCount = 20;
         private TcpClient tcpClient;
         private Thread workerThread;
 
@@ -363,11 +365,13 @@ namespace LVP_WPF
                 try
                 {
                     serialPort.Open();
-                    GuiModel.Log("Serial port connected");
+                    Log.Information("Serial port connected");
                 }
                 catch
                 {
-                    GuiModel.Log("No device connected to serial port");
+                    serialPortExCount--;
+                    if (serialPortExCount < 0) serialPortEnabled = false;
+                    Log.Warning("No device connected to serial port");
                 }
             }
         }
@@ -379,7 +383,7 @@ namespace LVP_WPF
             {
                 string msg = serialPort.ReadLine();
                 msg = msg.Replace("\r", "");
-                GuiModel.Log(msg);
+                Log.Information(msg);
                 if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
                 switch (msg)
                 {
@@ -441,11 +445,13 @@ namespace LVP_WPF
                         try
                         {
                             serialPort.Open();
-                            GuiModel.Log("Seriak port connected");
+                            Log.Information("Seriak port connected");
                         }
                         catch
                         {
-                            //GuiModel.Log("No device connected");
+                            serialPortExCount--;
+                            if (serialPortExCount < 0) serialPortEnabled = false;
+                            //Log.Information("No device connected");
                         }
                     }
                 }

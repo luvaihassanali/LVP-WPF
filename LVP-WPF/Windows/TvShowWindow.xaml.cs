@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
 using LVP_WPF.Dialogs;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -552,7 +553,7 @@ namespace LVP_WPF.Windows
                 }
             }
 
-            GuiModel.Log($"Switching language for {tvShow.Name} to {lang}");
+            Log.Information($"Switching language for {tvShow.Name} to {lang}");
             string currName = tvShow.Name;
             tvShow.Name = tvShow.MultiLangName[index];
             tvShow.MultiLangName[index] = currName;

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -14,6 +15,13 @@ namespace LVP_WPF
 #if DEBUG
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.KeyUpEvent, new KeyEventHandler(GlobalKeyUp), true);
 #endif
+            Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Debug()
+            .WriteTo.Debug()
+            .WriteTo.File($"{AppDomain.CurrentDomain.BaseDirectory}logs",
+            rollingInterval: RollingInterval.Month,
+            rollOnFileSizeLimit: true)
+            .CreateLogger();
         }
 
         private void GlobalKeyUp(object sender, KeyEventArgs e)
@@ -21,27 +29,27 @@ namespace LVP_WPF
             switch (e.Key)
             {
                 case Key.Up:
-                    System.Diagnostics.Debug.WriteLine("up");
+                    Log.Debug("up");
                     TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.up);
                     break;
                 case Key.Down:
-                    System.Diagnostics.Debug.WriteLine("down");
+                    Log.Debug("down");
                     TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.down);
                     break;
                 case Key.Left:
-                    System.Diagnostics.Debug.WriteLine("left");
+                    Log.Debug("left");
                     TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.left);
                     break;
                 case Key.Right:
-                    System.Diagnostics.Debug.WriteLine("right");
+                    Log.Debug("right");
                     TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.right);
                     break;
                 case Key.Enter:
-                    System.Diagnostics.Debug.WriteLine("enter");
+                    Log.Debug("enter");
                     TcpSerialListener.DoMouseClick();
                     break;
                 case Key.Escape:
-                    System.Diagnostics.Debug.WriteLine("esc");
+                    Log.Debug("esc");
                     TcpSerialListener.layoutPoint.CloseCurrWindow();
                     break;
             }
@@ -50,7 +58,7 @@ namespace LVP_WPF
         private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
             Exception ex = (Exception)e.ExceptionObject;
-            GuiModel.Log(ex.ToString());
+            Log.Fatal(ex.ToString());
             NotificationDialog.Show("Error", "Unhandled exception: " + ex.Message);
         }
     }

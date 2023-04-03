@@ -60,7 +60,7 @@ namespace LVP_WPF
                 //To-do: Detect file extension changes and episode deletions
                 pb.Visibility = Visibility.Visible;
                 cofeeGif.Visibility = Visibility.Visible;
-                //GuiModel.Log("Media count: " + mediaCount.ToString());
+                //Log.Information("Media count: " + mediaCount.ToString());
                 MainWindow.gui.ProgressBarMax = mediaCount;
                 await BuildCache();
             }

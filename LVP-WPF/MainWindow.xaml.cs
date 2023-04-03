@@ -1,4 +1,5 @@
 ﻿using LVP_WPF.Windows;
+using Serilog;
 using System;
 using System.Configuration;
 using System.Diagnostics;
@@ -247,7 +248,7 @@ namespace LVP_WPF
                 if (w as TvShowWindow != null) w.Close();
             }
             await Task.Delay(1000);
-            GuiModel.Log("Inactivity shutdown");
+            Log.Information("Inactivity shutdown");
             Application.Current.Shutdown();
         }
     }
