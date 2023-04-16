@@ -32,12 +32,12 @@ namespace LVP_WPF.Windows
     public partial class TvShowWindow : Window
     {
         static internal TvShow tvShow;
+        static internal EpisodeWindowBox[] episodes;
         static internal bool cartoonShuffle = false;
         static internal int cartoonIndex = 0;
         static internal int cartoonLimit = 20;
         static internal List<TvShow> cartoons = new List<TvShow>();
         static internal List<Episode> cartoonShuffleList = new List<Episode>();
-        static internal EpisodeWindowBox[] episodes;
         static internal bool subtitleSwitch = true;
 
         public static void Show(TvShow t)
@@ -109,6 +109,20 @@ namespace LVP_WPF.Windows
             if (tvShow.MultiLang)
             {
                 TcpSerialListener.layoutPoint.tvControlList.Add(this.langComboBox);
+                if (this.langComboBox.SelectedIndex != 0)
+                {
+                    if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton == null)
+                    {
+                        TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
+                    }
+                }
+                else
+                {
+                    if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
+                    {
+                        TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
+                    }
+                }
             }
             TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
 
@@ -506,16 +520,24 @@ namespace LVP_WPF.Windows
         {
             loadGrid.Visibility = Visibility.Visible;
             TvShowWindow_Fade(0.1);
-                        
+
             if (langComboBox.SelectedIndex == 0)
             {
                 PlayerWindow.subtitleFile = false;
                 toggleButton.Visibility = Visibility.Hidden;
+                if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
+                {
+                    TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
+                }
             }
             else
             {
                 PlayerWindow.subtitleFile = true;
                 toggleButton.Visibility = Visibility.Visible;
+                if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton == null)
+                {
+                    TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
+                }
             }
 
             if (!tvShow.Name.Contains(langComboBox.SelectedValue.ToString()))
@@ -548,7 +570,7 @@ namespace LVP_WPF.Windows
                     langChanged = false;
                     index = i;
                     break;
-                } 
+                }
                 else if (tvShow.MultiLangName[i].Contains(lang))
                 {
                     langChanged = true;

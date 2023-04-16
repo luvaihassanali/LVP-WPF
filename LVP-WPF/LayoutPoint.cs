@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 
 namespace LVP_WPF.Windows
 {
@@ -91,7 +92,7 @@ namespace LVP_WPF.Windows
 
             if (controlName.Equals("languageDropdown"))
             {
-                SelectLangDropDown();
+                SelectLangDropdown();
                 return;
             }
 
@@ -130,9 +131,9 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private void SelectLangDropDown()
+        private async void SelectLangDropdown()
         {
-            Task.Delay(100).Wait();
+            Task.Delay(200).Wait();
             if (!lanuageDropdownActive)
             {
                 returnPointB = currPoint;
@@ -148,7 +149,14 @@ namespace LVP_WPF.Windows
                 currPoint = returnPointB;
                 if (tvShowWindowActive)
                 {
-                    currPoint = (1, -1);
+                    if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
+                    {
+                        currPoint = (2, -1);
+                    }
+                    else
+                    {
+                        currPoint = (1, -1);
+                    }
                     currControl = tvControlList[currPoint.x];
                 }
                 else
@@ -290,6 +298,7 @@ namespace LVP_WPF.Windows
 
         private void MoveTvPoint(int x)
         {
+            
             int newIndex = currPoint.x + x;
             if (newIndex < 0 || newIndex >= tvControlList.Count) return;
 
@@ -305,7 +314,6 @@ namespace LVP_WPF.Windows
 
             currPoint = (newIndex, currPoint.y);
             currControl = langComboBoxItems[newIndex];
-            //CenterMouseOverComboBoxItem(langComboBoxItemPts[newIndex], (ComboBoxItem)currControl);
             CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.langScrollViewer);
         }
 
@@ -687,6 +695,11 @@ namespace LVP_WPF.Windows
                 Image image = (Image)control;
                 CenterMouseOverImage(image, row, scrollViewer);
             }
+            if (control as ToggleButton != null)
+            {
+                ToggleButton tb = (ToggleButton)control;
+                CenterMouseOverToggleButton(tb);
+            }
         }
 
         private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null)
@@ -731,6 +744,17 @@ namespace LVP_WPF.Windows
             });
         }
 
+        private void CenterMouseOverToggleButton(ToggleButton tb)
+        {
+            tb.Dispatcher.Invoke(() =>
+            {
+                Point target = tb.PointToScreen(new Point(0, 0));
+                target.X += tb.ActualWidth / 2;
+                target.Y += tb.ActualHeight / 2;
+                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+            });
+        }
+
         private void CenterMouseOverComboBox(ComboBox comboBox)
         {
             comboBox.Dispatcher.Invoke(() =>
@@ -764,7 +788,8 @@ namespace LVP_WPF.Windows
                 else
                 {
                     gui.scrollViewerAdjust = true;
-                    comboBoxItem.Dispatcher.Invoke(() => { 
+                    comboBoxItem.Dispatcher.Invoke(() =>
+                    {
                         comboBoxItem.BringIntoView();
                     });
                 }
