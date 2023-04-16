@@ -38,6 +38,7 @@ namespace LVP_WPF.Windows
         static internal List<TvShow> cartoons = new List<TvShow>();
         static internal List<Episode> cartoonShuffleList = new List<Episode>();
         static internal EpisodeWindowBox[] episodes;
+        static internal bool subtitleSwitch = true;
 
         public static void Show(TvShow t)
         {
@@ -123,6 +124,7 @@ namespace LVP_WPF.Windows
         private void GetLanguageInfo(TvShow tvShow)
         {
             if (!tvShow.MultiLang) return;
+            toggleButton.IsChecked = true;
             langComboBox.Visibility = Visibility.Visible;
             TcpSerialListener.layoutPoint.langComboBoxItems.Clear();
 
@@ -508,10 +510,12 @@ namespace LVP_WPF.Windows
             if (langComboBox.SelectedIndex == 0)
             {
                 PlayerWindow.subtitleFile = false;
+                toggleButton.Visibility = Visibility.Hidden;
             }
             else
             {
                 PlayerWindow.subtitleFile = true;
+                toggleButton.Visibility = Visibility.Visible;
             }
 
             if (!tvShow.Name.Contains(langComboBox.SelectedValue.ToString()))
@@ -592,6 +596,16 @@ namespace LVP_WPF.Windows
         private void EpisodeListView_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             e.Handled = true;
+        }
+
+        private void toggleButton_Unchecked(object sender, RoutedEventArgs e)
+        {
+            subtitleSwitch = false;
+        }
+
+        private void toggleButton_Checked(object sender, RoutedEventArgs e)
+        {
+            subtitleSwitch = true;
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Serilog;
 using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -15,10 +16,14 @@ namespace LVP_WPF
 #if DEBUG
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.KeyUpEvent, new KeyEventHandler(GlobalKeyUp), true);
 #endif
+            string baseFolder = AppDomain.CurrentDomain.BaseDirectory;
+            string logPath = $"{baseFolder}logs\\";
+            if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
+
             Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .WriteTo.Debug()
-            .WriteTo.File($"{AppDomain.CurrentDomain.BaseDirectory}logs",
+            .WriteTo.File(path: $"{logPath}LVP-WPF-.log",
             rollingInterval: RollingInterval.Month,
             rollOnFileSizeLimit: true)
             .CreateLogger();

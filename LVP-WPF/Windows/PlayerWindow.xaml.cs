@@ -299,12 +299,20 @@ namespace LVP_WPF.Windows
 
             if (subtitleFile)
             {
-                string[] pathParts = m.Path.Split("\\");
-                string path = "";
-                string name = pathParts[pathParts.Length - 1].Split(".")[0];
-                for (int i = 0; i < pathParts.Length - 1; i++) path += pathParts[i] + "\\";
-                path += name + ".srt";
-                mediaPlayer.AddSlave(MediaSlaveType.Subtitle, "file:///" + path, true);
+                if (TvShowWindow.subtitleSwitch)
+                {
+                    string[] pathParts = m.Path.Split("\\");
+                    string path = "";
+                    string name = pathParts[pathParts.Length - 1].Split(".")[0];
+                    for (int i = 0; i < pathParts.Length - 1; i++) path += pathParts[i] + "\\";
+                    path += name + ".srt";
+                    mediaPlayer.AddSlave(MediaSlaveType.Subtitle, "file:///" + path, true);
+                } 
+                else
+                {
+                    string subtitleTrackOption = String.Format(":sub-track={0}", subtitleTrack);
+                    media.AddOption(subtitleTrackOption);
+                }
             }
             else
             {
