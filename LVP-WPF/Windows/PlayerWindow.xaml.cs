@@ -89,7 +89,7 @@ namespace LVP_WPF.Windows
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
-            Log.Information("Play: " + currMedia.Path);
+            Log.Information("Play: {Media}", currMedia.Path);
             bool res = mediaPlayer.Play(currVLCMedia);
             if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
 
@@ -195,7 +195,7 @@ namespace LVP_WPF.Windows
 
                 currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                Log.Information("Playing " + currMedia.Path);
+                Log.Information("Playing {Media}", currMedia.Path);
                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                 return;
             }
@@ -230,12 +230,12 @@ namespace LVP_WPF.Windows
                                 }
                                 else
                                 {
-                                    Log.Information(tvShow.Name + " season change from " + (i) + " to " + (i + 1));
+                                    Log.Information("{TvShowName} season change from {Count1} to {Count2}", tvShow.Name, i, i + 1);
                                     season = tvShow.Seasons[i + 1];
                                     tvShow.CurrSeason = season.Id;
                                     currMedia = season.Episodes[0];
                                     LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                    Log.Information("Play: " + currMedia.Path);
+                                    Log.Information("Play: {Media}", currMedia.Path);
                                     ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                                     tvShowWindow.Dispatcher.BeginInvoke(() => { 
                                         tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
@@ -247,7 +247,7 @@ namespace LVP_WPF.Windows
                             {
                                 currMedia = season.Episodes[j + 1];
                                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                Log.Information("Play: " + currMedia.Path);
+                                Log.Information("Play: {Media}", currMedia.Path);
                                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
                                 return;
                             }
@@ -265,7 +265,7 @@ namespace LVP_WPF.Windows
 
         private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
         {
-            Log.Error("VLC ERROR: " + e.ToString());
+            Log.Error("VLC ERROR: {Error}", e.ToString());
         }
 
         private void MediaPlayer_LengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e)
@@ -410,7 +410,7 @@ namespace LVP_WPF.Windows
                 }
                 catch (Exception ex)
                 {
-                    Log.Error("Slider_ValueChanged: " + ex.Message);
+                    Log.Error("Slider_ValueChanged: {Value}", ex.Message);
                 }
                 prevSliderValue = SliderValue;
             }

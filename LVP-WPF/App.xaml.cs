@@ -64,7 +64,7 @@ namespace LVP_WPF
         {
             Exception ex = (Exception)e.ExceptionObject;
             Log.Fatal(ex.ToString());
-            NotificationDialog.Show("Error", "Unhandled exception: " + ex.Message);
+            NotificationDialog.Show("Error", $"Unhandled exception: {ex.Message}");
         }
     }
 }

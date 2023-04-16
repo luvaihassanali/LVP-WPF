@@ -579,7 +579,7 @@ namespace LVP_WPF.Windows
                 }
             }
 
-            Log.Information($"Switching language for {tvShow.Name} to {lang}");
+            Log.Information("Switching language for {TvShowName} to {Lang}", tvShow.Name, lang);
             string currName = tvShow.Name;
             tvShow.Name = tvShow.MultiLangName[index];
             tvShow.MultiLangName[index] = currName;

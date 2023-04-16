@@ -445,7 +445,7 @@ namespace LVP_WPF
                         try
                         {
                             serialPort.Open();
-                            Log.Information("Seriak port connected");
+                            Log.Information("Serial port connected");
                         }
                         catch
                         {

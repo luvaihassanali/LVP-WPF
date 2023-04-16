@@ -60,7 +60,6 @@ namespace LVP_WPF
                 //To-do: Detect file extension changes and episode deletions
                 pb.Visibility = Visibility.Visible;
                 cofeeGif.Visibility = Visibility.Visible;
-                //Log.Information("Media count: " + mediaCount.ToString());
                 MainWindow.gui.ProgressBarMax = mediaCount;
                 await BuildCache();
             }
@@ -536,7 +535,7 @@ namespace LVP_WPF
                     string oldSubFileName = temp[temp.Length - 1];
                     temp = newSrtPath.Split("\\");
                     string newSubFileName = temp[temp.Length - 1];
-                    string subMsg = "Renaming subtitle file " + oldSubFileName + " to " + newSubFileName + "' (Season " + season.Id + ").";
+                    string subMsg = $"Renaming subtitle file {oldSubFileName} to {newSubFileName} (Season {season.Id}).";
                     InputDialog.Show("Warning: " + tvShow.Name, subMsg, tvShow, season.Id + 1);
                     File.Move(oldSrtPath, newSrtPath);
                 }
@@ -544,7 +543,7 @@ namespace LVP_WPF
                 {
                     if (!oldPath.Contains("\\en\\"))
                     {
-                        NotificationDialog.Show("Error", "No subtitle file found " + oldSrtPath + "' (Season " + season.Id + ").");
+                        NotificationDialog.Show("Error", $"No subtitle file found {oldSrtPath} (Season {season.Id}).");
                     }
                 }
             }
@@ -752,7 +751,7 @@ namespace LVP_WPF
                 string[] langParts = langFolder.Split('\\');
                 string langKey = langParts[langParts.Length - 1];
                 string language = GetLangCode(langKey);
-                tvShow.MultiLangName.Add(tvShow.Name + " (" + language + ")");
+                tvShow.MultiLangName.Add($"{tvShow.Name} ({language})");
                 tvShow.MultiLangCurrSeason.Add(1);
                 tvShow.MultiLangLastWatched.Add(null);
 
