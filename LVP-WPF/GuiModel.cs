@@ -65,8 +65,8 @@ namespace LVP_WPF
         public GuiModel()
         {
             hideCursor = bool.Parse(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
-            fontSize = "--freetype-fontsize=Segoe UI";
-            fontStyle = "--freetype-font=48";
+            fontSize = "--freetype-fontsize=48";
+            fontStyle = "--freetype-font=Segoe UI";
         }
 
         public static void DoEvents()
