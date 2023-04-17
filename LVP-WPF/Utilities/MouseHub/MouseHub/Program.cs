@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO.Ports;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,14 +17,6 @@ namespace MouseMoverClient
 {
     class Program
     {
-        [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
-        private static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
-
-        private const int MOUSEEVENTF_LEFTDOWN = 0x02;
-        private const int MOUSEEVENTF_LEFTUP = 0x04;
-        private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
-        private const int MOUSEEVENTF_RIGHTUP = 0x10;
-
         private static bool connectionEstablished;
         private static string esp8266ServerIp;
         private static int esp8266ServerPort;
@@ -119,14 +114,15 @@ namespace MouseMoverClient
                         cursorPos--;
                         if (cursorPos == 0) cursorPos = 49;
                     }
-
+                    ConsoleHelper.StartBlink();
+                    ConsoleHelper.CloseTeamViewerDialog();
                     CheckSerialConnection();
                 }
             }
 
             Log("Stopping listener");
         }
-
+       
         private static void CheckSerialConnection()
         {
             if (serialPort != null)
@@ -235,6 +231,8 @@ namespace MouseMoverClient
                 {
                     ParseTcpDataIn(buffer);
                 }
+
+                ConsoleHelper.CloseTeamViewerDialog();
             }
 
             Log("!! Stream end !!");
@@ -301,14 +299,14 @@ namespace MouseMoverClient
         {
             uint X = (uint)Cursor.Position.X;
             uint Y = (uint)Cursor.Position.Y;
-            mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, X, Y, 0, 0);
+            ConsoleHelper.mouse_event(ConsoleHelper.MOUSEEVENTF_LEFTDOWN | ConsoleHelper.MOUSEEVENTF_LEFTUP, X, Y, 0, 0);
         }
 
         private static void DoMouseRightClick()
         {
             uint X = (uint)Cursor.Position.X;
             uint Y = (uint)Cursor.Position.Y;
-            mouse_event(MOUSEEVENTF_RIGHTDOWN | MOUSEEVENTF_RIGHTUP, X, Y, 0, 0);
+            ConsoleHelper.mouse_event(ConsoleHelper.MOUSEEVENTF_RIGHTDOWN | ConsoleHelper.MOUSEEVENTF_RIGHTUP, X, Y, 0, 0);
         }
 
         private static void StartTimer()
@@ -405,14 +403,16 @@ namespace MouseMoverClient
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern IntPtr GetStdHandle(int nStdHandle);
 
-        // Set window position x=600,y=680
+        // > Set window position x=600,y=680
+
         private const int SWP_NOSIZE = 0x0001;
         internal static void SetWindowPosition(int x, int y)
         {
             SetWindowPos(MyConsole, 0, 600, 680, 0, 0, SWP_NOSIZE);
         }
 
-        // Transparency
+        // > Transparency
+
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_LAYERED = 0x80000;
         private const uint LWA_ALPHA = 0x2;
@@ -427,7 +427,8 @@ namespace MouseMoverClient
             SetLayeredWindowAttributes(MyConsole, 0, (byte)opacity, LWA_ALPHA);
         }
 
-        // Font 
+        // > Font 
+
         private const int FixedWidthTrueType = 54;
         private const int StandardOutputHandle = -11;
 
@@ -498,7 +499,8 @@ namespace MouseMoverClient
             }
         }
 
-        // Disable quick edit mode
+        // > Disable quick edit mode
+
         private const uint ENABLE_QUICK_EDIT = 0x0040;
         // STD_INPUT_HANDLE (DWORD): -10 is the standard input device
         private const int STD_INPUT_HANDLE = -10;
@@ -535,7 +537,8 @@ namespace MouseMoverClient
             return true;
         }
 
-        // Hide title bar
+        // > Hide title bar
+
         [DllImport("kernel32.dll", ExactSpelling = true)]
         private static extern IntPtr GetConsoleWindow();
 
@@ -557,7 +560,8 @@ namespace MouseMoverClient
             SetWindowPos(MyConsole, 0, 0, 0, 0, 0, 0x27);
         }
 
-        // Matrix
+        #region > Matrix
+
         private static int matrixCounter;
         private static Random randomPosition = new Random();
         private static int flowSpeed = 50;
@@ -683,7 +687,143 @@ namespace MouseMoverClient
 
             }
         }
+
+        #endregion
+
+        // > Close TeamViewer dialog
+
+        [DllImport("user32.dll")]
+        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        [DllImport("user32.Dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool EnumChildWindows(IntPtr parentHandle, Win32Callback callback, IntPtr lParam);
+        public delegate bool Win32Callback(IntPtr hwnd, IntPtr lParam);
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern int GetWindowTextLength(IntPtr hWnd);
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, UInt32 Msg, IntPtr wParam, IntPtr lParam);
+
+        internal static void CloseTeamViewerDialog()
+        {
+            Process p = Process.GetProcessesByName("TeamViewer")[0];
+            List<IntPtr> rootWindows = GetRootWindowsOfProcess(p.Id);
+            foreach (IntPtr rw in rootWindows)
+            {
+                string parentTitle = GetWindowTitle(rw);
+                //Debug.WriteLine($"Parent: {parentTitle}");
+                if (parentTitle.Equals("Sponsored session"))
+                {
+                    SendMessage(rw, 0x0010, IntPtr.Zero, IntPtr.Zero); // WM_CLOSE = 0x0010;
+                    break;
+                }
+                /*List<IntPtr> children = GetChildWindows(rw);
+                foreach (IntPtr child in children)
+                {
+                    //Debug.WriteLine($"Child: {GetWindowTitle(child)}");
+                }*/
+            }
+        }
+
+        private static string GetWindowTitle(IntPtr hWnd)
+        {
+            var length = GetWindowTextLength(hWnd) + 1;
+            var title = new StringBuilder(length);
+            GetWindowText(hWnd, title, length);
+            return title.ToString();
+        }
+
+        private static List<IntPtr> GetRootWindowsOfProcess(int pid)
+        {
+            List<IntPtr> rootWindows = GetChildWindows(IntPtr.Zero);
+            List<IntPtr> dsProcRootWindows = new List<IntPtr>();
+            foreach (IntPtr hWnd in rootWindows)
+            {
+                uint lpdwProcessId;
+                GetWindowThreadProcessId(hWnd, out lpdwProcessId);
+                if (lpdwProcessId == pid)
+                    dsProcRootWindows.Add(hWnd);
+            }
+            return dsProcRootWindows;
+        }
+
+        private static List<IntPtr> GetChildWindows(IntPtr parent)
+        {
+            List<IntPtr> result = new List<IntPtr>();
+            GCHandle listHandle = GCHandle.Alloc(result);
+            try
+            {
+                Win32Callback childProc = new Win32Callback(EnumWindow);
+                EnumChildWindows(parent, childProc, GCHandle.ToIntPtr(listHandle));
+            }
+            finally
+            {
+                if (listHandle.IsAllocated)
+                    listHandle.Free();
+            }
+            return result;
+        }
+
+        private static bool EnumWindow(IntPtr handle, IntPtr pointer)
+        {
+            GCHandle gch = GCHandle.FromIntPtr(pointer);
+            List<IntPtr> list = gch.Target as List<IntPtr>;
+            if (list == null)
+            {
+                throw new InvalidCastException("GCHandle Target could not be cast as List<IntPtr>");
+            }
+            list.Add(handle);
+            //  You can modify this to check to see if you want to cancel the operation, then return a null here
+            return true;
+        }
+
+        // > Mouse clicks
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
+        internal static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
+
+        internal const int MOUSEEVENTF_LEFTDOWN = 0x02;
+        internal const int MOUSEEVENTF_LEFTUP = 0x04;
+        internal const int MOUSEEVENTF_RIGHTDOWN = 0x08;
+        internal const int MOUSEEVENTF_RIGHTUP = 0x10;
+
+        // 
+
+        [DllImport("user32.dll")]
+        internal static extern IntPtr GetForegroundWindow();
+
+        [StructLayoutAttribute(LayoutKind.Sequential)]
+        internal struct CONSOLE_CURSOR_INFO
+        {
+            internal int dwSize; // The percentage of the character cell that is filled by the cursor. This value is between 1 and 100. The cursor appearance varies, ranging from completely filling the cell to showing up as a horizontal line at the bottom of the cell.
+            internal bool bVisible; // The visibility of the cursor. If the cursor is visible, this member is TRUE.
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern bool GetConsoleCursorInfo(IntPtr hConsoleOutput, out CONSOLE_CURSOR_INFO lpConsoleCursorInfo);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern bool SetConsoleCursorInfo(IntPtr hConsoleOutput, ref CONSOLE_CURSOR_INFO lpConsoleCursorInfo);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        internal static void StartBlink()
+        {
+            IntPtr hwnd = Process.GetCurrentProcess().MainWindowHandle;
+            if (hwnd == ConsoleHelper.GetForegroundWindow())
+            {
+                return;
+            }
+
+            SetForegroundWindow(hwnd);
+        }
     }
 
     #endregion
+
 }

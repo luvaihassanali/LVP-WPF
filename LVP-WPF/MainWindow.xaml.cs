@@ -42,7 +42,7 @@ namespace LVP_WPF
 #if RELEASE
                 GuiModel.InitializeCustomCursor();
 #endif
-                TcpSerialListener.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
+                ComInterop.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
                 Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
                 if (mouseHubProcess.Length != 0)
                 {

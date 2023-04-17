@@ -105,7 +105,7 @@ namespace LVP_WPF.Windows
             MainWindow.gui.playerWindow = this;
             MainWindow.gui.playerCloseButton = this.closeButton;
             TcpSerialListener.layoutPoint.Select("PlayerWindow");
-            TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+            ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
         }
 
 
@@ -429,7 +429,7 @@ namespace LVP_WPF.Windows
                     mediaPlayer.Pause();
                     pollingTimer.Stop();
                     TcpSerialListener.DoMouseClick(); 
-                    TcpSerialListener.SetCursorPos(50, 1030);
+                    ComInterop.SetCursorPos(50, 1030);
                 }
                 else
                 {
@@ -439,7 +439,7 @@ namespace LVP_WPF.Windows
                     buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(1); });
                     mediaPlayer.Play();
                     pollingTimer.Start();
-                    TcpSerialListener.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+                    ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
                     TcpSerialListener.DoMouseClick();
                 }
             }

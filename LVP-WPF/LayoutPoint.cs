@@ -49,7 +49,7 @@ namespace LVP_WPF.Windows
         {
             gui = g;
             BuildMainWindowGrid();
-            TcpSerialListener.SetCursorPos(20, 20);
+            ComInterop.SetCursorPos(20, 20);
             TcpSerialListener.DoMouseClick();
             currControl = mainWindowControlGrid.Count != 0 ? mainWindowControlGrid[0][0] : gui.mainCloseButton;
             CenterMouseOverControl(currControl, 0);
@@ -729,7 +729,7 @@ namespace LVP_WPF.Windows
                 Point target = image.PointToScreen(new Point(0, 0));
                 target.X += image.ActualWidth / 2;
                 target.Y += image.ActualHeight / 2;
-                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
 
@@ -740,7 +740,7 @@ namespace LVP_WPF.Windows
                 Point target = button.PointToScreen(new Point(0, 0));
                 target.X += button.ActualWidth / 2;
                 target.Y += button.ActualHeight / 2;
-                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
 
@@ -751,7 +751,7 @@ namespace LVP_WPF.Windows
                 Point target = tb.PointToScreen(new Point(0, 0));
                 target.X += tb.ActualWidth / 2;
                 target.Y += tb.ActualHeight / 2;
-                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
 
@@ -762,7 +762,7 @@ namespace LVP_WPF.Windows
                 Point target = comboBox.PointToScreen(new Point(0, 0));
                 target.X += comboBox.ActualWidth / 2;
                 target.Y += comboBox.ActualHeight / 2;
-                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
 
@@ -801,7 +801,7 @@ namespace LVP_WPF.Windows
                 Point target = comboBoxItem.PointToScreen(new Point(0d, 0d));
                 target.X += comboBoxItem.ActualWidth / 2;
                 target.Y += comboBoxItem.ActualHeight / 2;
-                TcpSerialListener.SetCursorPos((int)target.X, (int)target.Y);
+                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
 
@@ -809,7 +809,7 @@ namespace LVP_WPF.Windows
         {
             p.X += c.ActualWidth / 2;
             p.Y += c.ActualHeight / 2;
-            TcpSerialListener.SetCursorPos((int)p.X, (int)p.Y);
+            ComInterop.SetCursorPos((int)p.X, (int)p.Y);
         }
 
         private void PrintGrid()
