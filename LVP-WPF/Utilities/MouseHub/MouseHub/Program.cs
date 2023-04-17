@@ -790,23 +790,10 @@ namespace MouseMoverClient
         internal const int MOUSEEVENTF_RIGHTDOWN = 0x08;
         internal const int MOUSEEVENTF_RIGHTUP = 0x10;
 
-        // 
+        // Keep on top
 
         [DllImport("user32.dll")]
         internal static extern IntPtr GetForegroundWindow();
-
-        [StructLayoutAttribute(LayoutKind.Sequential)]
-        internal struct CONSOLE_CURSOR_INFO
-        {
-            internal int dwSize; // The percentage of the character cell that is filled by the cursor. This value is between 1 and 100. The cursor appearance varies, ranging from completely filling the cell to showing up as a horizontal line at the bottom of the cell.
-            internal bool bVisible; // The visibility of the cursor. If the cursor is visible, this member is TRUE.
-        }
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool GetConsoleCursorInfo(IntPtr hConsoleOutput, out CONSOLE_CURSOR_INFO lpConsoleCursorInfo);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool SetConsoleCursorInfo(IntPtr hConsoleOutput, ref CONSOLE_CURSOR_INFO lpConsoleCursorInfo);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -815,15 +802,12 @@ namespace MouseMoverClient
         internal static void StartBlink()
         {
             IntPtr hwnd = Process.GetCurrentProcess().MainWindowHandle;
-            if (hwnd == ConsoleHelper.GetForegroundWindow())
+            if (hwnd == GetForegroundWindow())
             {
                 return;
             }
-
             SetForegroundWindow(hwnd);
         }
     }
-
     #endregion
-
 }
