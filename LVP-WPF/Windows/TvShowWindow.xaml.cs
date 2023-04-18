@@ -79,6 +79,7 @@ namespace LVP_WPF.Windows
 
         private void TvShowWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            this.Height = (int)SystemParameters.PrimaryScreenHeight;
             GetLanguageInfo(tvShow);
             TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
             if (tvShow.MultiLang)

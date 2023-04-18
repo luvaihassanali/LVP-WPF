@@ -91,6 +91,7 @@ namespace LVP_WPF.Windows
 
         private void MovieWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            this.Height = (int)SystemParameters.PrimaryScreenHeight;
             GetLanguageInfo(movie);
             MainWindow.gui.tvMovieCloseButton = this.closeButton;
             TcpSerialListener.layoutPoint.movieBackdrop = this.movieBackdrop;

@@ -73,7 +73,7 @@ namespace LVP_WPF.Windows
             Core.Initialize();
         }
 
-        private async void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
+        private void PlayerWindow_Loaded(object sender, RoutedEventArgs e)
         {
             mediaPlayer.TimeChanged += MediaPlayer_TimeChanged;
             mediaPlayer.LengthChanged += MediaPlayer_LengthChanged;

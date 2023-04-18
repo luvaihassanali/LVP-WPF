@@ -131,7 +131,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        private async void SelectLangDropdown()
+        private void SelectLangDropdown()
         {
             Task.Delay(200).Wait();
             if (!lanuageDropdownActive)
