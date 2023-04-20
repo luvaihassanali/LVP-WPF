@@ -265,13 +265,13 @@ namespace LVP_WPF.Windows
         private async void ClosePlayerWindow(bool click)
         {
             playerWindowActive = false;
-
             if (click)
             {
                 CenterMouseOverControl(gui.playerCloseButton);
                 GuiModel.DoEvents();
                 await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
+                await Task.Delay(200);
             }
 
             if (movieWindowActive)
