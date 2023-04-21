@@ -675,30 +675,37 @@ namespace LVP_WPF.Windows
 
         private void CenterMouseOverControl(object control, int row = -1, ScrollViewer scrollViewer = null)
         {
-            if (control as ComboBoxItem != null)
+            try
             {
-                ComboBoxItem comboBoxItem = (ComboBoxItem)control;
-                CenterMouseOverComboBoxItem(comboBoxItem, row, scrollViewer);
+                if (control as ComboBoxItem != null)
+                {
+                    ComboBoxItem comboBoxItem = (ComboBoxItem)control;
+                    CenterMouseOverComboBoxItem(comboBoxItem, row, scrollViewer);
+                }
+                if (control as ComboBox != null)
+                {
+                    ComboBox comboBox = (ComboBox)control;
+                    CenterMouseOverComboBox(comboBox);
+                }
+                if (control as Button != null)
+                {
+                    Button button = (Button)control;
+                    CenterMouseOverButton(button);
+                }
+                if (control as Image != null)
+                {
+                    Image image = (Image)control;
+                    CenterMouseOverImage(image, row, scrollViewer);
+                }
+                if (control as ToggleButton != null)
+                {
+                    ToggleButton tb = (ToggleButton)control;
+                    CenterMouseOverToggleButton(tb);
+                }
             }
-            if (control as ComboBox != null)
+            catch (Exception ex)
             {
-                ComboBox comboBox = (ComboBox)control;
-                CenterMouseOverComboBox(comboBox);
-            }
-            if (control as Button != null)
-            {
-                Button button = (Button)control;
-                CenterMouseOverButton(button);
-            }
-            if (control as Image != null)
-            {
-                Image image = (Image)control;
-                CenterMouseOverImage(image, row, scrollViewer);
-            }
-            if (control as ToggleButton != null)
-            {
-                ToggleButton tb = (ToggleButton)control;
-                CenterMouseOverToggleButton(tb);
+                Log.Error(ex.Message);
             }
         }
 
