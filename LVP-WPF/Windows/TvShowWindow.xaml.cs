@@ -385,6 +385,7 @@ namespace LVP_WPF.Windows
             cartoonIndex = 0;
             cartoonShuffleList.Clear();
             cartoonShuffle = true;
+            TcpSerialListener.layoutPoint.playerWindowActive = true;
             cartoonLimit = Int32.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
             for (int i = 0; i < cartoonLimit; i++)
             {
@@ -393,7 +394,7 @@ namespace LVP_WPF.Windows
             }
             Episode rndEpisode = cartoonShuffleList[cartoonIndex];
             PlayerWindow.Show(rndEpisode);
-            cartoonShuffle = false;
+            //cartoonShuffle = false;
         }
 
         internal static Random rnd = new Random();

@@ -82,7 +82,11 @@ namespace LVP_WPF.Windows
 
         public void Select(string controlName, bool isMovie = false)
         {
-            if (TvShowWindow.cartoonShuffle) return;
+            if (TvShowWindow.cartoonShuffle)
+            {
+                returnPointA = currPoint;
+                return;
+            }
 
             if (mainWindowActive)
             {
@@ -194,25 +198,21 @@ namespace LVP_WPF.Windows
             if (click) incomingSerialMsg = true;
             try
             {
-                if (mainWindowActive)
-                {
-                    CloseMainWindow();
-                }
-
                 if (playerWindowActive)
                 {
                     ClosePlayerWindow(click);
-                    return;
-                }
-
-                if (tvShowWindowActive)
+                } 
+                else if (tvShowWindowActive)
                 {
                     CloseTvWindow(click);
                 }
-
-                if (movieWindowActive)
+                else if (movieWindowActive)
                 {
                     CloseMovieWindow(click);
+                }
+                else if (mainWindowActive)
+                {
+                    CloseMainWindow();
                 }
             }
             catch (Exception ex)
@@ -284,6 +284,14 @@ namespace LVP_WPF.Windows
                 currPoint = returnPointB;
                 currControl = tvControlList[currPoint.x];
                 CenterMouseOverControl(currControl);
+            } 
+            else if (TvShowWindow.cartoonShuffle)
+            {
+                currPoint = returnPointA;
+                currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
+                CenterMouseOverControl(currControl);
+                TvShowWindow.cartoonShuffle = false;
+                playerWindowActive = false;
             }
         }
 
