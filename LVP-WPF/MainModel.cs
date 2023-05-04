@@ -241,7 +241,7 @@ namespace LVP_WPF
         internal bool Compare(Movie localMovie)
         {
             if (!this.Name.Equals(localMovie.Name)) return false;
-            if (!this.Path.Equals(localMovie.Path)) return false;
+            //if (!this.Path.Equals(localMovie.Path)) return false;
             return true;
         }
 
@@ -370,7 +370,7 @@ namespace LVP_WPF
                         {
                             Episode c = a[j].Episodes[k];
                             Episode d = b[j].Episodes[k];
-                            if (!c.Path.Equals(d.Path)) return false;
+                            //if (!c.Path.Equals(d.Path)) return false;
                         }
                     }
                 }
@@ -440,6 +440,7 @@ namespace LVP_WPF
 
         internal bool Compare(Season localSeason)
         {
+            if (this.Id == -1 || localSeason.Id == -1) return true;
             if (this.episodes.Length != localSeason.episodes.Length) return false;
             for (int i = 0; i < this.episodes.Length; i++)
             {
@@ -512,6 +513,7 @@ namespace LVP_WPF
         internal bool Compare(Episode otherEpisode)
         {
             if (!this.Name.Equals(otherEpisode.Name)) return false;
+            //if (!this.Path.Equals(otherEpisode.Path)) return false;
             return true;
         }
     }
