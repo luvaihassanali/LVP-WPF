@@ -13,9 +13,9 @@ namespace LVP_WPF
         private void Application_Startup(object sender, StartupEventArgs e)
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
-//#if DEBUG
+#if DEBUG
             EventManager.RegisterClassHandler(typeof(Window), Keyboard.KeyUpEvent, new KeyEventHandler(GlobalKeyUp), true);
-//#endif
+#endif
             string baseFolder = AppDomain.CurrentDomain.BaseDirectory;
             string logPath = $"{baseFolder}logs\\";
             if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);

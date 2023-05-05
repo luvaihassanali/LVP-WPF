@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace LVP_WPF
 {
@@ -37,8 +36,8 @@ namespace LVP_WPF
 
         internal static async Task Initialize(ProgressBar pb, MediaElement cofeeGif)
         {
-            string driveString = ConfigurationManager.AppSettings["Drives"];
-            if (driveString.Equals(String.Empty)) return;
+            string? driveString = ConfigurationManager.AppSettings["Drives"];
+            if (driveString != null && driveString.Equals(String.Empty)) return;
             string[] drives = driveString.Split(';');
             foreach (string drive in drives) { ProcessRootDirectory(drive); }
 
@@ -205,8 +204,9 @@ namespace LVP_WPF
         private static async Task<string> GetTranslation(string target, string msg, HttpClient client)
         {
 #if DEBUG
+            await Task.Delay(1);
             return "debug-translate";
-#endif
+#else
             if (!launchTranslator)
             {
                 Process[] libreTranslateProc = Process.GetProcessesByName("libretranslate");
@@ -253,6 +253,7 @@ namespace LVP_WPF
                 NotificationDialog.Show("Error", ex.Message);
                 throw new Exception("LibreTranslate failure");
             }
+#endif
         }
 
         private static async Task BuildTvShowGeneralData(TvShow tvShow, HttpClient client)

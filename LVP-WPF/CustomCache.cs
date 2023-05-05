@@ -33,7 +33,8 @@ namespace LVP_WPF
             {
                 while (!reader.EndOfStream)
                 {
-                    string row = reader.ReadLine();
+                    string? row = reader.ReadLine();
+                    if (row == null) continue;
                     if (skipHeader) //#;Prod.Num.;Title;Date;Summary
                     {
                         skipHeader = false;
@@ -66,7 +67,8 @@ namespace LVP_WPF
                     episode.Id = id;
                     episode.Overview = overview;
                     episode.Date = DateTime.Parse(date);
-                    //To-do: libvlc screen snip episode.Backdrop
+                    //To-do: libvlc screen snip
+                    //episode.Backdrop
                     index++;
                 }
             }
@@ -98,12 +100,14 @@ namespace LVP_WPF
             {
                 while (!reader.EndOfStream)
                 {
-                    string row = reader.ReadLine();
+                    string? row = reader.ReadLine();
+                    if (row == null) continue;
                     if (skipHeader) //#;Prod.Num.;Title;Date;Summary
                     {
                         skipHeader = false;
                         continue;
                     }
+                    
                     string[] values = row.Split(';');
                     ids.Add(Int32.Parse(values[0]));
                     titles.Add(values[1]);

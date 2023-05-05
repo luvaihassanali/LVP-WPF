@@ -176,72 +176,30 @@ namespace LVP_WPF
 
     public class Media
     {
-        private int id;
-        private string path;
         //To-do: move other common vars into Media class and update variables to auto property
+        public int Id { get; set; }
         public string Name { get; set; }
-
-        public int Id
-        {
-            get => id;
-            set => id = value;
-        }
-
-        public string Path
-        {
-            get => path;
-            set => path = value;
-        }
+        public string Path { get; set; }
     }
 
     public class Movie : Media
     {
-        private string poster;
-        private string backdrop;
-        private string overview;
-        DateTime? date;
-        private int runningTime;
-
         public Movie(string n, string p)
         {
             Name = n;
             Path = p;
         }
 
-        public string Backdrop
-        {
-            get => backdrop;
-            set => backdrop = value;
-        }
-
-        public string Poster
-        {
-            get => poster;
-            set => poster = value;
-        }
-
-        public string Overview
-        {
-            get => overview;
-            set => overview = value;
-        }
-
-        public DateTime? Date
-        {
-            get => date;
-            set => date = value;
-        }
-
-        public int RunningTime
-        {
-            get => runningTime;
-            set => runningTime = value;
-        }
+        public string Backdrop { get; set; }
+        public string Poster { get; set; }
+        public string Overview { get; set; }
+        public DateTime? Date { get; set; }
+        public int RunningTime { get; set; }
 
         internal bool Compare(Movie localMovie)
         {
             if (!this.Name.Equals(localMovie.Name)) return false;
-            //if (!this.Path.Equals(localMovie.Path)) return false;
+            if (!this.Path.Equals(localMovie.Path)) return false;
             return true;
         }
 
@@ -264,84 +222,29 @@ namespace LVP_WPF
     
     public class TvShow : Media
     {
-        private bool cartoon;
-        private string overview;
-        private string backdrop;
-        private string poster;
-        private Season[] seasons;
-        private DateTime? date;
-        private int currSeason;
-        private int runningTime;
-        Episode lastWatched;
-
         public TvShow(string n)
         {
             Name = n;
-            currSeason = 1;
-            lastWatched = null;
-            cartoon = false;
+            CurrSeason = 1;
+            Cartoon = false;
             MultiLang = false;
         }
 
-        public bool Cartoon
-        {
-            get => cartoon;
-            set => cartoon = value;
-        }
-
-        public string Backdrop
-        {
-            get => backdrop;
-            set => backdrop = value;
-        }
-
-        public string Poster
-        {
-            get => poster;
-            set => poster = value;
-        }
-
-        public string Overview
-        {
-            get => overview;
-            set => overview = value;
-        }
-
-        public DateTime? Date
-        {
-            get => date;
-            set => date = value;
-        }
-
-        public int CurrSeason
-        {
-            get => currSeason;
-            set => currSeason = value;
-        }
-
-        public Season[] Seasons
-        {
-            get => seasons;
-            set => seasons = value;
-        }
-
-        public Episode LastEpisode
-        {
-            get => lastWatched;
-            set => lastWatched = value;
-        }
-        public int RunningTime
-        {
-            get => runningTime;
-            set => runningTime = value;
-        }
-
+        public bool Cartoon { get; set; }
+        public string Backdrop { get; set; }
+        public string Poster { get; set; }
+        public string Overview { get; set; }
+        public DateTime? Date { get; set; }
+        public int CurrSeason { get; set; }
+        public Season[] Seasons { get; set; }
+        public Episode LastEpisode { get; set; }
+        public int RunningTime { get; set; }
         public bool MultiLang { get; set; }
-        public List<string> MultiLangName { get; set; }
-        public List<string> MultiLangOverview { get; set; }
-        public List<Season[]> MultiLangSeasons { get; set; }
-        public List<int> MultiLangCurrSeason { get; set; }
-        public List<Episode> MultiLangLastWatched { get; set; }
+        public List<string>? MultiLangName { get; set; }
+        public List<string>? MultiLangOverview { get; set; }
+        public List<Season[]>? MultiLangSeasons { get; set; }
+        public List<int>? MultiLangCurrSeason { get; set; }
+        public List<Episode>? MultiLangLastWatched { get; set; }
 
         internal bool Compare(TvShow localShow)
         {
@@ -370,17 +273,17 @@ namespace LVP_WPF
                         {
                             Episode c = a[j].Episodes[k];
                             Episode d = b[j].Episodes[k];
-                            //if (!c.Path.Equals(d.Path)) return false;
+                            if (!c.Path.Equals(d.Path)) return false;
                         }
                     }
                 }
                 return true;
             }
 
-            if (this.seasons.Length != localShow.seasons.Length) return false;
-            for (int i = 0; i < this.seasons.Length; i++)
+            if (this.Seasons.Length != localShow.Seasons.Length) return false;
+            for (int i = 0; i < this.Seasons.Length; i++)
             {
-                if (!this.seasons[i].Compare(localShow.seasons[i])) return false;
+                if (!this.Seasons[i].Compare(localShow.Seasons[i])) return false;
             }
 
             return true;
@@ -393,58 +296,35 @@ namespace LVP_WPF
 
         private class SortTvShowsAlphabeticallyHelper : IComparer
         {
-            int IComparer.Compare(object a, object b)
+            int IComparer.Compare(object? a, object? b)
             {
-                TvShow t1 = (TvShow)a;
-                TvShow t2 = (TvShow)b;
-                return String.Compare(t1.Name, t2.Name);
+                TvShow? t1 = (TvShow?)a;
+                TvShow? t2 = (TvShow?)b;
+                if (t1 != null && t2 != null) return String.Compare(t1.Name, t2.Name);
+                else throw new ArgumentNullException();
             }
         }
     }
 
     public class Season
     {
-        private int id;
-        private Episode[] episodes;
-        private string poster;
-        DateTime? date;
-
         public Season(int i)
         {
-            id = i;
+            Id = i;
         }
 
-        public int Id
-        {
-            get => id;
-            set => id = value;
-        }
-
-        public string Poster
-        {
-            get => poster;
-            set => poster = value;
-        }
-
-        public DateTime? Date
-        {
-            get => date;
-            set => date = value;
-        }
-
-        public Episode[] Episodes
-        {
-            get => episodes;
-            set => episodes = value;
-        }
+        public int Id { get; set; }
+        public string Poster { get; set; }
+        public DateTime? Date { get; set; }
+        public Episode[] Episodes { get; set; }
 
         internal bool Compare(Season localSeason)
         {
             if (this.Id == -1 || localSeason.Id == -1) return true;
-            if (this.episodes.Length != localSeason.episodes.Length) return false;
-            for (int i = 0; i < this.episodes.Length; i++)
+            if (this.Episodes.Length != localSeason.Episodes.Length) return false;
+            for (int i = 0; i < this.Episodes.Length; i++)
             {
-                if (!this.episodes[i].Compare(localSeason.episodes[i])) return false;
+                if (!this.Episodes[i].Compare(localSeason.Episodes[i])) return false;
             }
             return true;
         }
@@ -452,68 +332,27 @@ namespace LVP_WPF
 
     public class Episode : Media
     {
-        private bool multiEpisode = false;
-        private bool translated = false;
-        private string backdrop;
-        private string overview;
-        DateTime? date;
-        private long savedTime;
-        private long length;
-
         public Episode(int i, string n, string p, bool me = false)
         {
             Id = i;
             Name = n;
             Path = p;
-            savedTime = 0;
-            multiEpisode = me;
+            SavedTime = 0;
+            MultiEpisode = me;
         }
 
-        public bool Translated
-        {
-            get => translated;
-            set => translated = value;
-        }
-
-        public string Backdrop
-        {
-            get => backdrop;
-            set => backdrop = value;
-        }
-
-        public string Overview
-        {
-            get => overview;
-            set => overview = value;
-        }
-        public DateTime? Date
-        {
-            get => date;
-            set => date = value;
-        }
-
-        public long SavedTime
-        {
-            get => savedTime;
-            set => savedTime = value;
-        }
-
-        public long Length
-        {
-            get => length;
-            set => length = value;
-        }
-
-        public bool MultiEpisode
-        {
-            get => multiEpisode;
-            set => multiEpisode = value;
-        }
+        public bool Translated { get; set; }
+        public string Backdrop { get; set; }
+        public string Overview { get; set; }
+        public DateTime? Date { get; set; }
+        public long SavedTime { get; set; }
+        public long Length { get; set; }
+        public bool MultiEpisode { get; set; }
 
         internal bool Compare(Episode otherEpisode)
         {
             if (!this.Name.Equals(otherEpisode.Name)) return false;
-            //if (!this.Path.Equals(otherEpisode.Path)) return false;
+            if (!this.Path.Equals(otherEpisode.Path)) return false;
             return true;
         }
     }

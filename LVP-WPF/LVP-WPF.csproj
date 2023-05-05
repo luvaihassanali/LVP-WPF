@@ -17,6 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove=".editorconfig" />
     <None Remove="Resources\blue_cursors_xl\blank.cur" />
     <None Remove="Resources\blue_cursors_xl\blue_arrow_xl.cur" />
     <None Remove="Resources\blue_cursors_xl\blue_busy_xl.ani" />
@@ -266,6 +267,14 @@
       <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
       <SubType>Designer</SubType>
     </Page>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EditorConfigFiles Remove="C:\Users\luv\source\repos\LVP-WPF\LVP-WPF\.editorconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EditorConfigFiles Remove="C:\Users\luv\source\repos\LVP-WPF\LVP-WPF\.editorconfig" />
   </ItemGroup>
 
 </Project>

@@ -3,13 +3,10 @@ using Serilog;
 using System;
 using System.Configuration;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media.Animation;
 
 namespace LVP_WPF
@@ -26,7 +23,7 @@ namespace LVP_WPF
         public MainWindow()
         {
             InitializeComponent();
-            gui = new GuiModel();
+            gui = new GuiModel(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
             DataContext = gui;
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
@@ -36,7 +33,6 @@ namespace LVP_WPF
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            //System.Threading.Thread.Sleep(30000);
             await Task.Run(() =>
             {
 #if RELEASE
@@ -63,7 +59,6 @@ namespace LVP_WPF
                 gui.mainCloseButton = this.closeButton;
                 gui.mainScrollViewer = this.scrollViewer;
                 gui.mainGrid = this.mainGrid;
-
                 tcpWorker = new TcpSerialListener(gui);
                 tcpWorker.StartThread();
             });
@@ -71,7 +66,6 @@ namespace LVP_WPF
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30));
             inactivityTimer.Inactivity += InactivityDetected;
             PlayerWindow.InitiaizeLibVlcCore();
-
             MainWindow_Fade(1.0);
             loadGrid.Visibility = Visibility.Hidden;
             if (bool.Parse(ConfigurationManager.AppSettings["Snow"])) snow.Visibility = Visibility.Visible;

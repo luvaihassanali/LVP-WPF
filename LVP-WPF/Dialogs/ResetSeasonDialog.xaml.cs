@@ -1,25 +1,12 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace LVP_WPF.Dialogs
 {
-    /// <summary>
-    /// Interaction logic for ResetSeasonWindow.xaml
-    /// </summary>
-
     [ObservableObject]
     public partial class ResetSeasonDialog : Window
     {
@@ -116,12 +103,12 @@ namespace LVP_WPF.Dialogs
 
         private void SeasonListView_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            ListView seasonListView = sender as ListView;
+            /*ListView seasonListView = sender as ListView;
             OptionWindowBox item = (OptionWindowBox)seasonListView.SelectedItem;
             ItemContainerGenerator generator = seasonListView.ItemContainerGenerator;
             ListViewItem container = (ListViewItem)generator.ContainerFromItem(item);
             CheckBox c = GuiModel.GetChildrenByType(container, typeof(CheckBox), "checkbox") as CheckBox;
-            if (c != null) c.IsChecked = (bool)c.IsChecked ? false : true;
+            if (c != null) c.IsChecked = (bool)c.IsChecked ? false : true;*/
         }
     }
 }

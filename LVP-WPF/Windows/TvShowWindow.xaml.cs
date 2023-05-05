@@ -1,33 +1,21 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using LibVLCSharp.Shared;
 using LVP_WPF.Dialogs;
 using Serilog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
-using System.Diagnostics;
-using System.Linq;
-using System.Printing;
-using System.Reflection.Emit;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Interop;
-using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 
 namespace LVP_WPF.Windows
 {
-    /// <summary>
-    /// Interaction logic for TvShowWindow.xaml
-    /// </summary>
-
     [ObservableObject]
     public partial class TvShowWindow : Window
     {

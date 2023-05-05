@@ -1,24 +1,15 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Markup;
 using System.Windows.Media.Imaging;
 
 namespace LVP_WPF.Windows
 {
-    /// <summary>
-    /// Interaction logic for MovieWindow.xaml
-    /// </summary>
-
     [ObservableObject]
     public partial class MovieWindow : Window
     {

@@ -2,22 +2,14 @@
 using LibVLCSharp.Shared;
 using Serilog;
 using System;
-using System.Configuration;
-using System.Diagnostics;
-using System.Security;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace LVP_WPF.Windows
 {
-    /// <summary>
-    /// Interaction logic for PlayerWindow.xaml
-    /// </summary>
-
     [ObservableObject]
     public partial class PlayerWindow : Window
     {

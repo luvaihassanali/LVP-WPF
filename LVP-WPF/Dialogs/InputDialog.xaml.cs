@@ -1,7 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
-using System.Diagnostics;
-using System.Linq;
 using System.Windows;
 
 namespace LVP_WPF
@@ -26,7 +24,7 @@ namespace LVP_WPF
                 tmdbUrl = "https://www.themoviedb.org/tv/" + tvShow.Id.ToString() + "/season/" + (currSeason - 1);
             }
             dialog.ShowDialog();
-            if ((bool)dialog.DialogResult)
+            if (dialog.DialogResult != null && (bool)dialog.DialogResult)
             {
                 return true;
             }
@@ -57,7 +55,7 @@ namespace LVP_WPF
 
         private void TmdbButton_Click(object sender, RoutedEventArgs e)
         {
-            Process.Start(new ProcessStartInfo(tmdbUrl) { UseShellExecute = true });
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tmdbUrl) { UseShellExecute = true });
             e.Handled = true;
         }
     }

@@ -4,10 +4,6 @@ using System.Windows.Controls;
 
 namespace LVP_WPF.Windows
 {
-    /// <summary>
-    /// Interaction logic for SeasonWindow.xaml
-    /// </summary>
-
     public partial class SeasonWindow : Window
     {
         private static int seasonIndex = 0;
