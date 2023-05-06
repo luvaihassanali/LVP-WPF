@@ -127,6 +127,74 @@ void ParseIrValue(uint32_t rawData)
         sendRaw(intro_Reset, 68U, repeat_Reset, 4U, 38400U, 1);
         delay(50);
         break;
+    case SAMSUNG_PRECH:
+    case MODE:
+        SendSerialData("cartoons");
+        break;
+    case SAMSUNG_MINUS:
+    case EFFECT:
+        SendSerialData("history-play");   
+        break; 
+    case SAMSUNG_num_1:
+	    SendSerialData("S_n_1");
+        break;
+    case SAMSUNG_num_2:
+	    SendSerialData("S_n_2");
+        break;
+    case SAMSUNG_num_3:
+	    SendSerialData("S_n_3");
+        break;
+    case SAMSUNG_num_4:
+	    SendSerialData("S_n_4");
+        break;
+    case SAMSUNG_num_5:
+	    SendSerialData("S_n_5");
+        break;
+    case SAMSUNG_num_6:
+	    SendSerialData("S_n_6");
+        break;
+    case SAMSUNG_num_7:
+	    SendSerialData("S_n_7");
+        break;
+    case SAMSUNG_num_8:
+	    SendSerialData("S_n_8");
+        break;
+    case SAMSUNG_num_9:
+	    SendSerialData("S_n_9");
+        break;
+    case SAMSUNG_num_0:
+	    SendSerialData("S_n_0");
+        break;
+    case num_1:
+	    SendSerialData("n_1");
+       break;
+    case num_2:
+	    SendSerialData("n_2");
+       break;
+    case num_3:
+	    SendSerialData("n_3");
+       break;
+    case num_4:
+	    SendSerialData("n_4");
+       break;
+    case num_5:
+	    SendSerialData("n_5");
+       break;
+    case num_6:
+	    SendSerialData("n_6");
+       break;
+    case num_7:
+	    SendSerialData("n_7");
+       break;
+    case num_8:
+	    SendSerialData("n_8");
+       break;
+    case num_9:
+	    SendSerialData("n_9");
+       break;
+    case num_0:
+	    SendSerialData("n_0");
+       break;
     default:
         break;
     }

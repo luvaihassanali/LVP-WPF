@@ -371,8 +371,8 @@ namespace MouseMoverClient
                         path = ConfigurationManager.AppSettings["LVP-WPF-Path"] + "LVP-WPF.exe";
                         if (path.Contains("%USERPROFILE%")) { path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
 #endif
-                        System.Diagnostics.Process p = new System.Diagnostics.Process();
-                        p.StartInfo = new System.Diagnostics.ProcessStartInfo();
+                        Process p = new Process();
+                        p.StartInfo = new ProcessStartInfo();
                         p.StartInfo.FileName = path;
                         p.StartInfo.WorkingDirectory = path.Replace("LVP-WPF.exe", "");
                         p.Start();

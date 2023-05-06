@@ -445,6 +445,21 @@ namespace LVP_WPF.Windows
             }
         }
 
+        internal void TcpSerialListerner_BeginEnd(bool begin)
+        {
+            if (mediaPlayer != null)
+            {
+                if (begin)
+                {
+                    mediaPlayer.SeekTo(TimeSpan.Zero);
+                }
+                else
+                {
+                    mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Length - 1));
+                }
+            }
+        }
+
         internal void TcpSerialListener_Seek(bool rewind)
         {
             if (mediaPlayer != null)

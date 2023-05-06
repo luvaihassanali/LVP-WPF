@@ -24,7 +24,29 @@ const uint32_t SAMSUNG_STOP = 0xB9460707;
 const uint32_t SAMSUNG_FAST_FORWARD = 0xB7480707; 
 const uint32_t SAMSUNG_REWIND = 0xBA450707; 
 //const uint32_t SAMSUNG_EXIT = 0xD22D0707; 
+const uint32_t SAMSUNG_MINUS = 0xDC230707;
+const uint32_t SAMSUNG_PRECH = 0xEC130707;
+const uint32_t SAMSUNG_num_1 = 0xBE415343;
+const uint32_t SAMSUNG_num_2 = 0xBD425343;
+const uint32_t SAMSUNG_num_3 = 0xBC435343;
+const uint32_t SAMSUNG_num_4 = 0xBB445343;
+const uint32_t SAMSUNG_num_5 = 0xBA455343;
+const uint32_t SAMSUNG_num_6 = 0xB9465343;
+const uint32_t SAMSUNG_num_7 = 0xB8475343;
+const uint32_t SAMSUNG_num_8 = 0xC03F5343;
+const uint32_t SAMSUNG_num_9 = 0xC8375343;
+const uint32_t SAMSUNG_num_0 = 0xD02F5343;
 
+const uint32_t num_1 = 0xFB040707;
+const uint32_t num_2 = 0xFA050707;
+const uint32_t num_3 = 0xF9060707;
+const uint32_t num_4 = 0xF7080707;
+const uint32_t num_5 = 0xF6090707;
+const uint32_t num_6 = 0xF50A0707;
+const uint32_t num_7 = 0xF30C0707;
+const uint32_t num_8 = 0xF20D0707;
+const uint32_t num_9 = 0xF10E0707;
+const uint32_t num_0 = 0xEE110707;
 const uint32_t TV_POWER = 0xFD020707; 
 const uint32_t SOUNDBAR_POWER = 0xFE015343; 
 const uint32_t SOUNDBAR_VOL_UP = 0xCC335343; 
@@ -45,7 +67,9 @@ const uint32_t FAST_FORWARD = 0x8A755343;
 const uint32_t REWIND = 0x8B745343; 
 const uint32_t SOUNDBAR_INPUT = 0xF9065343;  //"AUDIO" button
 const uint32_t SOUNDBAR_MUTE = 0xC6395343; 
-const uint32_t SOUNDBAR_RESET = 0xFB045343; //"MODE" button
+const uint32_t SOUNDBAR_RESET = 0xF10E5343; // "SUBTITLES"
+const uint32_t MODE = 0xFB045343; //"MODE"
+const uint32_t EFFECT = 0xF30C5343; // "EFFECT"
 
 // The following variables are automatically generated using IrScrutinizer 2.3.0 and Bomaker Ondine 1 Soundbar.rmdu
 // http://www.hifi-remote.com/forums/dload.php?action=file&file_id=25809

@@ -31,7 +31,7 @@ namespace LVP_WPF
         private int joystickY;
         private bool workerThreadRunning;
 
-        private GuiModel gui;
+        internal GuiModel gui;
         public static LayoutPoint layoutPoint;
         private static System.Timers.Timer pollingTimer;
 
@@ -406,6 +406,18 @@ namespace LVP_WPF
                         break;
                     case "rewind":
                         gui.playerWindow.TcpSerialListener_Seek(true);
+                        break;
+                    case "forward":
+                        gui.playerWindow.TcpSerialListerner_BeginEnd(false);
+                        break;
+                    case "backward:":
+                        gui.playerWindow.TcpSerialListerner_BeginEnd(true);
+                        break;
+                    case "cartoons":
+                        if (!gui.isPlaying) TvShowWindow.PlayRandomCartoons();
+                        break;
+                    case "history-play":
+                        //
                         break;
                 }
             }
