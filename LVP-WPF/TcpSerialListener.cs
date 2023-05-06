@@ -1,16 +1,10 @@
 ﻿using LVP_WPF.Windows;
-using Microsoft.Win32;
 using Serilog;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Diagnostics;
-using System.IO;
 using System.IO.Ports;
-using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,6 +28,7 @@ namespace LVP_WPF
         internal GuiModel gui;
         public static LayoutPoint layoutPoint;
         private static System.Timers.Timer pollingTimer;
+        private static Thread dispatcher;
 
         private SerialPort serialPort;
         public bool serialPortEnabled;
@@ -43,6 +38,7 @@ namespace LVP_WPF
 
         public TcpSerialListener(GuiModel g)
         {
+            dispatcher = null;
             gui = g;
             connectionEstablished = false;
             workerThreadRunning = false; 
@@ -410,16 +406,51 @@ namespace LVP_WPF
                     case "forward":
                         gui.playerWindow.TcpSerialListerner_BeginEnd(false);
                         break;
-                    case "backward:":
+                    case "backward":
                         gui.playerWindow.TcpSerialListerner_BeginEnd(true);
                         break;
                     case "cartoons":
-                        if (!gui.isPlaying) TvShowWindow.PlayRandomCartoons();
+                        StaThreadWrapper(() =>
+                        {
+                            TvShowWindow.PlayRandomCartoons();
+                        });
                         break;
                     case "history-play":
                         //
                         break;
                 }
+            }
+        }
+
+        internal static void StaThreadWrapper(Action action)
+        {
+            dispatcher = new Thread(o =>
+            {
+                action();
+                Dispatcher.Run();
+            });
+            dispatcher.SetApartmentState(ApartmentState.STA);
+            dispatcher.IsBackground = true;
+            dispatcher.Start();
+        }
+
+        internal static void EndFeature()
+        {
+            if (dispatcher != null)
+            {
+                try
+                {
+#pragma warning disable SYSLIB0006 // Type or member is obsolete
+                    dispatcher.Abort();
+                }
+                catch (ThreadAbortException)
+                {
+                    Thread.ResetAbort();
+#pragma warning restore SYSLIB0006 // Type or member is obsolete
+                }
+
+                dispatcher.Join();
+                dispatcher = null;
             }
         }
 

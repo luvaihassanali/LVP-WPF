@@ -229,7 +229,8 @@ namespace LVP_WPF.Windows
                                     LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
                                     Log.Information("Play: {Media}", currMedia.Path);
                                     ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                    tvShowWindow.Dispatcher.BeginInvoke(() => { 
+                                    tvShowWindow.Dispatcher.BeginInvoke(() =>
+                                    {
                                         tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
                                     });
                                     return;
@@ -275,7 +276,7 @@ namespace LVP_WPF.Windows
             if (!sliderMouseDown)
             {
                 SliderValue = mediaPlayer.Time;
-            } 
+            }
             else
             {
                 sliderMouseDown = false;
@@ -299,7 +300,7 @@ namespace LVP_WPF.Windows
                     for (int i = 0; i < pathParts.Length - 1; i++) path += pathParts[i] + "\\";
                     path += name + ".srt";
                     mediaPlayer.AddSlave(MediaSlaveType.Subtitle, "file:///" + path, true);
-                } 
+                }
                 else
                 {
                     string subtitleTrackOption = String.Format(":sub-track={0}", subtitleTrack);
@@ -420,13 +421,13 @@ namespace LVP_WPF.Windows
                     buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(0); });
                     mediaPlayer.Pause();
                     pollingTimer.Stop();
-                    TcpSerialListener.DoMouseClick(); 
+                    TcpSerialListener.DoMouseClick();
                     ComInterop.SetCursorPos(50, 1030);
                 }
                 else
                 {
-                    playButton.Dispatcher.Invoke(() => { playButton.Background = System.Windows.Media.Brushes.Transparent;});
-                    playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = System.Windows.Media.Brushes.White;});
+                    playButton.Dispatcher.Invoke(() => { playButton.Background = System.Windows.Media.Brushes.Transparent; });
+                    playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = System.Windows.Media.Brushes.White; });
                     overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Hidden; });
                     buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(1); });
                     mediaPlayer.Play();
@@ -451,7 +452,7 @@ namespace LVP_WPF.Windows
             {
                 if (begin)
                 {
-                    mediaPlayer.SeekTo(TimeSpan.Zero);
+                    mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(0));
                 }
                 else
                 {

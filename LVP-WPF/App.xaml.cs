@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using LVP_WPF.Windows;
+using Serilog;
 using System;
 using System.IO;
 using System.Windows;
@@ -54,6 +55,14 @@ namespace LVP_WPF
                 case Key.Escape:
                     Log.Debug("esc");
                     TcpSerialListener.layoutPoint.CloseCurrWindow();
+                    break;
+                case Key.S:
+                    Log.Debug("cartoons");
+
+                    TcpSerialListener.StaThreadWrapper(() =>
+                    {
+                        TvShowWindow.PlayRandomCartoons();
+                    });
                     break;
             }
         }

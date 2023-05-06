@@ -201,6 +201,7 @@ namespace LVP_WPF.Windows
                 if (playerWindowActive)
                 {
                     ClosePlayerWindow(click);
+                    TcpSerialListener.EndFeature();
                 } 
                 else if (tvShowWindowActive)
                 {
