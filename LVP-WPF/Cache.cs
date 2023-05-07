@@ -72,6 +72,23 @@ namespace LVP_WPF
             {
                 MainWindow.gui.mediaDict.Add(MainWindow.model.TvShows[i].Id, MainWindow.model.TvShows[i]);
             }
+
+            //if (MainWindow.model.HistoryList.Count == 0 || update)
+            {
+                foreach (TvShow t in MainWindow.model.TvShows)
+                {
+                    if (t.Cartoon) continue;
+                    foreach (Season s in t.Seasons)
+                    {
+                        foreach (Episode e in s.Episodes)
+                        {
+                            MainWindow.model.HistoryList.Add(e);
+                        }
+                    }
+                }
+                MainWindow.model.HistoryList.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
+            }
+
         }
 
         #region BuildCache functions
@@ -834,7 +851,7 @@ namespace LVP_WPF
 
                 for (int j = 0; j < episodeEntries.Length; j++)
                 {
-                    mediaCount++; 
+                    mediaCount++;
                     if (tvShow.MultiLang) mediaCount++;
                     try
                     {

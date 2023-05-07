@@ -82,7 +82,7 @@ namespace LVP_WPF.Windows
 
         public void Select(string controlName, bool isMovie = false)
         {
-            if (TvShowWindow.cartoonShuffle)
+            if (TvShowWindow.cartoonShuffle || TvShowWindow.historyWatch)
             {
                 returnPointA = currPoint;
                 return;
@@ -286,11 +286,12 @@ namespace LVP_WPF.Windows
                 currControl = tvControlList[currPoint.x];
                 CenterMouseOverControl(currControl);
             } 
-            else if (TvShowWindow.cartoonShuffle)
+            else if (TvShowWindow.cartoonShuffle || TvShowWindow.historyWatch)
             {
                 currPoint = returnPointA;
                 currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
                 CenterMouseOverControl(currControl);
+                TvShowWindow.historyWatch = false;
                 TvShowWindow.cartoonShuffle = false;
                 playerWindowActive = false;
             }

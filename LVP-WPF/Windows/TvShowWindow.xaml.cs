@@ -21,6 +21,7 @@ namespace LVP_WPF.Windows
     {
         static internal TvShow tvShow;
         static internal EpisodeWindowBox[] episodes;
+        static internal bool historyWatch = false;
         static internal bool cartoonShuffle = false;
         static internal int cartoonIndex = 0;
         static internal int cartoonLimit = 20;
@@ -368,36 +369,6 @@ namespace LVP_WPF.Windows
             TcpSerialListener.layoutPoint.langComboBoxItemPts.Clear();
         }
 
-        internal static void PlayRandomCartoons()
-        {
-            cartoonIndex = 0;
-            cartoonShuffleList.Clear();
-            cartoonShuffle = true;
-            TcpSerialListener.layoutPoint.playerWindowActive = true;
-            cartoonLimit = Int32.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
-            for (int i = 0; i < cartoonLimit; i++)
-            {
-                Episode e = GetRandomEpisode();
-                cartoonShuffleList.Add(e);
-            }
-            Episode rndEpisode = cartoonShuffleList[cartoonIndex];
-            PlayerWindow.Show(rndEpisode);
-            //cartoonShuffle = false;
-        }
-
-        internal static Random rnd = new Random();
-        internal static Episode GetRandomEpisode()
-        {
-            Episode rndEpisode;
-            int rndVal = rnd.Next(cartoons.Count);
-            TvShow rndShow = cartoons[rndVal];
-            rndVal = rnd.Next(rndShow.Seasons.Length);
-            Season rndSeason = rndShow.Seasons[rndVal];
-            rndVal = rnd.Next(rndSeason.Episodes.Length);
-            rndEpisode = rndSeason.Episodes[rndVal];
-            return rndEpisode;
-        }
-
         private void ShowNameLabel_Click(object sender, MouseButtonEventArgs e)
         {
             int[] seasons = ResetSeasonDialog.Show(tvShow);
@@ -618,6 +589,53 @@ namespace LVP_WPF.Windows
         private void toggleButton_Checked(object sender, RoutedEventArgs e)
         {
             subtitleSwitch = true;
+        }
+
+        internal static void PlayRandomCartoons()
+        {
+            cartoonIndex = 0;
+            cartoonShuffleList.Clear();
+            cartoonShuffle = true;
+            TcpSerialListener.layoutPoint.playerWindowActive = true;
+            cartoonLimit = Int32.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
+            for (int i = 0; i < cartoonLimit; i++)
+            {
+                Episode e = GetRandomEpisode();
+                cartoonShuffleList.Add(e);
+            }
+            Episode rndEpisode = cartoonShuffleList[cartoonIndex];
+            PlayerWindow.Show(rndEpisode);
+        }
+
+        internal static Random rnd = new Random();
+        internal static Episode GetRandomEpisode()
+        {
+            Episode rndEpisode;
+            int rndVal = rnd.Next(cartoons.Count);
+            TvShow rndShow = cartoons[rndVal];
+            rndVal = rnd.Next(rndShow.Seasons.Length);
+            Season rndSeason = rndShow.Seasons[rndVal];
+            rndVal = rnd.Next(rndSeason.Episodes.Length);
+            rndEpisode = rndSeason.Episodes[rndVal];
+            return rndEpisode;
+        }
+
+        internal static void PlayHistoryList()
+        {
+            historyWatch = true;
+            TcpSerialListener.layoutPoint.playerWindowActive = true;
+            Episode currEpisode;
+            if (MainWindow.model.HistoryEpisode == null)
+            {
+                MainWindow.model.HistoryEpisode = MainWindow.model.HistoryList[0];
+                MainWindow.model.HistoryIndex = 0;
+                currEpisode = MainWindow.model.HistoryEpisode;
+            }
+            else
+            {
+                currEpisode = MainWindow.model.HistoryList[MainWindow.model.HistoryIndex];
+            }
+            PlayerWindow.Show(currEpisode);
         }
     }
 }

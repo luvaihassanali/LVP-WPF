@@ -64,6 +64,14 @@ namespace LVP_WPF
                         TvShowWindow.PlayRandomCartoons();
                     });
                     break;
+                case Key.W:
+                    Log.Debug("historyWatch");
+
+                    TcpSerialListener.StaThreadWrapper(() =>
+                    {
+                        TvShowWindow.PlayHistoryList();
+                    });
+                    break;
             }
         }
 

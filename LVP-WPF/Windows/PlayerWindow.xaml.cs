@@ -111,7 +111,15 @@ namespace LVP_WPF.Windows
                 pollingTimer = null;
             }
 
-            if (!TvShowWindow.cartoonShuffle && !skipClosing)
+            if (TvShowWindow.historyWatch)
+            {
+                if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
+                {
+                    MainWindow.model.HistoryIndex = 0;
+                    MainWindow.model.HistoryEpisode = null;
+                }
+            }
+            else if (!TvShowWindow.cartoonShuffle && !skipClosing)
             {
                 if (currMedia as Episode != null)
                 {
@@ -152,6 +160,7 @@ namespace LVP_WPF.Windows
                     UpdateProgressBar(episode);
                 }
             }
+
             if (mediaPlayer.IsPlaying) mediaPlayer.Stop();
             mediaPlayer.Dispose();
             inactivityTimer.Dispose();
@@ -176,6 +185,22 @@ namespace LVP_WPF.Windows
 
         private void MediaPlayer_EndReached(object? sender, EventArgs e)
         {
+            if (TvShowWindow.historyWatch)
+            {
+                MainWindow.model.HistoryIndex++;
+                if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
+                {
+                    TcpSerialListener.layoutPoint.CloseCurrWindow();
+                }
+                MainWindow.model.HistoryEpisode = MainWindow.model.HistoryList[MainWindow.model.HistoryIndex];
+                currMedia = MainWindow.model.HistoryEpisode;
+
+                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
+                Log.Information("Playing {Media}", currMedia.Path);
+                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+                return;
+            }
+
             if (TvShowWindow.cartoonShuffle)
             {
                 TvShowWindow.cartoonIndex++;

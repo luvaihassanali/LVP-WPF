@@ -1,18 +1,19 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-
 namespace LVP_WPF
 {
     public class MainModel
     {
         private Movie[] movies;
         private TvShow[] tvShows;
+        internal List<Episode> historyList;
 
         public MainModel(int m, int s)
         {
             movies = new Movie[m];
             tvShows = new TvShow[s];
+            historyList = new List<Episode>();
         }
 
         public Movie[] Movies
@@ -26,6 +27,17 @@ namespace LVP_WPF
             get => tvShows;
             set => tvShows = value;
         }
+
+        public List<Episode> HistoryList
+        {
+            get => historyList;
+            set => historyList = value;
+        }
+
+        public int HistoryIndex { get; set; }
+        public DateTime HistoryMin { get; set; }
+        public DateTime HistoryMax { get; set; }
+        public Episode HistoryEpisode { get; set; }
 
         internal bool Compare(MainModel prevMedia)
         {
@@ -315,7 +327,7 @@ namespace LVP_WPF
 
         public int Id { get; set; }
         public string Poster { get; set; }
-        public DateTime? Date { get; set; }
+        public DateTime Date { get; set; }
         public Episode[] Episodes { get; set; }
 
         internal bool Compare(Season localSeason)
@@ -344,7 +356,7 @@ namespace LVP_WPF
         public bool Translated { get; set; }
         public string Backdrop { get; set; }
         public string Overview { get; set; }
-        public DateTime? Date { get; set; }
+        public DateTime Date { get; set; }
         public long SavedTime { get; set; }
         public long Length { get; set; }
         public bool MultiEpisode { get; set; }
@@ -355,5 +367,11 @@ namespace LVP_WPF
             if (!this.Path.Equals(otherEpisode.Path)) return false;
             return true;
         }
+
+        public override string ToString()
+        {
+            return "Episode: " + Path + " " + Date;
+        }
+
     }
 }
