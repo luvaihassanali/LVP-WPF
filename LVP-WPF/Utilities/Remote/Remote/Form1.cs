@@ -9,13 +9,13 @@ using System.Windows.Forms;
 
 namespace Remote
 {
+    // 15152117
     public partial class Form1 : Form
     {
         Samsung remote;
         public Form1()
         {
             InitializeComponent();
-            //WolUtilities.SendTenMagicPackets();
             remote = new Samsung();
         }
 

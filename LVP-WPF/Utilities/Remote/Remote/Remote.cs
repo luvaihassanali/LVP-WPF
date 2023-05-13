@@ -1,27 +1,19 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Remote.Properties;
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
-using System.Drawing.Text;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Security.Cryptography;
-using System.Security.Policy;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using WebSocketSharp;
-using static System.Windows.Forms.LinkLabel;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace Remote
 {
     internal static class Config
     {
-        internal static bool Debug = Properties.Settings.Default.Debug;
         internal static string AppName = Properties.Settings.Default.AppName;
         internal static string IpAddr = Properties.Settings.Default.IpAddr;
         internal static string MacAddr = Properties.Settings.Default.MacAddr;
@@ -31,8 +23,8 @@ namespace Remote
 
     public class Command
     {
-        public string method { get; set; }
-        public Params parameters { get; set; }
+        public string Method { get; set; }
+        public Params Params { get; set; }
     }
 
     public class Params
@@ -53,6 +45,7 @@ namespace Remote
 
         public Samsung()
         {
+            //Properties.Settings.Default.Reset();
             InitializeKeys();
             wsUrl = GetWsUrl();
             Debug.WriteLine(wsUrl);
@@ -69,14 +62,18 @@ namespace Remote
             }
 
             WebSocket ws = new WebSocket(wsUrl);
-
+            
             /*ws.OnOpen += (sender, e) =>
             {
             };*/
 
             ws.OnMessage += (sender, e) =>
             {
-                Console.WriteLine("Msg: " + e.Data);
+                Debug.WriteLine("Msg: " + e.Data);
+                JObject response = JObject.Parse(e.Data);
+                string temp = response?["data"]?["token"]?.ToString() ?? "token";
+                
+                Properties.Settings.Default.Token = temp;
             };
 
             ws.OnError += (sender, e) =>
@@ -91,21 +88,27 @@ namespace Remote
 
             ws.Connect();
 
-            Command c = GetCommandByKey("KEY_VOLDOWN");
-            string cmd = JsonConvert.SerializeObject(c, Formatting.None, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }).Replace("parameters", "params");
+            Command c = GetCommandByKey("KEY_HOME");
+            string cmd = JsonConvert.SerializeObject(c, Formatting.None, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }).Replace("Method","method").Replace("Params","params");
             Debug.WriteLine("Send: " + cmd);
+
             ws.Send(cmd);
+        }
+
+        private void wsSendCompleted (bool res)
+        {
+            Debug.WriteLine($"webSocket send complete {res}");
         }
 
         private Command GetCommandByKey(string key)
         {
             Command cmd = new Command();
-            cmd.method = "ms.remote.control";
-            cmd.parameters = new Params();
-            cmd.parameters.Cmd = "Click";
-            cmd.parameters.DataOfCmd = key;
-            cmd.parameters.Option = "false";
-            cmd.parameters.TypeOfRemote = "SendRemoteKey";
+            cmd.Method = "ms.remote.control";
+            cmd.Params = new Params();
+            cmd.Params.Cmd = "Click";
+            cmd.Params.DataOfCmd = key;
+            cmd.Params.Option = "false";
+            cmd.Params.TypeOfRemote = "SendRemoteKey";
             return cmd;
         }
 
@@ -163,9 +166,6 @@ namespace Remote
                 CancellationTokenSource tokenSource = new CancellationTokenSource();
                 try
                 {
-                    //Task<HttpResponseMessage> task = Task.Run(() => client.GetAsync(url));
-                    //task.Wait();
-                    //response = task.Result;
                     response = await client.GetAsync(url);
                 }
                 catch (WebException ex)

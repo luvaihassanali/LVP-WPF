@@ -65,12 +65,12 @@ namespace LVP_WPF
 
             for (int i = 0; i < MainWindow.model.Movies.Length; i++)
             {
-                MainWindow.gui.mediaDict.Add(MainWindow.model.Movies[i].Id, MainWindow.model.Movies[i]);
+                MainWindow.gui.mediaDict[MainWindow.model.Movies[i].Id] = MainWindow.model.Movies[i];
             }
 
             for (int i = 0; i < MainWindow.model.TvShows.Length; i++)
             {
-                MainWindow.gui.mediaDict.Add(MainWindow.model.TvShows[i].Id, MainWindow.model.TvShows[i]);
+                MainWindow.gui.mediaDict[MainWindow.model.TvShows[i].Id] = MainWindow.model.TvShows[i];
             }
 
             //if (MainWindow.model.HistoryList.Count == 0 || update)
@@ -413,6 +413,8 @@ namespace LVP_WPF
                 }
 
                 JArray jEpisodes = (JArray)seasonObject["episodes"];
+                jEpisodes = new JArray(jEpisodes.OrderBy(obj => (int)obj["episode_number"]));
+
                 Episode[] episodes = season.Episodes;
                 int jEpIndex = 0;
 
@@ -1009,10 +1011,11 @@ namespace LVP_WPF
             return result;
         }
 
-        internal static void SaveData()
+        internal static async void SaveData()
         {
             string jsonString = JsonConvert.SerializeObject(MainWindow.model);
             File.WriteAllText(jsonFile, jsonString);
+            await Task.Delay(2000);
         }
     }
 }

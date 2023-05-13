@@ -18,7 +18,7 @@
       <Value Profile="(Default)">8002</Value>
     </Setting>
     <Setting Name="Token" Type="System.String" Scope="User">
-      <Value Profile="(Default)">15152117</Value>
+      <Value Profile="(Default)" />
     </Setting>
   </Settings>
 </SettingsFile>
