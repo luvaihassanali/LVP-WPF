@@ -44,12 +44,10 @@ namespace LVP_WPF
             InitializeComponent();
         }
 
-        private async void ExitButton_Click(object sender, RoutedEventArgs e)
+        private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
             GuiModel.RestoreSystemCursor();
-            Cache.SaveData();
-            await System.Threading.Tasks.Task.Delay(2000);
-            Environment.Exit(0);
+            Application.Current.Shutdown();
         }
 
         private void ContinueButton_Click(object sender, RoutedEventArgs e)

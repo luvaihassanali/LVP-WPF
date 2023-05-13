@@ -73,8 +73,9 @@ namespace LVP_WPF
                 MainWindow.gui.mediaDict[MainWindow.model.TvShows[i].Id] = MainWindow.model.TvShows[i];
             }
 
-            //if (MainWindow.model.HistoryList.Count == 0 || update)
+            if (MainWindow.model.HistoryList.Count == 0 || update)
             {
+                MainWindow.model.HistoryList.Clear();
                 foreach (TvShow t in MainWindow.model.TvShows)
                 {
                     if (t.Cartoon) continue;
@@ -427,7 +428,7 @@ namespace LVP_WPF
                     }
                     if (k > jEpisodes.Count - 1)
                     {
-                        string message = "Episode index out of TMDB episodes range S" + seasonIndex.ToString() + "E" + (k + 1).ToString();
+                        string message = "Episode index out of TMDB episodes range S" + seasonIndex.ToString() + "E" + jEpIndex.ToString();
                         NotificationDialog.Show("Error: " + tvShow.Name, message);
                     }
                     Episode episode = episodes[k];
@@ -489,9 +490,18 @@ namespace LVP_WPF
                         continue;
                     }
 
-                    JObject jEpisode = (JObject)jEpisodes[jEpIndex];
-                    String jEpisodeName = (string)jEpisode["name"];
+                    JObject jEpisode = null;
+                    try
+                    {
+                        jEpisode = (JObject)jEpisodes[jEpIndex];
+                    }
+                    catch
+                    {
+                        string message = "Episode index out of TMDB episodes range S" + seasonIndex.ToString() + "E" + (k + 1).ToString();
+                        NotificationDialog.Show("Error: " + tvShow.Name, message);
+                    }
 
+                    String jEpisodeName = (string)jEpisode["name"];
                     if (!(String.Compare(episode.Name, jEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
                     {
                         string message = "Local episode name does not match retrieved data. Renaming file '" + episode.Name + "' to '" + jEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
