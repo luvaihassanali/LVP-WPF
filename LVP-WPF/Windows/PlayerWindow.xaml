@@ -9,67 +9,83 @@
         Title="PlayerWindow" Height="1080" Width="1920" Loaded="PlayerWindow_Loaded" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
         RenderOptions.BitmapScalingMode="HighQuality" AllowsTransparency="True" WindowStyle="None" WindowState="Maximized" FontSize="42" FontFamily="Segoe UI" Background="Black" Icon="/Resources/movie.ico" Closing="PlayerWindow_Closing">
     <Grid>
-        <wpf:VideoView x:Name="videoView" MouseMove="VideoView_MouseMove" Background="Black">
-            <Grid Name="overlayGrid" Visibility="Visible">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+        <wpf:VideoView x:Name="videoView" MouseMove="VideoView_MouseMove" Background="Beige">
+            <Grid>
+                <Grid Name="hwGrid" Visibility="Visible" Margin="25,25,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Name="hwTxtBlock" Background="Transparent" Foreground="White" FontSize="64"><Run Text="January 10, 1999"/><LineBreak/><Run Text="Episode name"/>
+                        <TextBlock.Effect>
+                            <DropShadowEffect ShadowDepth="4" Direction="330" Color="Black" Opacity="0.5" BlurRadius="4"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
+                </Grid>
+                <Grid Name="overlayGrid" Visibility="Visible">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
 
-                <Button Name="closeButton" Grid.Column="1" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="CloseButton_Click" Foreground="White" 
+                    <Button Name="closeButton" Grid.Column="1" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="CloseButton_Click" Foreground="White" 
                         FontSize="28" Width="50" Height="50" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,20,20,0" Style="{StaticResource CloseButton}">
-                    <TextBlock Text="✖" Margin="0,-3,1,0"/>
-                </Button>
-                <Button Name="playButton" FontSize="30" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="PlayButton_Click" Grid.Row="2" Foreground="White" 
+                        <TextBlock Text="✖" Margin="0,-3,1,0"/>
+                    </Button>
+                    <Button Name="playButton" FontSize="30" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="PlayButton_Click" Grid.Row="2" Foreground="White" 
                         Width="60" Height="60" HorizontalAlignment="Left" Margin="10,0,0,20">
-                    <TextBlock Name="buttonText" Text="▶️" Margin="6,-4,0,0" />
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="60"/>
-                            <Setter Property="Button.Effect">
-                                <Setter.Value>
-                                    <DropShadowEffect ShadowDepth="4" Direction="330" Color="Black" Opacity="0.5" BlurRadius="4"/>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Resources>
-                    <Button.Style>
-                        <Style TargetType="{x:Type Button}">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="{x:Type Button}">
-                                        <Border x:Name="Border" Background="{TemplateBinding Background}" BorderThickness="3" BorderBrush="White">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#FF26A0DA" TargetName="Border" />
-                                                <Setter Property="BorderBrush" Value="#3c7fb1" TargetName="Border"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Button.Style>
-                </Button>
-                <Border Grid.Row="2" Margin="85,20,10,0">
-                    <Border.Effect>
-                        <DropShadowEffect ShadowDepth="4" Direction="330" Color="Black" Opacity="0.5" BlurRadius="4"/>
-                    </Border.Effect>
-                    <Slider MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Name="timelineSlider" Background="Transparent" 
+                        <TextBlock Name="buttonText" Text="▶️" Margin="6,-4,0,0" />
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="60"/>
+                                <Setter Property="Button.Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect ShadowDepth="4" Direction="330" Color="Black" Opacity="0.5" BlurRadius="4"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Resources>
+                        <Button.Style>
+                            <Style TargetType="{x:Type Button}">
+                                <Setter Property="Background" Value="Transparent" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="{x:Type Button}">
+                                            <Border x:Name="Border" Background="{TemplateBinding Background}" BorderThickness="3" BorderBrush="White">
+                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#FF26A0DA" TargetName="Border" />
+                                                    <Setter Property="BorderBrush" Value="#3c7fb1" TargetName="Border"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Border Grid.Row="2" Margin="85,20,10,0">
+                        <Border.Effect>
+                            <DropShadowEffect ShadowDepth="4" Direction="330" Color="Black" Opacity="0.5" BlurRadius="4"/>
+                        </Border.Effect>
+                        <Slider MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Name="timelineSlider" Background="Transparent" 
                         Value="{Binding SliderValue}" Maximum="{Binding SliderMax}" ValueChanged="Slider_ValueChanged" IsMoveToPointEnabled="True"/>
-                </Border>
-                <TextBlock FontSize="28" Grid.Column="1" HorizontalAlignment="Right" Grid.Row="2" Margin="0,10,10,10" Foreground="White" Text="{Binding TimeLabel}">
-                    <TextBlock.Effect>
-                        <DropShadowEffect ShadowDepth="4" Direction="330" Color="Black" Opacity="0.5" BlurRadius="4"/>
-                    </TextBlock.Effect></TextBlock>
+                    </Border>
+                    <TextBlock FontSize="28" Grid.Column="1" HorizontalAlignment="Right" Grid.Row="2" Margin="0,10,10,10" Foreground="White" Text="{Binding TimeLabel}">
+                        <TextBlock.Effect>
+                            <DropShadowEffect ShadowDepth="4" Direction="330" Color="Black" Opacity="0.5" BlurRadius="4"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
+                </Grid>
             </Grid>
         </wpf:VideoView>
     </Grid>

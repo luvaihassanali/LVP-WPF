@@ -82,12 +82,24 @@ namespace LVP_WPF.Windows
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
             Log.Information("Play: {Media}", currMedia.Path);
+
             bool res = mediaPlayer.Play(currVLCMedia);
             if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
 
             if (currMedia as Episode != null)
             {
                 Episode episode = (Episode)currMedia;
+
+                if (TvShowWindow.historyWatch)
+                {
+                    hwTxtBlock.Text = $"{episode.Date.ToString("MMMM dd, yyyy")}\n{episode.Name}";
+                    hwGrid.Visibility = Visibility.Visible;
+                    Task.Delay(5000).ContinueWith(t =>
+                    {
+                        hwGrid.Dispatcher.BeginInvoke(() => { hwGrid.Visibility = Visibility.Hidden; });
+                    });
+                }
+
                 if (episode.SavedTime != 0 && episode.SavedTime < episode.Length)
                 {
                     mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(episode.SavedTime));
@@ -99,8 +111,7 @@ namespace LVP_WPF.Windows
             TcpSerialListener.layoutPoint.Select("PlayerWindow");
             ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
         }
-
-
+        
         private void PlayerWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             timelineSlider.ValueChanged -= Slider_ValueChanged;
@@ -198,6 +209,16 @@ namespace LVP_WPF.Windows
                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
                 Log.Information("Playing {Media}", currMedia.Path);
                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+
+                hwGrid.Dispatcher.BeginInvoke(() =>
+                {
+                    hwTxtBlock.Text = $"{MainWindow.model.HistoryEpisode.Date.ToString("MMMM dd, yyyy")}\n{MainWindow.model.HistoryEpisode.Name}";
+                    hwGrid.Visibility = Visibility.Visible;
+                });
+                Task.Delay(5000).ContinueWith(t =>
+                {
+                    hwGrid.Dispatcher.BeginInvoke(() => { hwGrid.Visibility = Visibility.Hidden; });
+                });
                 return;
             }
 

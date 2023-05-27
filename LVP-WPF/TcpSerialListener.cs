@@ -41,7 +41,7 @@ namespace LVP_WPF
             dispatcher = null;
             gui = g;
             connectionEstablished = false;
-            workerThreadRunning = false; 
+            workerThreadRunning = false;
             esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
             esp8266ServerPort = Int32.Parse(ConfigurationManager.AppSettings["Esp8266Port"]);
             esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
@@ -416,7 +416,10 @@ namespace LVP_WPF
                         });
                         break;
                     case "history-play":
-                        //
+                        StaThreadWrapper(() =>
+                        {
+                            TvShowWindow.PlayHistoryList();
+                        });
                         break;
                 }
             }
