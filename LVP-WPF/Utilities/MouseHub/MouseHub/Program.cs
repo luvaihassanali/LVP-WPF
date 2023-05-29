@@ -6,6 +6,7 @@ using System.Drawing;
 using System.IO.Ports;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,7 +22,6 @@ namespace MouseMoverClient
         private static int esp8266ServerPort;
         private static int joystickX;
         private static int joystickY;
-        private static int opacity;
 
         private static System.Timers.Timer pollingTimer;
         private static SerialPort serialPort;
@@ -32,25 +32,27 @@ namespace MouseMoverClient
             connectionEstablished = false;
             esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
             esp8266ServerPort = Int32.Parse(ConfigurationManager.AppSettings["Esp8266Port"]);
-            opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
-
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
-            ConsoleHelper.SetCurrentFont("Segoe Mono Boot", 30);
+            ConsoleHelper.SetCurrentFont("Segoe Mono Boot", 38);
             Console.Title = "";
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.BackgroundColor = ConsoleColor.Blue;
-            Console.CursorSize = 100;
-            Console.SetWindowSize(50, 12);
-            Console.SetBufferSize(50, 12);
-            ConsoleHelper.SetWindowPosition(600, 680);
-            ConsoleHelper.SetWindowTransparency(opacity);
+            //Console.ForegroundColor = ConsoleColor.White;
+            Console.BackgroundColor = ConsoleColor.Black;
+            //Console.CursorSize = 1;
+            Console.CursorVisible = false;
+            Console.SetWindowSize(112, 27);
+            Console.SetBufferSize(112, 27);
+            ConsoleHelper.SetWindowPosition(-10, -10);
+            //ConsoleHelper.SetWindowPosition(Screen.PrimaryScreen.Bounds.Width / 4 - 10, Screen.PrimaryScreen.Bounds.Height / 4  - 10);
+            int opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
+            ConsoleHelper.SetWindowTransparency(opacity); // /256
             ConsoleHelper.HideTitleBar();
             ConsoleHelper.DisableQuickEditMode();
-
+            
             pollingTimer = new System.Timers.Timer(6000); // esp timeout is 5s
             pollingTimer.Elapsed += OnTimedEventAsync;
             pollingTimer.AutoReset = false;
 
+            Task.Run(() => { ConsoleHelper.StartMatrix(); });
             InitializeSerialPort();
             StartListener();
 
@@ -108,7 +110,7 @@ namespace MouseMoverClient
                     else
                     {
                         //Log("Destination host unreachable");
-                        Console.CursorVisible = true;
+                        //Console.CursorVisible = true;
                         Console.SetCursorPosition(cursorPos, Console.CursorTop);
                         cursorPos--;
                         if (cursorPos == 0) cursorPos = 49;
@@ -376,7 +378,7 @@ namespace MouseMoverClient
                         p.StartInfo.FileName = path;
                         p.StartInfo.WorkingDirectory = path.Replace("LVP-WPF.exe", "");
                         p.Start();
-                        ConsoleHelper.StartMatrix();
+                        //ConsoleHelper.StartMatrix();
                         break;
                     default:
                         Log("Unknown msg received: " + msg);
@@ -407,7 +409,7 @@ namespace MouseMoverClient
         private const int SWP_NOSIZE = 0x0001;
         internal static void SetWindowPosition(int x, int y)
         {
-            SetWindowPos(MyConsole, 0, 600, 680, 0, 0, SWP_NOSIZE);
+            SetWindowPos(MyConsole, 0, x, y, 0, 0, SWP_NOSIZE);
         }
 
         // > Transparency
@@ -567,7 +569,7 @@ namespace MouseMoverClient
         private static int fastFlow = flowSpeed + 30;
         private static int textFlow = flowSpeed + 500;
         private static ConsoleColor baseColor = ConsoleColor.DarkBlue;
-        private static ConsoleColor fadedColor = ConsoleColor.White;
+        private static ConsoleColor fadedColor = ConsoleColor.Blue;
 
         private static int divisor = 10;
         private static int modVal = 9;
@@ -576,13 +578,14 @@ namespace MouseMoverClient
 
         internal static void StartMatrix()
         {
-            Console.CursorVisible = false;
+            //Console.CursorVisible = false;
             int width, height;
             int[] y;
             Initialize(out width, out height, out y);
             while (true)
             {
                 matrixCounter++;
+                if (matrixCounter == 50) matrixCounter = 0;
                 ColumnUpdate(width, height, y);
                 if (matrixCounter > (3 * flowSpeed)) matrixCounter = 0;
             }

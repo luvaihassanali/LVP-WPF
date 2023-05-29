@@ -11,7 +11,7 @@
     <Grid>
         <wpf:VideoView x:Name="videoView" MouseMove="VideoView_MouseMove" Background="Beige">
             <Grid>
-                <Grid Name="hwGrid" Visibility="Visible" Margin="25,25,0,0">
+                <Grid Name="hwGrid" Visibility="Hidden" Margin="25,25,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
