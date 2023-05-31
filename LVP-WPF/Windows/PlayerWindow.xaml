@@ -9,7 +9,7 @@
         Title="PlayerWindow" Height="1080" Width="1920" Loaded="PlayerWindow_Loaded" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
         RenderOptions.BitmapScalingMode="HighQuality" AllowsTransparency="True" WindowStyle="None" WindowState="Maximized" FontSize="42" FontFamily="Segoe UI" Background="Black" Icon="/Resources/movie.ico" Closing="PlayerWindow_Closing">
     <Grid>
-        <wpf:VideoView x:Name="videoView" MouseMove="VideoView_MouseMove" Background="Beige">
+        <wpf:VideoView x:Name="videoView" MouseMove="VideoView_MouseMove" Background="Black">
             <Grid>
                 <Grid Name="hwGrid" Visibility="Hidden" Margin="25,25,0,0">
                     <Grid.RowDefinitions>
