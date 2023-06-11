@@ -22,7 +22,7 @@ namespace LVP_WPF
         private const string apiImageUrl = "http://image.tmdb.org/t/p/original";
         private const string apiTvSearchUrl = apiUrl + "search/tv" + apiKey + "&query=";
         private const string apiMovieSearchUrl = apiUrl + "search/movie" + apiKey + "&query=";
-        private const string jsonFile = "media-data.json";
+        private const string jsonFile = "media.json";
 
         private static string apiTvShowUrl = apiUrl + "tv/{tv_id}" + apiKey;
         private static string apiTvSeasonUrl = apiUrl + "tv/{tv_id}/season/{season_number}" + apiKey;
@@ -30,6 +30,7 @@ namespace LVP_WPF
 
         private static List<string> tvPathList = new List<string>();
         private static List<string> moviePathList = new List<string>();
+        private static int extrasIdx = -1;
         public static int mediaCount = 0;
         public static bool update = false;
         private static bool launchTranslator = false;
@@ -914,7 +915,7 @@ namespace LVP_WPF
                     episodeName = episodeNameNumber[1].Substring(0, fileSuffixIndex).Trim();
                 }
 
-                Episode ep = new Episode(-1, episodeName, entry);
+                Episode ep = new Episode(extrasIdx--, episodeName, entry);
                 extras.Add(ep);
             }
 

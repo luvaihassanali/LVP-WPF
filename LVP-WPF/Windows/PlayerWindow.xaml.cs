@@ -240,15 +240,17 @@ namespace LVP_WPF.Windows
 
             if (currMedia as Episode != null)
             {
-                Episode episode = (Episode)currMedia;
-                episode.SavedTime = episode.Length;
-                UpdateProgressBar(episode);
 
-                if (episode.Id == -1)
+                Episode episode = (Episode)currMedia;
+                if (episode.Id < 0)
                 {
                     skipClosing = true;
                     TcpSerialListener.layoutPoint.CloseCurrWindow();
+                    return;
                 }
+
+                episode.SavedTime = episode.Length;
+                UpdateProgressBar(episode);
 
                 TvShow tvShow = TvShowWindow.tvShow;
                 for (int i = 0; i < tvShow.Seasons.Length; i++)
@@ -265,6 +267,7 @@ namespace LVP_WPF.Windows
                                 {
                                     skipClosing = true;
                                     TcpSerialListener.layoutPoint.CloseCurrWindow();
+                                    return;
                                 }
                                 else
                                 {

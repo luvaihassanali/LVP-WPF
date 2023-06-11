@@ -332,7 +332,7 @@ namespace LVP_WPF
 
         internal bool Compare(Season localSeason)
         {
-            if (this.Id == -1 || localSeason.Id == -1) return true;
+            //if (this.Id == -1 || localSeason.Id == -1) return true;
             if (this.Episodes.Length != localSeason.Episodes.Length) return false;
             for (int i = 0; i < this.Episodes.Length; i++)
             {

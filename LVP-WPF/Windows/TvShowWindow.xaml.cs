@@ -252,7 +252,7 @@ namespace LVP_WPF.Windows
         {
             EpisodeWindowBox item = (EpisodeWindowBox)(sender as ListView).SelectedItem;
             if (item == null) return;
-            int index = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
+            int index = item.Id < 0 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
             Episode[] episodes = tvShow.Seasons[index].Episodes;
             foreach (Episode episode in episodes)
             {

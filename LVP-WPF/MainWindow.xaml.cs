@@ -182,7 +182,7 @@ namespace LVP_WPF
             loadGrid.Visibility = Visibility.Hidden;
         }
 
-        private void MainWindow_Fade(double direction)
+        private async void MainWindow_Fade(double direction)
         {
             DoubleAnimation da = new DoubleAnimation();
             if (direction == 0.1)
@@ -197,8 +197,11 @@ namespace LVP_WPF
             }
             da.Duration = new Duration(TimeSpan.FromMilliseconds(250));
             da.AutoReverse = false;
-            da.RepeatBehavior = new RepeatBehavior(1);
-            mainGrid.BeginAnimation(OpacityProperty, da);
+            da.RepeatBehavior = new RepeatBehavior(1); 
+            this.Dispatcher.BeginInvoke(() =>
+            {
+                mainGrid.BeginAnimation(OpacityProperty, da);
+            });
         }
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
