@@ -713,7 +713,16 @@ namespace MouseMoverClient
 
         internal static void CloseTeamViewerDialog()
         {
-            Process p = Process.GetProcessesByName("TeamViewer")[0];
+            Process p;
+            try
+            {
+                p = Process.GetProcessesByName("TeamViewer")[0];
+            }
+            catch
+            {
+                return;
+            }
+
             List<IntPtr> rootWindows = GetRootWindowsOfProcess(p.Id);
             foreach (IntPtr rw in rootWindows)
             {

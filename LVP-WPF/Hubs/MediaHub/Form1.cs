@@ -11,7 +11,7 @@ namespace MediaIndexUtil
 
         public Form1()
         {
-            string path = MediaIndexer.Properties.Settings.Default.path;
+            string path = MediaHub.Properties.Settings.Default.path;
             if (path.Equals(String.Empty) || !Directory.Exists(path)) path = "..\\.";
             InitializeComponent();
             PopulateTreeView(path);
@@ -82,7 +82,7 @@ namespace MediaIndexUtil
             ListViewItem item;
             foreach (DirectoryInfo dir in directories)
             {
-                if (dir.Name.Contains("MediaIndexer")) continue;
+                if (dir.Name.Contains("MediaHub")) continue;
                 item = new ListViewItem(dir.Name, 0);
                 subItems = new ListViewItem.ListViewSubItem[] { new ListViewItem.ListViewSubItem(item, "Directory"), new ListViewItem.ListViewSubItem(item, dir.FullName) };
                 item.SubItems.AddRange(subItems);
@@ -156,7 +156,7 @@ namespace MediaIndexUtil
             Cursor.Current = Cursors.WaitCursor;
             if (checkBox1.Checked)
             {
-                if (checkBox2.Checked || checkBox3.Checked) { MessageBox.Show("Choose only 1");  }
+                if (checkBox2.Checked || checkBox3.Checked) { MessageBox.Show("Choose only 1"); }
                 RenameSrtFiles();
                 return;
             }
@@ -314,7 +314,7 @@ namespace MediaIndexUtil
             Trace.WriteLine("SRT Rename for directory: " + currentFolder);
 
             int lineNum = 0;
-            for (int i = 0; i < files.Length - 1; i+=2)
+            for (int i = 0; i < files.Length - 1; i += 2)
             {
                 string f1;
                 string f2;
@@ -348,7 +348,8 @@ namespace MediaIndexUtil
                     string prevName = f1Parts[f1Parts.Length - 1];
                     string newName = f2Parts[f2Parts.Length - 1];
                     try
-                    {;
+                    {
+                        ;
                         f1Parts[f1Parts.Length - 1] = newName;
                         string f2Join = String.Join("\\", f1Parts);
                         f2Join += ".srt";
@@ -398,8 +399,8 @@ namespace MediaIndexUtil
                 Trace.WriteLine("Warning: Number of seasons not the same");
                 log += "Warning: Number of seasons not the same\n";
             }
-            
-            foreach(string path in showDir1)
+
+            foreach (string path in showDir1)
             {
                 if (path.Contains("Extras"))
                 {
@@ -482,7 +483,8 @@ namespace MediaIndexUtil
                 string[] n2Parts = fileList2[i].Split("\\");
                 string n2 = n2Parts[n2Parts.Length - 1];
                 n2 = n2.Split('.')[0];
-                if (!n1.Trim().Equals(n2.Trim(), StringComparison.InvariantCultureIgnoreCase)) {
+                if (!n1.Trim().Equals(n2.Trim(), StringComparison.InvariantCultureIgnoreCase))
+                {
                     log += "Not a match: " + n1 + " and " + n2 + "\n";
                     Trace.WriteLine("Not a match: " + n1 + " and " + n2);
                 }
@@ -558,7 +560,7 @@ namespace MediaIndexUtil
                     if (ext.Equals("srt"))
                     {
                         File.WriteAllText(treeSubFolder.FullName + "\\" + filename + ".srt", "blank");
-                    } 
+                    }
                     else
                     {
                         File.WriteAllText(treeSubFolder.FullName + "\\" + filename + ".txt", "blank");
@@ -581,8 +583,8 @@ namespace MediaIndexUtil
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            MediaIndexer.Properties.Settings.Default.path = currentFolder;
-            MediaIndexer.Properties.Settings.Default.Save();
+            MediaHub.Properties.Settings.Default.path = currentFolder;
+            MediaHub.Properties.Settings.Default.Save();
         }
     }
 
