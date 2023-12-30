@@ -462,7 +462,7 @@ namespace LVP_WPF
 
                                 try
                                 {
-                                    // To-do wtf is going on here
+                                    // To-do* wtf is going on here
                                     System.Diagnostics.Debugger.Break();
                                     char drive = newPath[0];
                                     string drivePath = $"{drive}:";
@@ -520,7 +520,7 @@ namespace LVP_WPF
 
                         try
                         {
-                            // To-do wtf is going on here
+                            // To-do* wtf is going on here
                             System.Diagnostics.Debugger.Break();
                             char drive = newPath[0];
                             string drivePath = $"{drive}:";
@@ -976,10 +976,7 @@ namespace LVP_WPF
 
         internal static void ProcessRootDirectory(string driveLetter)
         {
-            // To-do
-            // fix string interpolation
-            // fix new inits
-            // rest of to-dos
+            // To-do*
             // push
             // delete editor.config
             // if statements + var variables

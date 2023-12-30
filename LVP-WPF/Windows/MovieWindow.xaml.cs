@@ -20,15 +20,19 @@ namespace LVP_WPF.Windows
             PlayerWindow.subtitleTrack = Int32.MaxValue;
             PlayerWindow.subtitleFile = false;
             movie = m;
-            MovieWindow window = new MovieWindow();
-            window.MovieName = $"{movie.Name} ({movie.Date.GetValueOrDefault().Year})";
+
             TimeSpan temp = TimeSpan.FromMinutes(movie.RunningTime);
             string hour = temp.Hours > 1 ? "hours " : "hour ";
-            window.RunningTime = $"Running time: {temp.Hours} {hour} {temp.Minutes} minutes";
-            window.Description = movie.Overview; //.Length > 1011 ? $"{movie.Overview.Substring(0, 1011)}..." : movie.Overview;
             string img = movie.Backdrop == null ? "Resources\\noPrevWide.png" : movie.Backdrop;
-            window.Backdrop = Cache.LoadImage(img, 960);
-            window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
+
+            MovieWindow window = new MovieWindow
+            {
+                MovieName = $"{movie.Name} ({movie.Date.GetValueOrDefault().Year})",
+                RunningTime = $"Running time: {temp.Hours} {hour} {temp.Minutes} minutes",
+                Description = movie.Overview, //.Length > 1011 ? $"{movie.Overview.Substring(0, 1011)}..." : movie.Overview;
+                Backdrop = Cache.LoadImage(img, 960),
+                Overlay = Cache.LoadImage("Resources\\play.png", 960)
+            };
             window.ShowDialog();
         }
 

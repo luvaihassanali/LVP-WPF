@@ -333,14 +333,16 @@ namespace MouseMoverClient
 
         private static void InitializeSerialPort()
         {
-            serialPort = new SerialPort();
             string portNumber = ConfigurationManager.AppSettings["SerialPort"];
-            serialPort.PortName = $"COM{portNumber}";
-            serialPort.BaudRate = 9600;
-            serialPort.DataBits = 8;
-            serialPort.Parity = Parity.None;
-            serialPort.StopBits = StopBits.One;
-            serialPort.Handshake = Handshake.None;
+            serialPort = new SerialPort
+            {
+                PortName = $"COM{portNumber}",
+                BaudRate = 9600,
+                DataBits = 8,
+                Parity = Parity.None,
+                StopBits = StopBits.One,
+                Handshake = Handshake.None
+            };
             serialPort.DataReceived += SerialPort_DataReceived;
 
             try

@@ -184,7 +184,13 @@ namespace LVP_WPF
 
         private void MainWindow_Fade(double direction)
         {
-            DoubleAnimation da = new DoubleAnimation();
+            DoubleAnimation da = new DoubleAnimation
+            {
+                Duration = new Duration(TimeSpan.FromMilliseconds(250)),
+                AutoReverse = false,
+                RepeatBehavior = new RepeatBehavior(1)
+            };
+
             if (direction == 0.1)
             {
                 da.From = 1.0;
@@ -194,10 +200,7 @@ namespace LVP_WPF
             {
                 da.From = 0.1;
                 da.To = 1.0;
-            }
-            da.Duration = new Duration(TimeSpan.FromMilliseconds(250));
-            da.AutoReverse = false;
-            da.RepeatBehavior = new RepeatBehavior(1); 
+            } 
             this.Dispatcher.BeginInvoke(() =>
             {
                 mainGrid.BeginAnimation(OpacityProperty, da);

@@ -109,8 +109,10 @@ namespace LVP_WPF
             connectionEstablished = false;
 
             Ping pingSender = new Ping();
-            PingOptions options = new PingOptions();
-            options.DontFragment = true;
+            PingOptions options = new PingOptions
+            {
+                DontFragment = true
+            };
             string data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"; //32 bytes
             byte[] buffer = Encoding.ASCII.GetBytes(data);
             int timeout = 120;
@@ -325,13 +327,15 @@ namespace LVP_WPF
         public void InitializeSerialPort()
         {
             string portNumber = ConfigurationManager.AppSettings["SerialPort"];
-            serialPort = new SerialPort();
-            serialPort.PortName = $"COM{portNumber}";
-            serialPort.BaudRate = 9600;
-            serialPort.DataBits = 8;
-            serialPort.Parity = Parity.None;
-            serialPort.StopBits = StopBits.One;
-            serialPort.Handshake = Handshake.None;
+            serialPort = new SerialPort
+            {
+                PortName = $"COM{portNumber}",
+                BaudRate = 9600,
+                DataBits = 8,
+                Parity = Parity.None,
+                StopBits = StopBits.One,
+                Handshake = Handshake.None
+            };
             serialPort.DataReceived += SerialPort_DataReceived;
             if (serialPortEnabled)
             {
