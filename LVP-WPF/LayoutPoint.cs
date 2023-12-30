@@ -57,7 +57,11 @@ namespace LVP_WPF.Windows
 
         public void Move((int x, int y) pos)
         {
-            if (playerWindowActive) return;
+            if (playerWindowActive)
+            {
+                return;
+            }
+
             if (lanuageDropdownActive)
             {
                 MoveLangPoint(pos.x);
@@ -100,10 +104,10 @@ namespace LVP_WPF.Windows
                 return;
             }
 
-            SelectChildWindow(controlName, isMovie);
+            SelectChildWindow(controlName);
         }
 
-        private void SelectChildWindow(string controlName, bool isMovie)
+        private void SelectChildWindow(string controlName)
         {
             if (seasonWindowActive)
             {
@@ -126,12 +130,18 @@ namespace LVP_WPF.Windows
                     currControl = seasonWindowControlGrid[currPoint.x][currPoint.y];
                     CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.seasonScrollViewer);
                 }
-                if (controlName.Equals("PlayerWindow")) { playerWindowActive = true; }
+                if (controlName.Equals("PlayerWindow"))
+                {
+                    playerWindowActive = true;
+                }
             }
             else if (movieWindowActive)
             {
                 returnPointB = currPoint;
-                if (controlName.Equals("PlayerWindow")) { playerWindowActive = true; }
+                if (controlName.Equals("PlayerWindow"))
+                {
+                    playerWindowActive = true;
+                }
             }
         }
 
@@ -194,15 +204,22 @@ namespace LVP_WPF.Windows
 
         internal void CloseCurrWindow(bool click = true)
         {
-            if (seasonWindowActive || lanuageDropdownActive) return;
-            if (click) incomingSerialMsg = true;
+            if (seasonWindowActive || lanuageDropdownActive)
+            {
+                return;
+            }
+
+            if (click)
+            {
+                incomingSerialMsg = true;
+            }
             try
             {
                 if (playerWindowActive)
                 {
                     ClosePlayerWindow(click);
                     TcpSerialListener.EndFeature();
-                } 
+                }
                 else if (tvShowWindowActive)
                 {
                     CloseTvWindow(click);
@@ -285,7 +302,7 @@ namespace LVP_WPF.Windows
                 currPoint = returnPointB;
                 currControl = tvControlList[currPoint.x];
                 CenterMouseOverControl(currControl);
-            } 
+            }
             else if (TvShowWindow.cartoonShuffle || TvShowWindow.historyWatch)
             {
                 currPoint = returnPointA;
@@ -308,9 +325,13 @@ namespace LVP_WPF.Windows
 
         private void MoveTvPoint(int x)
         {
-            
+
             int newIndex = currPoint.x + x;
-            if (newIndex < 0 || newIndex >= tvControlList.Count) return;
+            if (newIndex < 0 || newIndex >= tvControlList.Count)
+            {
+                return;
+            }
+
 
             currPoint = (newIndex, currPoint.y);
             currControl = tvControlList[newIndex];
@@ -320,7 +341,11 @@ namespace LVP_WPF.Windows
         private void MoveLangPoint(int x)
         {
             int newIndex = currPoint.x + x;
-            if (newIndex < 0 || newIndex >= langComboBoxItems.Count) return;
+            if (newIndex < 0 || newIndex >= langComboBoxItems.Count)
+            {
+                return;
+            }
+
 
             currPoint = (newIndex, currPoint.y);
             currControl = langComboBoxItems[newIndex];
@@ -331,7 +356,11 @@ namespace LVP_WPF.Windows
         {
 
             int newIndex = currPoint.x + x;
-            if (newIndex < 0 || newIndex > 1) return;
+            if (newIndex < 0 || newIndex > 1)
+            {
+                return;
+            }
+
 
             currPoint = (newIndex, currPoint.y);
             currControl = newIndex == 0 ? movieBackdrop : movieLangComboBox;
@@ -349,7 +378,10 @@ namespace LVP_WPF.Windows
                 {
                     count = 0;
                     point = (point.x + 1, 0);
-                    if (seasonFormIndex == 0) break;
+                    if (seasonFormIndex == 0)
+                    {
+                        break;
+                    }
                 }
                 else
                 {
@@ -364,7 +396,11 @@ namespace LVP_WPF.Windows
         public void MoveSeasonPoint((int x, int y) movePoint)
         {
             (int x, int y) newPoint = (currPoint.x + movePoint.x, currPoint.y + movePoint.y);
-            if (OutOfSeasonGridRange(newPoint)) return;
+            if (OutOfSeasonGridRange(newPoint))
+            {
+                return;
+            }
+
 
             if (seasonWindowControlGrid[newPoint.x][newPoint.y] == null)
             {
@@ -376,7 +412,11 @@ namespace LVP_WPF.Windows
                 else
                 {
                     newPoint = NextSeasonGridPoint(newPoint, movePoint);
-                    if (newPoint.x == -1) return;
+                    if (newPoint.x == -1)
+                    {
+                        return;
+                    }
+
                 }
             }
 
@@ -390,7 +430,11 @@ namespace LVP_WPF.Windows
         public (int x, int y) NextSeasonGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
         {
             (int x, int y) nextPoint = (currentPoint.x + movePoint.x, currentPoint.y + movePoint.y);
-            if (OutOfSeasonGridRange(nextPoint)) return (-1, -1);
+            if (OutOfSeasonGridRange(nextPoint))
+            {
+                return (-1, -1);
+            }
+
             if (seasonWindowControlGrid[nextPoint.x][nextPoint.y] == null)
             {
                 NextSeasonGridPoint(nextPoint, movePoint);
@@ -408,8 +452,20 @@ namespace LVP_WPF.Windows
             int high = nextPoint.y + 1;
             while (low >= 0 || high > 3)
             {
-                if (low >= 0) if (seasonWindowControlGrid[nextPoint.x][low] != null) return (nextPoint.x, low);
-                if (high < 3) if (seasonWindowControlGrid[nextPoint.x][high] != null) return (nextPoint.x, high);
+                if (low >= 0)
+                {
+                    if (seasonWindowControlGrid[nextPoint.x][low] != null)
+                    {
+                        return (nextPoint.x, low);
+                    }
+                }
+                if (high < 3)
+                {
+                    if (seasonWindowControlGrid[nextPoint.x][high] != null)
+                    {
+                        return (nextPoint.x, high);
+                    }
+                }
                 low--;
                 high++;
             }
@@ -418,7 +474,11 @@ namespace LVP_WPF.Windows
 
         private bool OutOfSeasonGridRange((int x, int y) testPoint)
         {
-            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 3 || testPoint.x >= seasonWindowGrid.Count) return true;
+            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 3 || testPoint.x >= seasonWindowGrid.Count)
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -430,7 +490,11 @@ namespace LVP_WPF.Windows
             Image[] currControlRow = null;
             for (int i = 0; i < seasonCount; i++)
             {
-                if (count == 3) count = 0;
+                if (count == 3)
+                {
+                    count = 0;
+                }
+
                 if (count == 0)
                 {
                     currRow = new int[3];
@@ -460,7 +524,10 @@ namespace LVP_WPF.Windows
                 if (count == 3)
                 {
                     rowIndex++;
-                    if (rowIndex >= seasonWindowGrid.Count) break;
+                    if (rowIndex >= seasonWindowGrid.Count)
+                    {
+                        break;
+                    }
                     count = 0;
                 }
 
@@ -488,7 +555,11 @@ namespace LVP_WPF.Windows
             {
                 newPoint.x = 0;
             }
-            if (OutOfMainGridRange(newPoint)) return;
+            if (OutOfMainGridRange(newPoint))
+            {
+                return;
+            }
+
 
             if (mainWindowControlGrid[newPoint.x][newPoint.y] == null)
             {
@@ -500,7 +571,11 @@ namespace LVP_WPF.Windows
                 else
                 {
                     newPoint = NextMainGridPoint(newPoint, movePoint);
-                    if (newPoint.x == -1) return;
+                    if (newPoint.x == -1)
+                    {
+                        return;
+                    }
+
                 }
             }
 
@@ -514,7 +589,10 @@ namespace LVP_WPF.Windows
         public (int x, int y) NextMainGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
         {
             (int x, int y) nextPoint = (currentPoint.x + movePoint.x, currentPoint.y + movePoint.y);
-            if (OutOfMainGridRange(nextPoint)) return (-1, -1);
+            if (OutOfMainGridRange(nextPoint))
+            {
+                return (-1, -1);
+            }
 
             if (mainWindowControlGrid[nextPoint.x][nextPoint.y] == null)
             {
@@ -535,12 +613,18 @@ namespace LVP_WPF.Windows
             {
                 if (low >= 0)
                 {
-                    if (mainWindowControlGrid[nextPoint.x][low] != null) return (nextPoint.x, low);
+                    if (mainWindowControlGrid[nextPoint.x][low] != null)
+                    {
+                        return (nextPoint.x, low);
+                    }
                 }
 
                 if (high < 6)
                 {
-                    if (mainWindowControlGrid[nextPoint.x][high] != null) return (nextPoint.x, high);
+                    if (mainWindowControlGrid[nextPoint.x][high] != null)
+                    {
+                        return (nextPoint.x, high);
+                    }
                 }
                 low--;
                 high++;
@@ -550,7 +634,11 @@ namespace LVP_WPF.Windows
 
         private bool OutOfMainGridRange((int x, int y) testPoint)
         {
-            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 6 || testPoint.x >= mainWindowGrid.Count) return true;
+            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 6 || testPoint.x >= mainWindowGrid.Count)
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -564,8 +652,15 @@ namespace LVP_WPF.Windows
                 Image[] currControlRow = null;
                 for (int j = 0; j < count; j++)
                 {
-                    if (i == 0 && j == count - gui.Cartoons.Count) rowIndex = 0;
-                    if (rowIndex == 6) rowIndex = 0;
+                    if (i == 0 && j == count - gui.Cartoons.Count)
+                    {
+                        rowIndex = 0;
+                    }
+
+                    if (rowIndex == 6)
+                    {
+                        rowIndex = 0;
+                    }
 
                     if (rowIndex == 0)
                     {
@@ -633,12 +728,18 @@ namespace LVP_WPF.Windows
             int totalTvShows = gui.TvShows.Count + gui.Cartoons.Count;
             for (int i = 0; i < totalTvShows; i++)
             {
-                if (i == totalTvShows - gui.Cartoons.Count) count = 6;
+                if (i == totalTvShows - gui.Cartoons.Count)
+                {
+                    count = 6;
+                }
 
                 if (count == 6)
                 {
                     rowIndex++;
-                    if (rowIndex >= mainWindowGrid.Count) break;
+                    if (rowIndex >= mainWindowGrid.Count)
+                    {
+                        break;
+                    }
                     count = 0;
                 }
 
@@ -666,7 +767,10 @@ namespace LVP_WPF.Windows
                 if (count == 6)
                 {
                     rowIndex++;
-                    if (rowIndex >= mainWindowGrid.Count) break;
+                    if (rowIndex >= mainWindowGrid.Count)
+                    {
+                        break;
+                    }
                     count = 0;
                 }
 
@@ -750,7 +854,7 @@ namespace LVP_WPF.Windows
             });
         }
 
-        private void CenterMouseOverButton(Button button)
+        private static void CenterMouseOverButton(Button button)
         {
             button.Dispatcher.Invoke(() =>
             {
@@ -761,7 +865,7 @@ namespace LVP_WPF.Windows
             });
         }
 
-        private void CenterMouseOverToggleButton(ToggleButton tb)
+        private static void CenterMouseOverToggleButton(ToggleButton tb)
         {
             tb.Dispatcher.Invoke(() =>
             {
@@ -772,7 +876,7 @@ namespace LVP_WPF.Windows
             });
         }
 
-        private void CenterMouseOverComboBox(ComboBox comboBox)
+        private static void CenterMouseOverComboBox(ComboBox comboBox)
         {
             comboBox.Dispatcher.Invoke(() =>
             {
@@ -822,14 +926,14 @@ namespace LVP_WPF.Windows
             });
         }
 
-        private void CenterMouseOverComboBoxItem(Point p, ComboBoxItem c)
+        private static void CenterMouseOverComboBoxItem(Point p, ComboBoxItem c)
         {
             p.X += c.ActualWidth / 2;
             p.Y += c.ActualHeight / 2;
             ComInterop.SetCursorPos((int)p.X, (int)p.Y);
         }
 
-        private void PrintGrid()
+        /*private void PrintGrid()
         {
             List<int[]> ctrl = seasonWindowActive ? seasonWindowGrid : mainWindowGrid;
             foreach (int[] row in ctrl)
@@ -876,7 +980,6 @@ namespace LVP_WPF.Windows
                 Debug.WriteLine(" ]");
             }
             Debug.WriteLine(Environment.NewLine);
-        }
-
+        }*/
     }
 }

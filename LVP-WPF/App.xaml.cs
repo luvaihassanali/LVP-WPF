@@ -17,7 +17,10 @@ namespace LVP_WPF
 #endif
             string baseFolder = AppDomain.CurrentDomain.BaseDirectory;
             string logPath = $"{baseFolder}logs\\";
-            if (!Directory.Exists(logPath)) Directory.CreateDirectory(logPath);
+            if (!Directory.Exists(logPath))
+            {
+                Directory.CreateDirectory(logPath);
+            }
 
             Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()

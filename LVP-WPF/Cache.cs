@@ -78,7 +78,10 @@ namespace LVP_WPF
                 MainWindow.model.HistoryList.Clear();
                 foreach (TvShow t in MainWindow.model.TvShows)
                 {
-                    if (t.Cartoon) continue;
+                    if (t.Cartoon)
+                    {
+                        continue;
+                    }
                     foreach (Season s in t.Seasons)
                     {
                         foreach (Episode e in s.Episodes)
@@ -188,13 +191,19 @@ namespace LVP_WPF
                         Season multiLangSeason = multiLangSeasons[k];
                         for (int l = 0; l < multiLangSeason.Episodes.Length; l++)
                         {
-                            if (multiLangSeason.Episodes[l].Translated) continue;
+                            if (multiLangSeason.Episodes[l].Translated)
+                            {
+                                continue;
+                            }
 
                             if (!overviewTranslated)
                             {
                                 overviewTranslated = true;
                                 string overview = await GetTranslation(langKey, tvShow.Overview, client);
-                                if (!tvShow.MultiLangOverview.Contains(overview)) tvShow.MultiLangOverview.Add(overview);
+                                if (!tvShow.MultiLangOverview.Contains(overview))
+                                {
+                                    tvShow.MultiLangOverview.Add(overview);
+                                }
                             }
 
                             multiLangSeason.Episodes[l].Name = await GetTranslation(langKey, multiLangSeason.Episodes[l].Name, client);
@@ -235,8 +244,14 @@ namespace LVP_WPF
                 if (libreTranslateProc.Length == 0)
                 {
                     string path = $"{ConfigurationManager.AppSettings["LibreTranslatePath"]}libretranslate.exe";
-                    if (path.Contains("%APPDATA%")) { path = path.Replace("%APPDATA%", Environment.GetEnvironmentVariable("APPDATA")); }
-                    if (path.Contains("%LOCALAPPDATA%")) { path = path.Replace("%LOCALAPPDATA%", Environment.GetEnvironmentVariable("LOCALAPPDATA")); }
+                    if (path.Contains("%APPDATA%"))
+                    {
+                        path = path.Replace("%APPDATA%", Environment.GetEnvironmentVariable("APPDATA"));
+                    }
+                    if (path.Contains("%LOCALAPPDATA%"))
+                    {
+                        path = path.Replace("%LOCALAPPDATA%", Environment.GetEnvironmentVariable("LOCALAPPDATA"));
+                    }
 
                     if (!File.Exists(path))
                     {
@@ -367,7 +382,10 @@ namespace LVP_WPF
             for (int j = 0; j < tvShow.Seasons.Length; j++)
             {
                 Season season = tvShow.Seasons[j];
-                if (season.Id == -1) continue;
+                if (season.Id == -1)
+                {
+                    continue;
+                }
 
                 string seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
                 using HttpResponseMessage tvSeasonResponse = await client.GetAsync(seasonUrl);
@@ -584,7 +602,11 @@ namespace LVP_WPF
 
         private static async Task BuildMovieCacheAsync(Movie movie, HttpClient client)
         {
-            if (movie.Id != 0) return;
+            if (movie.Id != 0)
+            {
+                return;
+            }
+
             string movieSearchUrl = apiMovieSearchUrl + movie.Name;
             using HttpResponseMessage movieSearchResponse = await client.GetAsync(movieSearchUrl);
             using HttpContent movieSearchContent = movieSearchResponse.Content;
@@ -676,7 +698,10 @@ namespace LVP_WPF
         internal static string ReplaceFirst(string text, string search, string replace)
         {
             int pos = text.IndexOf(search);
-            if (pos < 0) return text;
+            if (pos < 0)
+            {
+                return text;
+            }
             return string.Concat(text.AsSpan(0, pos), replace, text.AsSpan(pos + search.Length));
         }
 
@@ -737,7 +762,11 @@ namespace LVP_WPF
                 prevMedia = JsonConvert.DeserializeObject<MainModel>(jsonString);
             }
 
-            if (prevMedia == null) return true;
+            if (prevMedia == null)
+            {
+                return true;
+            }
+
 
             bool result = !MainWindow.model.Compare(prevMedia);
             if (!result)
@@ -847,7 +876,10 @@ namespace LVP_WPF
                     continue;
                 }
 
-                if (!seasonEntries[i].Contains("Season")) continue;
+                if (!seasonEntries[i].Contains("Season"))
+                {
+                    continue;
+                }
 
                 Season season = new Season(i + 1);
                 string[] episodeEntries = Directory.GetFiles(seasonEntries[i]).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -864,7 +896,10 @@ namespace LVP_WPF
                 for (int j = 0; j < episodeEntries.Length; j++)
                 {
                     mediaCount++;
-                    if (tvShow.MultiLang) mediaCount++;
+                    if (tvShow.MultiLang)
+                    {
+                        mediaCount++;
+                    }
                     try
                     {
                         string[] namePath = episodeEntries[j].Split('\\');
@@ -889,7 +924,11 @@ namespace LVP_WPF
             string[] langKeys = ConfigurationManager.AppSettings["Languages"].Split(";");
             string[] folderParts = folder.Split("\\");
             string langKey = folderParts[folderParts.Length - 1];
-            if (langKeys.Contains(langKey)) return true;
+            if (langKeys.Contains(langKey))
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -934,8 +973,14 @@ namespace LVP_WPF
 
             string s5Part = s3Parts[s3Parts.Length - 1];
             string s6Part = s4Parts[s4Parts.Length - 1];
-            if (s5Part.Contains('#')) s5Part = s5Part.Split('#')[0];
-            if (s6Part.Contains('#')) s6Part = s6Part.Split('#')[0];
+            if (s5Part.Contains('#'))
+            {
+                s5Part = s5Part.Split('#')[0];
+            }
+            if (s6Part.Contains('#'))
+            {
+                s6Part = s6Part.Split('#')[0];
+            }
 
             int indexA = Int32.Parse(s5Part);
             int indexB = Int32.Parse(s6Part);
@@ -967,8 +1012,14 @@ namespace LVP_WPF
             string[] seasonValuePathB = seasonB.Split();
             int seasonValueA = Int32.Parse(seasonValuePathA[seasonValuePathA.Length - 1]);
             int seasonValueB = Int32.Parse(seasonValuePathB[seasonValuePathB.Length - 1]);
-            if (seasonValueA == seasonValueB) return 0;
-            if (seasonValueA < seasonValueB) return 1;
+            if (seasonValueA == seasonValueB)
+            {
+                return 0;
+            }
+            if (seasonValueA < seasonValueB)
+            {
+                return 1;
+            }
             return -1;
         }
 
@@ -976,8 +1027,8 @@ namespace LVP_WPF
         {
             // To-do*
             // push
-            // delete editor.config
-            // if statements + var variables
+            // http factory
+            // wtf -tod
             // add gui for ID
             // austin powers
             string tvDirPath = driveLetter.StartsWith("\\") ? driveLetter : $"{driveLetter}:\\media\\tv";
@@ -999,7 +1050,10 @@ namespace LVP_WPF
         internal static BitmapImage LoadImage(string filename, int pixelWidth)
         {
             string path = AppDomain.CurrentDomain.BaseDirectory;
-            if (filename.Contains("Resources\\")) filename = path + filename;
+            if (filename.Contains("Resources\\"))
+            {
+                filename = path + filename;
+            }
             BitmapImage image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
@@ -1018,8 +1072,15 @@ namespace LVP_WPF
             for (int i = 0; i < langFolders.Length; i++)
             {
                 string langKey = langFolders[i].Replace(path, "").Split("\\")[1];
-                if (langKey.Length != 2) return result;
-                if (langKey.Equals("en")) continue;
+                if (langKey.Length != 2)
+                {
+                    return result;
+                }
+                if (langKey.Equals("en"))
+                {
+                    continue;
+                }
+
                 string imgPath = $"Resources\\flags\\{langKey.ToUpper()}.png";
                 if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + imgPath))
                 {

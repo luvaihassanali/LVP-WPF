@@ -8,7 +8,11 @@ namespace LVP_WPF
     {
         internal static void BuildTomAndJerryData(TvShow tvShow)
         {
-            if (tvShow.Id != 0) return;
+            if (tvShow.Id != 0)
+            {
+                return;
+            }
+
             string path = tvShow.Seasons[0].Episodes[0].Path;
             string[] pathParts = path.Split('\\');
             string root = "";
@@ -34,7 +38,10 @@ namespace LVP_WPF
                 while (!reader.EndOfStream)
                 {
                     string? row = reader.ReadLine();
-                    if (row == null) continue;
+                    if (row == null)
+                    {
+                        continue;
+                    }
                     if (skipHeader) //#;Prod.Num.;Title;Date;Summary
                     {
                         skipHeader = false;
@@ -76,7 +83,11 @@ namespace LVP_WPF
 
         internal static void BuildLooneyTunesData(TvShow tvShow)
         {
-            if (tvShow.Id != 0) return;
+            if (tvShow.Id != 0)
+            {
+                return;
+            }
+
             string path = tvShow.Seasons[0].Episodes[0].Path;
             string[] pathParts = path.Split('\\');
             string root = "";
@@ -101,13 +112,16 @@ namespace LVP_WPF
                 while (!reader.EndOfStream)
                 {
                     string? row = reader.ReadLine();
-                    if (row == null) continue;
+                    if (row == null)
+                    {
+                        continue;
+                    }
                     if (skipHeader) //#;Prod.Num.;Title;Date;Summary
                     {
                         skipHeader = false;
                         continue;
                     }
-                    
+
                     string[] values = row.Split(';');
                     ids.Add(Int32.Parse(values[0]));
                     titles.Add(values[1]);

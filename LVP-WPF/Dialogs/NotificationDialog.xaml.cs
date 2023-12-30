@@ -1,6 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
-using System.Threading;
 using System.Windows;
 
 namespace LVP_WPF

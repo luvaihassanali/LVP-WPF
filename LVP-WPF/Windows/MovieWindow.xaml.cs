@@ -14,7 +14,7 @@ namespace LVP_WPF.Windows
     public partial class MovieWindow : Window
     {
         private static Movie movie;
-        
+
         public static void Show(Movie m)
         {
             PlayerWindow.subtitleTrack = Int32.MaxValue;
@@ -77,7 +77,7 @@ namespace LVP_WPF.Windows
             if (!TcpSerialListener.layoutPoint.incomingSerialMsg)
             {
                 TcpSerialListener.layoutPoint.CloseCurrWindow(false);
-            } 
+            }
             else
             {
                 TcpSerialListener.layoutPoint.incomingSerialMsg = false;
@@ -138,7 +138,11 @@ namespace LVP_WPF.Windows
             string name = pathParts[pathParts.Length - 1].Split('.')[0];
 
             string[] movieFiles = Directory.GetFiles(path);
-            if (movieFiles.Length == 1) return;
+            if (movieFiles.Length == 1)
+            {
+                return;
+            }
+
 
             srtFileExists = true;
             subTrackComboBox.Items.Add("English");
@@ -156,7 +160,7 @@ namespace LVP_WPF.Windows
             langScrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
             MainWindow.gui.langScrollViewer = langScrollViewer;
             subTrackComboBox.IsDropDownOpen = false;
-            
+
         }
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -185,7 +189,7 @@ namespace LVP_WPF.Windows
             {
                 PlayerWindow.subtitleTrack = Int32.MaxValue;
                 PlayerWindow.subtitleFile = false;
-            } 
+            }
             else
             {
                 if (srtFileExists)

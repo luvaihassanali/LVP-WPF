@@ -48,13 +48,24 @@ namespace LVP_WPF
             });
 
             await Cache.Initialize(progressBar, coffeeGif);
-            if (model == null) return;
+            if (model == null)
+            {
+                return;
+            }
+
             await AssignControlContext();
 
             await this.Dispatcher.BeginInvoke(() =>
             {
-                if (progressBar.Visibility == Visibility.Visible) progressBar.Visibility = Visibility.Hidden;
-                if (coffeeGif.Visibility == Visibility.Visible) coffeeGif.Visibility = Visibility.Hidden;
+                if (progressBar.Visibility == Visibility.Visible)
+                {
+                    progressBar.Visibility = Visibility.Hidden;
+                }
+                if (coffeeGif.Visibility == Visibility.Visible)
+                {
+                    coffeeGif.Visibility = Visibility.Hidden;
+                }
+
                 coffeeGif.Source = null;
                 gui.mainCloseButton = this.closeButton;
                 gui.mainScrollViewer = this.scrollViewer;
@@ -68,7 +79,10 @@ namespace LVP_WPF
             PlayerWindow.InitiaizeLibVlcCore();
             MainWindow_Fade(1.0);
             loadGrid.Visibility = Visibility.Hidden;
-            if (bool.Parse(ConfigurationManager.AppSettings["Snow"])) snow.Visibility = Visibility.Visible;
+            if (bool.Parse(ConfigurationManager.AppSettings["Snow"]))
+            {
+                snow.Visibility = Visibility.Visible;
+            }
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -91,7 +105,10 @@ namespace LVP_WPF
                 path = path.Replace("bin\\Debug\\net6.0-windows\\", "Utilities\\MouseHub\\MouseHub\\bin\\Debug\\MouseHub.exe");
 #else
                 path = $"{ConfigurationManager.AppSettings["MouseHubPath"]}MouseHub.exe";
-                if (path.Contains("%USERPROFILE%")) { path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
+                if (path.Contains("%USERPROFILE%"))
+                {
+                    path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
+                }
 #endif
                 Process.Start(path);
             }
@@ -195,12 +212,12 @@ namespace LVP_WPF
             {
                 da.From = 1.0;
                 da.To = 0.1;
-            } 
+            }
             else
             {
                 da.From = 0.1;
                 da.To = 1.0;
-            } 
+            }
             this.Dispatcher.BeginInvoke(() =>
             {
                 mainGrid.BeginAnimation(OpacityProperty, da);
@@ -242,10 +259,17 @@ namespace LVP_WPF
 
         private async void InactivityDetected(object sender, EventArgs e)
         {
-            if (gui.isPlaying) return;
+            if (gui.isPlaying)
+            {
+                return;
+            }
+
             foreach (Window w in Application.Current.Windows)
             {
-                if (w as TvShowWindow != null) w.Close();
+                if (w as TvShowWindow != null)
+                {
+                    w.Close();
+                }
             }
             await Task.Delay(1000);
             Log.Information("Inactivity shutdown");

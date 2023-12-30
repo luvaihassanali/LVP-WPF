@@ -47,12 +47,18 @@ namespace LVP_WPF
             esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
             serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
             layoutPoint = new LayoutPoint(g);
-            if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
+            if (GuiModel.hideCursor)
+            {
+                Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
+            }
         }
 
         public void StartThread()
         {
-            if (serialPortEnabled) InitializeSerialPort();
+            if (serialPortEnabled)
+            {
+                InitializeSerialPort();
+            }
             try
             {
                 if (workerThread == null)
@@ -105,7 +111,10 @@ namespace LVP_WPF
 
         private void PollConnections()
         {
-            if (esp8266Enabled) DebugLog("Pinging server...");
+            if (esp8266Enabled)
+            {
+                DebugLog("Pinging server...");
+            }
             connectionEstablished = false;
 
             Ping pingSender = new Ping();
@@ -243,7 +252,10 @@ namespace LVP_WPF
 
         private void ParseTcpDataIn(string data)
         {
-            if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
+            if (GuiModel.hideCursor)
+            {
+                Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
+            }
 
             string[] dataSplit = data.Split(',');
             if (dataSplit.Length > 6)
@@ -347,7 +359,10 @@ namespace LVP_WPF
                 catch
                 {
                     serialPortExCount--;
-                    if (serialPortExCount < 0) serialPortEnabled = false;
+                    if (serialPortExCount < 0)
+                    {
+                        serialPortEnabled = false;
+                    }
                     Log.Warning("No device connected to serial port");
                 }
             }
@@ -361,7 +376,10 @@ namespace LVP_WPF
                 string msg = serialPort.ReadLine();
                 msg = msg.Replace("\r", "");
                 Log.Information(msg);
-                if (GuiModel.hideCursor) Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
+                if (GuiModel.hideCursor)
+                {
+                    Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
+                }
                 switch (msg)
                 {
                     case "left":
@@ -388,7 +406,10 @@ namespace LVP_WPF
                         else
                         {
                             DoMouseClick();
-                            if (!layoutPoint.seasonWindowActive) layoutPoint.Select(String.Empty);
+                            if (!layoutPoint.seasonWindowActive)
+                            {
+                                layoutPoint.Select(String.Empty);
+                            }
                         }
                         break;
                     case "return":
@@ -477,7 +498,10 @@ namespace LVP_WPF
                         catch
                         {
                             serialPortExCount--;
-                            if (serialPortExCount < 0) serialPortEnabled = false;
+                            if (serialPortExCount < 0)
+                            {
+                                serialPortEnabled = false;
+                            }
                             //Log.Information("No device connected");
                         }
                     }

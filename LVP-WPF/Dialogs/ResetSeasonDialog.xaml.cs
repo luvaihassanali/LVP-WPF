@@ -24,7 +24,10 @@ namespace LVP_WPF.Dialogs
             for (int i = 1; i <= tvShow.Seasons.Length; i++)
             {
                 string name;
-                if (tvShow.Seasons[idx].Id == -1) name = "  Extras";
+                if (tvShow.Seasons[idx].Id == -1)
+                {
+                    name = "  Extras";
+                }
                 else name = $"   Season {tvShow.Seasons[idx].Id}";
                 seasonBoxes[i] = new OptionWindowBox
                 {
@@ -108,7 +111,10 @@ namespace LVP_WPF.Dialogs
             ItemContainerGenerator generator = seasonListView.ItemContainerGenerator;
             ListViewItem container = (ListViewItem)generator.ContainerFromItem(item);
             CheckBox c = GuiModel.GetChildrenByType(container, typeof(CheckBox), "checkbox") as CheckBox;
-            if (c != null) c.IsChecked = (bool)c.IsChecked ? false : true;*/
+            if (c != null)
+            {
+                c.IsChecked = (bool)c.IsChecked ? false : true;
+            }*/
         }
     }
 }

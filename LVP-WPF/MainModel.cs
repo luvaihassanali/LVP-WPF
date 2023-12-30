@@ -44,18 +44,34 @@ namespace LVP_WPF
             Array.Sort(this.Movies, Movie.SortMoviesAlphabetically());
             Array.Sort(this.TvShows, TvShow.SortTvShowsAlphabetically());
 
-            if (this.movies.Length != prevMedia.movies.Length) return false;
-            if (this.tvShows.Length != prevMedia.tvShows.Length) return false;
+            if (this.movies.Length != prevMedia.movies.Length)
+            {
+                return false;
+            }
+
+            if (this.tvShows.Length != prevMedia.tvShows.Length)
+            {
+                return false;
+            }
+
 
             //Compare by ID... or create GUID? make cache faster... multiple tasks??
             for (int i = 0; i < this.movies.Length; i++)
             {
-                if (!this.movies[i].Compare(prevMedia.movies[i])) return false;
+                if (!this.movies[i].Compare(prevMedia.movies[i]))
+                {
+                    return false;
+                }
+
             }
 
             for (int i = 0; i < this.tvShows.Length; i++)
             {
-                if (!this.tvShows[i].Compare(prevMedia.tvShows[i])) return false;
+                if (!this.tvShows[i].Compare(prevMedia.tvShows[i]))
+                {
+                    return false;
+                }
+
             }
 
             return true;
@@ -140,7 +156,7 @@ namespace LVP_WPF
                     int currIdx = currFilePath.LastIndexOf("\\");
                     int prevIdx = prevFilePath.LastIndexOf("\\");
                     string currFileName = currFilePath.Substring(currIdx);
-                    string prevFileName = prevFilePath.Substring(prevIdx);                    
+                    string prevFileName = prevFilePath.Substring(prevIdx);
 
                     if (currFileName.Equals(prevFileName))
                     {
@@ -211,8 +227,16 @@ namespace LVP_WPF
 
         internal bool Compare(Movie localMovie)
         {
-            if (!this.Name.Equals(localMovie.Name)) return false;
-            if (!this.Path.Equals(localMovie.Path)) return false;
+            if (!this.Name.Equals(localMovie.Name))
+            {
+                return false;
+            }
+
+            if (!this.Path.Equals(localMovie.Path))
+            {
+                return false;
+            }
+
             return true;
         }
 
@@ -232,7 +256,7 @@ namespace LVP_WPF
         }
     }
 
-    
+
     public class TvShow : Media
     {
         public TvShow(string n)
@@ -261,42 +285,78 @@ namespace LVP_WPF
 
         internal bool Compare(TvShow localShow)
         {
-            if (!this.Name.Split(" (")[0].Equals(localShow.Name.Split(" (")[0])) return false;
+            if (!this.Name.Split(" (")[0].Equals(localShow.Name.Split(" (")[0]))
+            {
+                return false;
+            }
+
 
             if (this.MultiLang)
             {
-                if (this.MultiLangName.Count != localShow.MultiLangName.Count) return false;
-                for (int i = 0; i < this.MultiLangName.Count; i++)
+                if (this.MultiLangName.Count != localShow.MultiLangName.Count)
                 {
-                    if (!this.MultiLangName[i].Split(" (")[0].Equals(localShow.MultiLangName[i].Split(" (")[0])) return false;
+                    return false;
                 }
 
-                if (this.MultiLangSeasons.Count != localShow.MultiLangSeasons.Count) return false;
+                for (int i = 0; i < this.MultiLangName.Count; i++)
+                {
+                    if (!this.MultiLangName[i].Split(" (")[0].Equals(localShow.MultiLangName[i].Split(" (")[0]))
+                    {
+                        return false;
+                    }
+
+                }
+
+                if (this.MultiLangSeasons.Count != localShow.MultiLangSeasons.Count)
+                {
+                    return false;
+                }
+
 
                 // To-do: map seasons and compare each one. Adding/removing from multi lang tv show won't trigger update
                 for (int i = 0; i < this.MultiLangSeasons.Count; i++)
                 {
                     Season[] a = this.MultiLangSeasons[i];
                     Season[] b = localShow.MultiLangSeasons[i];
-                    if (a.Length != b.Length) return false;
+                    if (a.Length != b.Length)
+                    {
+                        return false;
+                    }
+
                     for (int j = 0; j < a.Length; j++)
                     {
-                        if (a[j].Episodes.Length != b[j].Episodes.Length) return false;
-                        for (int k = 0; k < a[j].Episodes.Length; k ++)
+                        if (a[j].Episodes.Length != b[j].Episodes.Length)
+                        {
+                            return false;
+                        }
+
+                        for (int k = 0; k < a[j].Episodes.Length; k++)
                         {
                             Episode c = a[j].Episodes[k];
                             Episode d = b[j].Episodes[k];
-                            if (!c.Path.Equals(d.Path)) return false;
+                            if (!c.Path.Equals(d.Path))
+                            {
+                                return false;
+                            }
+
                         }
                     }
                 }
                 return true;
             }
 
-            if (this.Seasons.Length != localShow.Seasons.Length) return false;
+            if (this.Seasons.Length != localShow.Seasons.Length)
+            {
+                return false;
+            }
+
             for (int i = 0; i < this.Seasons.Length; i++)
             {
-                if (!this.Seasons[i].Compare(localShow.Seasons[i])) return false;
+                if (!this.Seasons[i].Compare(localShow.Seasons[i]))
+                {
+                    return false;
+                }
+
             }
 
             return true;
@@ -313,7 +373,10 @@ namespace LVP_WPF
             {
                 TvShow? t1 = (TvShow?)a;
                 TvShow? t2 = (TvShow?)b;
-                if (t1 != null && t2 != null) return String.Compare(t1.Name, t2.Name);
+                if (t1 != null && t2 != null)
+                {
+                    return String.Compare(t1.Name, t2.Name);
+                }
                 else throw new ArgumentNullException(nameof(a));
             }
         }
@@ -333,11 +396,18 @@ namespace LVP_WPF
 
         internal bool Compare(Season localSeason)
         {
-            //if (this.Id == -1 || localSeason.Id == -1) return true;
-            if (this.Episodes.Length != localSeason.Episodes.Length) return false;
+            if (this.Episodes.Length != localSeason.Episodes.Length)
+            {
+                return false;
+            }
+
             for (int i = 0; i < this.Episodes.Length; i++)
             {
-                if (!this.Episodes[i].Compare(localSeason.Episodes[i])) return false;
+                if (!this.Episodes[i].Compare(localSeason.Episodes[i]))
+                {
+                    return false;
+                }
+
             }
             return true;
         }
@@ -364,8 +434,16 @@ namespace LVP_WPF
 
         internal bool Compare(Episode otherEpisode)
         {
-            if (!this.Name.Equals(otherEpisode.Name)) return false;
-            if (!this.Path.Equals(otherEpisode.Path)) return false;
+            if (!this.Name.Equals(otherEpisode.Name))
+            {
+                return false;
+            }
+
+            if (!this.Path.Equals(otherEpisode.Path))
+            {
+                return false;
+            }
+
             return true;
         }
     }

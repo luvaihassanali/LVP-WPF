@@ -127,7 +127,11 @@ namespace LVP_WPF.Windows
 
         private void GetLanguageInfo(TvShow tvShow)
         {
-            if (!tvShow.MultiLang) return;
+            if (!tvShow.MultiLang)
+            {
+                return;
+            }
+
             toggleButton.IsChecked = true;
             langComboBox.Visibility = Visibility.Visible;
             TcpSerialListener.layoutPoint.langComboBoxItems.Clear();
@@ -216,7 +220,11 @@ namespace LVP_WPF.Windows
         private void EpisodeListView_MouseMove(object sender, MouseEventArgs e)
         {
             HitTestResult hitTestResult = VisualTreeHelper.HitTest(EpisodeListView, Mouse.GetPosition(EpisodeListView));
-            if (hitTestResult == null) return;
+            if (hitTestResult == null)
+            {
+                return;
+            }
+
             DependencyObject item = hitTestResult.VisualHit;
             while (item != null && !(item is ListViewItem))
             {
@@ -234,7 +242,10 @@ namespace LVP_WPF.Windows
             for (int i = 0; i < EpisodeListView.Items.Count; i++)
             {
                 EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeListView.Items[i];
-                if (ep == episodeWindowBox) continue;
+                if (ep == episodeWindowBox)
+                {
+                    continue;
+                }
                 ep.Opacity = 0.0;
             }
         }
@@ -251,7 +262,11 @@ namespace LVP_WPF.Windows
         private void EpisodeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             EpisodeWindowBox item = (EpisodeWindowBox)(sender as ListView).SelectedItem;
-            if (item == null) return;
+            if (item == null)
+            {
+                return;
+            }
+
             int index = item.Id < 0 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
             Episode[] episodes = tvShow.Seasons[index].Episodes;
             foreach (Episode episode in episodes)
@@ -372,7 +387,11 @@ namespace LVP_WPF.Windows
         private void ShowNameLabel_Click(object sender, MouseButtonEventArgs e)
         {
             int[] seasons = ResetSeasonDialog.Show(tvShow);
-            if (seasons.Length == 0) return;
+            if (seasons.Length == 0)
+            {
+                return;
+            }
+
             ResetSeasons(tvShow, seasons);
         }
 

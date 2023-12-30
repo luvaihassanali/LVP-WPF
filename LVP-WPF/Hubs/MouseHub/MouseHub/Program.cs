@@ -48,7 +48,7 @@ namespace MouseMoverClient
             ConsoleHelper.SetWindowTransparency(opacity); // /256
             ConsoleHelper.HideTitleBar();
             ConsoleHelper.DisableQuickEditMode();
-            
+
             pollingTimer = new System.Timers.Timer(6000); // esp timeout is 5s
             pollingTimer.Elapsed += OnTimedEventAsync;
             pollingTimer.AutoReset = false;
@@ -114,7 +114,10 @@ namespace MouseMoverClient
                         //Console.CursorVisible = true;
                         Console.SetCursorPosition(cursorPos, Console.CursorTop);
                         cursorPos--;
-                        if (cursorPos == 0) cursorPos = 49;
+                        if (cursorPos == 0)
+                        {
+                            cursorPos = 49;
+                        }
                     }
                     ConsoleHelper.StartBlink();
                     ConsoleHelper.CloseTeamViewerDialog();
@@ -124,7 +127,7 @@ namespace MouseMoverClient
 
             Log("Stopping listener");
         }
-       
+
         private static void CheckSerialConnection()
         {
             if (serialPort != null)
@@ -374,7 +377,10 @@ namespace MouseMoverClient
                         path = path.Replace("Utilities\\MouseHub\\MouseHub\\bin\\Debug\\", "\\bin\\Debug\\net6.0-windows\\LVP-WPF.exe");
 #else
                         path = $"{ConfigurationManager.AppSettings["LVP-WPF-Path"]}LVP-WPF.exe";
-                        if (path.Contains("%USERPROFILE%")) { path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
+                        if (path.Contains("%USERPROFILE%"))
+                        {
+                            path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
+                        }
 #endif
                         Process p = new Process();
                         p.StartInfo = new ProcessStartInfo();
@@ -399,7 +405,7 @@ namespace MouseMoverClient
 
     // https://stackoverflow.com/questions/13656846/how-to-programmatic-disable-c-sharp-console-applications-quick-edit-mode/36720802#36720802
     // https://stackoverflow.com/questions/6554536/possible-to-get-set-console-font-size-in-c-sharp-net#:~:text=After%20running%20the%20application%20(Ctrl,option%20to%20adjust%20the%20size.
-    
+
     #region ConsoleHelper
 
     public static class ConsoleHelper
@@ -582,22 +588,32 @@ namespace MouseMoverClient
         internal static void StartMatrix()
         {
             //Console.CursorVisible = false;
-            int width, height;
-            int[] y;
-            Initialize(out width, out height, out y);
+            Initialize(out int width, out int height, out int[] y);
             while (true)
             {
                 matrixCounter++;
-                if (matrixCounter == 50) matrixCounter = 0;
+                if (matrixCounter == 50)
+                {
+                    matrixCounter = 0;
+                }
                 ColumnUpdate(width, height, y);
-                if (matrixCounter > (3 * flowSpeed)) matrixCounter = 0;
+                if (matrixCounter > (3 * flowSpeed))
+                {
+                    matrixCounter = 0;
+                }
             }
         }
 
         private static int YPositionFields(int yPosition, int height)
         {
-            if (yPosition < 0) return yPosition + height;
-            else if (yPosition < height) return yPosition;
+            if (yPosition < 0)
+            {
+                return yPosition + height;
+            }
+            else if (yPosition < height)
+            {
+                return yPosition;
+            }
             else return 0;
 
         }
@@ -619,14 +635,26 @@ namespace MouseMoverClient
             {
                 for (x = 0; x < width; ++x)
                 {
-                    if (x % divisor == 1) Console.ForegroundColor = fadedColor;
-                    else Console.ForegroundColor = baseColor;
+                    if (x % divisor == 1)
+                    {
+                        Console.ForegroundColor = fadedColor;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = baseColor;
+                    }
 
                     Console.SetCursorPosition(x, y[x]);
                     Console.Write(Asciicharacters);
 
-                    if (x % divisor == modVal) Console.ForegroundColor = fadedColor;
-                    else Console.ForegroundColor = baseColor;
+                    if (x % divisor == modVal)
+                    {
+                        Console.ForegroundColor = fadedColor;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = baseColor;
+                    }
 
                     int temp = y[x] - yPad;
                     Console.SetCursorPosition(x, YPositionFields(temp, height));
@@ -643,8 +671,14 @@ namespace MouseMoverClient
                 for (x = 0; x < width; ++x)
                 {
                     Console.SetCursorPosition(x, y[x]);
-                    if (x % divisor == modVal) Console.ForegroundColor = fadedColor;
-                    else Console.ForegroundColor = baseColor;
+                    if (x % divisor == modVal)
+                    {
+                        Console.ForegroundColor = fadedColor;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = baseColor;
+                    }
 
                     Console.Write(Asciicharacters);
 
@@ -665,8 +699,14 @@ namespace MouseMoverClient
 
                     if (matrixCounter > fastFlow && matrixCounter < textFlow)
                     {
-                        if (x % divisor == modVal) Console.ForegroundColor = fadedColor;
-                        else Console.ForegroundColor = baseColor;
+                        if (x % divisor == modVal)
+                        {
+                            Console.ForegroundColor = fadedColor;
+                        }
+                        else
+                        {
+                            Console.ForegroundColor = baseColor;
+                        }
 
                         int temp = y[x] - yPad;
                         Console.SetCursorPosition(x, YPositionFields(temp, height));
@@ -684,12 +724,22 @@ namespace MouseMoverClient
             get
             {
                 int t = randomPosition.Next(10);
-
-                if (t <= 2) return (char)('0' + randomPosition.Next(10));
-                else if (t <= 4) return (char)('a' + randomPosition.Next(27));
-                else if (t <= 6) return (char)('A' + randomPosition.Next(27));
-                else return (char)(randomPosition.Next(32, 255));
-
+                if (t <= 2)
+                {
+                    return (char)('0' + randomPosition.Next(10));
+                }
+                else if (t <= 4)
+                {
+                    return (char)('a' + randomPosition.Next(27));
+                }
+                else if (t <= 6)
+                {
+                    return (char)('A' + randomPosition.Next(27));
+                }
+                else
+                {
+                    return (char)randomPosition.Next(32, 255);
+                }
             }
         }
 

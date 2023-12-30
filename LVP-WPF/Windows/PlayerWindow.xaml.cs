@@ -86,7 +86,10 @@ namespace LVP_WPF.Windows
             Log.Information("Play: {Media}", currMedia.Path);
 
             bool res = mediaPlayer.Play(currVLCMedia);
-            if (!res) NotificationDialog.Show("Error", "Media player failed to start.");
+            if (!res)
+            {
+                NotificationDialog.Show("Error", "Media player failed to start.");
+            }
 
             if (currMedia as Episode != null)
             {
@@ -113,13 +116,16 @@ namespace LVP_WPF.Windows
             TcpSerialListener.layoutPoint.Select("PlayerWindow");
             ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
         }
-        
+
         private void PlayerWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             timelineSlider.ValueChanged -= Slider_ValueChanged;
             if (pollingTimer != null)
             {
-                if (pollingTimer.IsEnabled) pollingTimer.Stop();
+                if (pollingTimer.IsEnabled)
+                {
+                    pollingTimer.Stop();
+                }
                 pollingTimer.IsEnabled = false;
                 pollingTimer = null;
             }
@@ -152,11 +158,18 @@ namespace LVP_WPF.Windows
                                 break;
                             }
                         }
-                        if (found) break;
+                        if (found)
+                        {
+                            break;
+                        }
                     }
 
                     long endTime = mediaPlayer.Time;
-                    if (endTime > episode.Length) endTime = episode.Length;
+                    if (endTime > episode.Length)
+                    {
+                        endTime = episode.Length;
+                    }
+
                     if (endTime > 0)
                     {
                         if (seasonIndex == -1)
@@ -174,7 +187,10 @@ namespace LVP_WPF.Windows
                 }
             }
 
-            if (mediaPlayer.IsPlaying) mediaPlayer.Stop();
+            if (mediaPlayer.IsPlaying)
+            {
+                mediaPlayer.Stop();
+            }
             mediaPlayer.Dispose();
             inactivityTimer.Dispose();
         }
@@ -567,18 +583,29 @@ namespace LVP_WPF.Windows
 
         private async void InactivityDetected(object sender, EventArgs e)
         {
-            if (mediaPlayer.IsPlaying) return;
+            if (mediaPlayer.IsPlaying)
+            {
+                return;
+            }
+
             else
             {
                 // Double check after 10s to make sure media player was not in process of changing to new video
                 await Task.Delay(10000);
-                if (mediaPlayer.IsPlaying) return;
+                if (mediaPlayer.IsPlaying)
+                {
+                    return;
+                }
+
             }
 
             this.Dispatcher.Invoke(() => { this.Close(); });
             foreach (Window w in Application.Current.Windows)
             {
-                if (w as TvShowWindow != null) w.Close();
+                if (w as TvShowWindow != null)
+                {
+                    w.Close();
+                }
             }
 
             await Task.Delay(1000);

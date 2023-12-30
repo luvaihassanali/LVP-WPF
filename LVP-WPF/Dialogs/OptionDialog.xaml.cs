@@ -52,7 +52,11 @@ namespace LVP_WPF
 
         private void ContinueButton_Click(object sender, RoutedEventArgs e)
         {
-            if (OptionListView.SelectedIndex == -1) return;
+            if (OptionListView.SelectedIndex == -1)
+            {
+                return;
+            }
+
             OptionWindowBox o = (OptionWindowBox)OptionListView.SelectedItem;
             returnId = o.Id;
             this.Close();
@@ -60,7 +64,7 @@ namespace LVP_WPF
 
         private void OptionWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            OptionListView.SelectedIndex= 0;
+            OptionListView.SelectedIndex = 0;
         }
     }
 }

@@ -4,7 +4,6 @@ using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Configuration;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -52,7 +51,7 @@ namespace LVP_WPF
             if (h != null)
             {
                 hideCursor = bool.Parse(h);
-            } 
+            }
             else
             {
                 hideCursor = false;
@@ -70,7 +69,10 @@ namespace LVP_WPF
         // https://stackoverflow.com/questions/37247724/find-controls-placed-inside-listview-wpf
         public static Visual? GetChildrenByType(Visual visualElement, Type typeElement, string nameElement)
         {
-            if (visualElement == null) return null;
+            if (visualElement == null)
+            {
+                return null;
+            }
             if (visualElement.GetType() == typeElement)
             {
                 FrameworkElement? fe = visualElement as FrameworkElement;
@@ -93,19 +95,28 @@ namespace LVP_WPF
             {
                 Visual visual = (Visual)VisualTreeHelper.GetChild(visualElement, i);
                 foundElement = GetChildrenByType(visual, typeElement, nameElement);
-                if (foundElement != null) break;
+                if (foundElement != null)
+                {
+                    break;
+                }
             }
             return foundElement;
         }
 
         public static DependencyObject? GetScrollViewer(DependencyObject o)
         {
-            if (o is ScrollViewer) return o;
+            if (o is ScrollViewer)
+            {
+                return o;
+            }
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(o); i++)
             {
                 DependencyObject? child = VisualTreeHelper.GetChild(o, i);
                 DependencyObject? result = GetScrollViewer(child);
-                if (result == null) continue;
+                if (result == null)
+                {
+                    continue;
+                }
                 else return result;
             }
             return null;

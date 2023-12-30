@@ -64,7 +64,11 @@ namespace LVP_WPF
         internal static void CloseTeamViewerDialog()
         {
             Process[] pp = Process.GetProcessesByName("TeamViewer");
-            if (pp.Length == 0) return;
+            if (pp.Length == 0)
+            {
+                return;
+            }
+
             Process p = pp[0];
             List<IntPtr> rootWindows = GetRootWindowsOfProcess(p.Id);
             foreach (IntPtr rw in rootWindows)
