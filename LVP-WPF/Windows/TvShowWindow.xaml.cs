@@ -34,11 +34,11 @@ namespace LVP_WPF.Windows
             tvShow = t;
             TvShowWindow window = new TvShowWindow();
             window.ShowName = tvShow.Name.Contains("(") ? tvShow.Name.Split(" (")[0] : tvShow.Name;
-            window.ShowName += " (" + tvShow.Date.GetValueOrDefault().Year + ")";
-            window.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
+            window.ShowName += $" ({tvShow.Date.GetValueOrDefault().Year})";
+            window.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : tvShow.Overview;
             string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
             window.Backdrop = Cache.LoadImage(img, 960);
-            window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : "Season " + tvShow.CurrSeason.ToString();
+            window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : $"Season {tvShow.CurrSeason}";
             int index = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
             Episode[] episodes = tvShow.Seasons[index].Episodes;
             window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
@@ -185,7 +185,7 @@ namespace LVP_WPF.Windows
                 string description;
                 if (episodes[i].Overview != null)
                 {
-                    description = episodes[i].Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? episodes[i].Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : episodes[i].Overview;
+                    description = episodes[i].Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{episodes[i].Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : episodes[i].Overview;
                 }
                 else
                 {
@@ -316,7 +316,7 @@ namespace LVP_WPF.Windows
             }
             else
             {
-                this.seasonButton.Content = "Season " + seasonIndex.ToString();
+                this.seasonButton.Content = $"Season {seasonIndex}";
                 episodes = tvShow.Seasons[seasonIndex - 1].Episodes;
             }
 
@@ -504,8 +504,8 @@ namespace LVP_WPF.Windows
             if (!tvShow.Name.Contains(langComboBox.SelectedValue.ToString()))
             {
                 SwitchMultiLangTvIndex(tvShow, langComboBox.SelectedValue.ToString());
-                this.ShowName = tvShow.Name.Contains("(") ? tvShow.Name : tvShow.Name + " (" + tvShow.Date.GetValueOrDefault().Year + ")";
-                this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN) + "..." : tvShow.Overview;
+                this.ShowName = tvShow.Name.Contains("(") ? tvShow.Name : $"{tvShow.Name} ({tvShow.Date.GetValueOrDefault().Year})";
+                this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : tvShow.Overview;
                 UpdateTvWindowSeasonChange(tvShow.CurrSeason);
                 await GenerateEpisodeItemContainers();
             }

@@ -16,8 +16,8 @@ namespace LVP_WPF.Dialogs
         {
             results.Clear();
             ResetSeasonDialog resetDialog = new ResetSeasonDialog();
-            string epString = tvShow.LastEpisode == null ? "" : "E" + tvShow.LastEpisode.Id.ToString();
-            resetDialog.Header = tvShow.Name + " (" + "S" + tvShow.CurrSeason + epString + ")";
+            string epString = tvShow.LastEpisode == null ? "" : $"E{tvShow.LastEpisode.Id}";
+            resetDialog.Header = $"{tvShow.Name} (S{tvShow.CurrSeason}{epString})";
             OptionWindowBox[] seasonBoxes = new OptionWindowBox[tvShow.Seasons.Length + 1];
             seasonBoxes[0] = new OptionWindowBox { Id = 0, Name = "  All" };
             int idx = 0;
@@ -25,7 +25,7 @@ namespace LVP_WPF.Dialogs
             {
                 string name;
                 if (tvShow.Seasons[idx].Id == -1) name = "  Extras";
-                else name = "   Season " + tvShow.Seasons[idx].Id.ToString();
+                else name = $"   Season {tvShow.Seasons[idx].Id}";
                 seasonBoxes[i] = new OptionWindowBox
                 {
                     Id = tvShow.Seasons[idx++].Id,

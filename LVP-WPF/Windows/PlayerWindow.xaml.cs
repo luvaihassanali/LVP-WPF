@@ -346,9 +346,9 @@ namespace LVP_WPF.Windows
                     string[] pathParts = m.Path.Split("\\");
                     string path = "";
                     string name = pathParts[pathParts.Length - 1].Split(".")[0];
-                    for (int i = 0; i < pathParts.Length - 1; i++) path += pathParts[i] + "\\";
-                    path += name + ".srt";
-                    mediaPlayer.AddSlave(MediaSlaveType.Subtitle, "file:///" + path, true);
+                    for (int i = 0; i < pathParts.Length - 1; i++) path += $"{pathParts[i]}\\";
+                    path += $"{name}.srt";
+                    mediaPlayer.AddSlave(MediaSlaveType.Subtitle, $"file:///{path}", true);
                 }
                 else
                 {
@@ -436,11 +436,11 @@ namespace LVP_WPF.Windows
 
                     if (lengthTime.TotalMilliseconds > 3600000) // 1 hour
                     {
-                        TimeLabel = currTime.ToString(@"hh\:mm\:ss") + "/" + lengthTime.ToString(@"hh\:mm\:ss");
+                        TimeLabel = $"{currTime:hh\\:mm\\:ss}/{lengthTime:hh\\:mm\\:ss}";
                     }
                     else
                     {
-                        TimeLabel = currTime.ToString(@"mm\:ss") + "/" + lengthTime.ToString(@"mm\:ss");
+                        TimeLabel = $"{currTime:mm\\:ss}/{lengthTime:mm\\:ss}";
                     }
 
                     if (Math.Abs(SliderValue - prevSliderValue) > 3000 && prevSliderValue != 0)

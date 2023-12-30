@@ -168,7 +168,7 @@ namespace LVP_WPF
                 }
                 catch (Exception ex)
                 {
-                    DebugLog("Server not ready. Trying again (" + ex.Message + ")");
+                    DebugLog($"Server not ready. Trying again ({ex.Message})");
                     return;
                 }
 
@@ -183,7 +183,7 @@ namespace LVP_WPF
             }
             catch (Exception e)
             {
-                DebugLog("MouseWorker_ConnectToServerException: " + e.Message);
+                DebugLog($"MouseWorker_ConnectToServerException: {e.Message}");
             }
             finally
             {
@@ -204,7 +204,7 @@ namespace LVP_WPF
             while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
             {
                 buffer = Encoding.ASCII.GetString(bytes, 0, i);
-                DebugLog("Received: " + buffer.Replace("\r\n", ""));
+                DebugLog($"Received: {buffer.Replace("\r\n", "")}");
 
                 if (buffer.Contains("initack"))
                 {
@@ -246,7 +246,7 @@ namespace LVP_WPF
             string[] dataSplit = data.Split(',');
             if (dataSplit.Length > 6)
             {
-                DebugLog("Error. Message incorrect format: " + data);
+                DebugLog($"Error. Message incorrect format: {data}");
                 return;
             }
 
@@ -326,7 +326,7 @@ namespace LVP_WPF
         {
             string portNumber = ConfigurationManager.AppSettings["SerialPort"];
             serialPort = new SerialPort();
-            serialPort.PortName = "COM" + portNumber;
+            serialPort.PortName = $"COM{portNumber}";
             serialPort.BaudRate = 9600;
             serialPort.DataBits = 8;
             serialPort.Parity = Parity.None;

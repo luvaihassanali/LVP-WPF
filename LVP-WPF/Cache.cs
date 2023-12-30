@@ -20,13 +20,13 @@ namespace LVP_WPF
         private const string apiKey = "?api_key=c69c4effc7beb9c473d22b8f85d59e4c";
         private const string apiUrl = "https://api.themoviedb.org/3/";
         private const string apiImageUrl = "http://image.tmdb.org/t/p/original";
-        private const string apiTvSearchUrl = apiUrl + "search/tv" + apiKey + "&query=";
-        private const string apiMovieSearchUrl = apiUrl + "search/movie" + apiKey + "&query=";
+        private const string apiTvSearchUrl = $"{apiUrl}search/tv{apiKey}&query=";
+        private const string apiMovieSearchUrl = $"{apiUrl}search/movie{apiKey}&query=";
         private const string jsonFile = "media.json";
 
-        private static string apiTvShowUrl = apiUrl + "tv/{tv_id}" + apiKey;
-        private static string apiTvSeasonUrl = apiUrl + "tv/{tv_id}/season/{season_number}" + apiKey;
-        private static string apiMovieUrl = apiUrl + "movie/{movie_id}" + apiKey;
+        private static string apiTvShowUrl = $"{apiUrl}tv/{{tv_id}}{apiKey}";
+        private static string apiTvSeasonUrl = $"{apiUrl}tv/{{tv_id}}/season/{{season_number}}{apiKey}";
+        private static string apiMovieUrl = $"{apiUrl}movie/{{movie_id}}{apiKey}";
 
         private static List<string> tvPathList = new List<string>();
         private static List<string> moviePathList = new List<string>();
@@ -231,13 +231,13 @@ namespace LVP_WPF
                 Process[] libreTranslateProc = Process.GetProcessesByName("libretranslate");
                 if (libreTranslateProc.Length == 0)
                 {
-                    string path = ConfigurationManager.AppSettings["LibreTranslatePath"] + "libretranslate.exe";
+                    string path = $"{ConfigurationManager.AppSettings["LibreTranslatePath"]}libretranslate.exe";
                     if (path.Contains("%APPDATA%")) { path = path.Replace("%APPDATA%", Environment.GetEnvironmentVariable("APPDATA")); }
                     if (path.Contains("%LOCALAPPDATA%")) { path = path.Replace("%LOCALAPPDATA%", Environment.GetEnvironmentVariable("LOCALAPPDATA")); }
 
                     if (!File.Exists(path))
                     {
-                        NotificationDialog.Show("Error", "LibreTranslate exe does not exist at path " + path);
+                        NotificationDialog.Show("Error", $"LibreTranslate exe does not exist at {path}");
                     }
 
                     Process libreTranslateNew = new Process();
@@ -287,7 +287,7 @@ namespace LVP_WPF
             if (totalResults == 0)
             {
                 Cache.SaveData();
-                NotificationDialog.Show("Error", "No tv show found for: " + tvShow.Name);
+                NotificationDialog.Show("Error", $"No tv show found for: {tvShow.Name}");
             }
             else if (totalResults != 1)
             {
@@ -399,7 +399,7 @@ namespace LVP_WPF
                 }
                 catch
                 {
-                    NotificationDialog.Show("Error", "Season first index error: " + tvShow.Name + ", ID = " + tvShow.Id);
+                    NotificationDialog.Show("Error", $"Season first index error: {tvShow.Name}, ID = {tvShow.Id}");
                 }
 
                 if (season.Poster == null)
@@ -429,8 +429,8 @@ namespace LVP_WPF
                     }
                     if (k > jEpisodes.Count - 1)
                     {
-                        string message = "Episode index out of TMDB episodes range S" + seasonIndex.ToString() + "E" + jEpIndex.ToString();
-                        NotificationDialog.Show("Error: " + tvShow.Name, message);
+                        string message = $"Episode index out of TMDB episodes range S{seasonIndex}E{jEpIndex}";
+                        NotificationDialog.Show($"Error: {tvShow.Name}", message);
                     }
                     Episode episode = episodes[k];
 
@@ -449,12 +449,12 @@ namespace LVP_WPF
                             if (String.Compare(currMultiEpisodeName, jCurrMultiEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture,
                                 System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
                             {
-                                string message = "Multi episode name does not match retrieved data: Renaming file: '" + currMultiEpisodeName + "', to: '" + jCurrMultiEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
-                                InputDialog.Show("Warning: " + tvShow.Name, message, tvShow, season.Id + 1);
+                                string message = $"Multi episode name does not match retrieved data: Renaming file: '{currMultiEpisodeName}', to: '{jCurrMultiEpisodeName.fixBrokenQuotes()}' (Season {season.Id}).";
+                                InputDialog.Show($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
 
                                 string oldPath = episode.Path;
                                 string newPath = oldPath.Replace(currMultiEpisodeName, jCurrMultiEpisodeName.fixBrokenQuotes());
-                                string invalid = new string(System.IO.Path.GetInvalidPathChars()) + '?' + ':' + '*';
+                                string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
                                 foreach (char c in invalid)
                                 {
                                     newPath = newPath.Replace(c.ToString(), "");
@@ -462,8 +462,10 @@ namespace LVP_WPF
 
                                 try
                                 {
+                                    // To-do wtf is going on here
+                                    System.Diagnostics.Debugger.Break();
                                     char drive = newPath[0];
-                                    string drivePath = drive + ":";
+                                    string drivePath = $"{drive}:";
                                     newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
                                     File.Move(oldPath, newPath);
                                     episode.Path = newPath;
@@ -477,8 +479,7 @@ namespace LVP_WPF
                             multiEpisodeOverview += (jCurrMultiEpisodeOverview + Environment.NewLine + Environment.NewLine);
                         }
 
-                        DateTime mTempDate;
-                        episode.Date = DateTime.TryParse((string)jEpisodesMulti[numEps - 1]["air_date"], out mTempDate) ? mTempDate : DateTime.MinValue.AddHours(9);
+                        episode.Date = DateTime.TryParse((string)jEpisodesMulti[numEps - 1]["air_date"], out DateTime mTempDate) ? mTempDate : DateTime.MinValue.AddHours(9);
                         episode.Id = (int)jEpisodesMulti[numEps - 1]["episode_number"];
                         episode.Backdrop = (string)jEpisodesMulti[numEps - 1]["still_path"];
                         episode.Overview = multiEpisodeOverview;
@@ -498,20 +499,20 @@ namespace LVP_WPF
                     }
                     catch
                     {
-                        string message = "Episode index out of TMDB episodes range S" + seasonIndex.ToString() + "E" + (k + 1).ToString();
-                        NotificationDialog.Show("Error: " + tvShow.Name, message);
+                        string message = $"Episode index out of TMDB episodes range S{seasonIndex}E{k + 1}";
+                        NotificationDialog.Show($"Error: {tvShow.Name}", message);
                     }
 
-                    String jEpisodeName = (string)jEpisode["name"];
+                    string jEpisodeName = (string)jEpisode["name"];
                     if (!(String.Compare(episode.Name, jEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
                     {
-                        string message = "Local episode name does not match retrieved data. Renaming file '" + episode.Name + "' to '" + jEpisodeName.fixBrokenQuotes() + "' (Season " + season.Id + ").";
-                        InputDialog.Show("Warning: " + tvShow.Name, message, tvShow, season.Id + 1);
+                        string message = $"Local episode name does not match retrieved data. Renaming file '{episode.Name}' to '{jEpisodeName.fixBrokenQuotes()}' (Season {season.Id}).";
+                        InputDialog.Show($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
 
                         string oldPath = episode.Path;
                         jEpisodeName = (string)jEpisode["name"];
                         string newPath = oldPath.Replace(episode.Name, jEpisodeName.fixBrokenQuotes());
-                        string invalid = new string(System.IO.Path.GetInvalidPathChars()) + '?' + ':' + '*';
+                        string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
                         foreach (char c in invalid)
                         {
                             newPath = newPath.Replace(c.ToString(), "");
@@ -519,8 +520,10 @@ namespace LVP_WPF
 
                         try
                         {
+                            // To-do wtf is going on here
+                            System.Diagnostics.Debugger.Break();
                             char drive = newPath[0];
-                            string drivePath = drive + ":";
+                            string drivePath = $"{drive}:";
                             newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
                             File.Move(oldPath, newPath);
                             CheckSubtitleName(tvShow, season, oldPath, newPath);
@@ -534,8 +537,7 @@ namespace LVP_WPF
                         episode.Name = jEpisodeName.fixBrokenQuotes();
                     }
 
-                    DateTime tempDate;
-                    episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+                    episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
                     episode.Id = (int)jEpisode["episode_number"];
                     episode.Overview = (string)jEpisode["overview"];
                     episode.Overview = episode.Overview.fixBrokenQuotes();
@@ -557,17 +559,17 @@ namespace LVP_WPF
             if (tvShow.MultiLang)
             {
                 int separatorIndex = oldPath.LastIndexOf(".");
-                string oldSrtPath = oldPath.Substring(0, separatorIndex) + ".srt";
+                string oldSrtPath = $"{oldPath.Substring(0, separatorIndex)}.srt";
                 if (File.Exists(oldSrtPath))
                 {
                     int newSeparatorIndex = newPath.LastIndexOf(".");
-                    string newSrtPath = newPath.Substring(0, newSeparatorIndex) + ".srt";
+                    string newSrtPath = $"{newPath.Substring(0, newSeparatorIndex)}.srt";
                     string[] temp = oldSrtPath.Split("\\");
                     string oldSubFileName = temp[temp.Length - 1];
                     temp = newSrtPath.Split("\\");
                     string newSubFileName = temp[temp.Length - 1];
                     string subMsg = $"Renaming subtitle file {oldSubFileName} to {newSubFileName} (Season {season.Id}).";
-                    InputDialog.Show("Warning: " + tvShow.Name, subMsg, tvShow, season.Id + 1);
+                    InputDialog.Show($"Warning: {tvShow.Name}", subMsg, tvShow, season.Id + 1);
                     File.Move(oldSrtPath, newSrtPath);
                 }
                 else
@@ -594,7 +596,7 @@ namespace LVP_WPF
             if (numMovieObjects == 0)
             {
                 Cache.SaveData();
-                NotificationDialog.Show("Error", "No movie found for: " + movie.Name);
+                NotificationDialog.Show("Error", $"No movie found for: {movie.Name}");
             }
             else if (numMovieObjects != 1)
             {
@@ -636,14 +638,14 @@ namespace LVP_WPF
         {
             if (!(String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
             {
-                string message = "Local movie name does not match retrieved data. Renaming file '" + movie.Name.Replace(":", "") + "' to '" + ((string)movieObject["title"]).Replace(":", "") + "'.";
+                string message = $"Local movie name does not match retrieved data. Renaming file '{movie.Name.Replace(":", "")}' to '{((string)movieObject["title"]).Replace(":", "")}'.";
                 InputDialog.Show("Warning", message);
                 string oldPath = movie.Path;
                 string[] fileNamePath = oldPath.Split('\\');
                 string fileName = fileNamePath[fileNamePath.Length - 1];
                 string extension = fileName.Split('.')[1];
                 string newFileName = ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(); ;
-                string newPath = oldPath.Replace(fileName, newFileName + "." + extension);
+                string newPath = oldPath.Replace(fileName, $"{newFileName}.{extension}");
                 string invalid = new string(System.IO.Path.GetInvalidPathChars()) + '?';
                 foreach (char c in invalid)
                 {
@@ -688,15 +690,14 @@ namespace LVP_WPF
             CancellationTokenSource source = new CancellationTokenSource();
             CancellationToken token = source.Token;
 
-            string path = AppDomain.CurrentDomain.BaseDirectory;
             if (isMovie)
             {
-                dirPath = path + "cache\\movies\\" + name;
+                dirPath = $"{AppDomain.CurrentDomain.BaseDirectory}cache\\movies\\{name}";
                 filePath = dirPath + imagePath.Replace("/", "\\");
             }
             else
             {
-                dirPath = path + "cache\\tv\\" + name;
+                dirPath = $"{AppDomain.CurrentDomain.BaseDirectory}cache\\tv\\{name}";
                 filePath = dirPath + imagePath.Replace("/", "\\");
             }
 
@@ -704,11 +705,11 @@ namespace LVP_WPF
 
             if (!File.Exists(filePath))
             {
-                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, short.MaxValue, true))
+                using (FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, short.MaxValue, true))
                 {
                     try
                     {
-                        var requestUri = new Uri(url);
+                        Uri requestUri = new Uri(url);
                         HttpClientHandler handler = new HttpClientHandler
                         {
                             PreAuthenticate = true,
@@ -830,7 +831,7 @@ namespace LVP_WPF
             {
                 if (!seasonEntries[i].Contains("Extras") && !seasonEntries[i].Contains("Season") && !IsMultiLangSeasonFolder(seasonEntries[i]))
                 {
-                    NotificationDialog.Show("Error", tvShow.Name + " contains unknown season folder, index: " + (i + 1));
+                    NotificationDialog.Show("Error", $"{tvShow.Name} contains unknown season folder, index: {i + 1}");
                 }
 
                 if (seasonEntries[i].Contains("Extras"))
@@ -858,7 +859,7 @@ namespace LVP_WPF
                 }
                 catch
                 {
-                    NotificationDialog.Show("Error", "Episode is missing separator in " + tvShow.Name + ", Season " + (i + 1)); ;
+                    NotificationDialog.Show("Error", $"Episode is missing separator in {tvShow.Name}, Season {i + 1}");
                 }
                 season.Episodes = new Episode[episodeEntries.Length];
 
@@ -877,7 +878,7 @@ namespace LVP_WPF
                     }
                     catch
                     {
-                        NotificationDialog.Show("Error", "Episode is missing separator in " + tvShow.Name + ", Season " + (i + 1)); ;
+                        NotificationDialog.Show("Error", $"Episode is missing separator in {tvShow.Name}, Season {i + 1}");
                     }
                 }
                 seasons[i] = season;
@@ -975,16 +976,25 @@ namespace LVP_WPF
 
         internal static void ProcessRootDirectory(string driveLetter)
         {
-            string tvDirPath = driveLetter + ":\\media\\tv";
+            // To-do
+            // fix string interpolation
+            // fix new inits
+            // rest of to-dos
+            // push
+            // delete editor.config
+            // if statements + var variables
+            // add gui for ID
+            // austin powers
+            string tvDirPath = driveLetter.StartsWith("\\") ? driveLetter : $"{driveLetter}:\\media\\tv";
             if (!Directory.Exists(tvDirPath))
             {
-                NotificationDialog.Show("Error", "TV folder on " + driveLetter + " drive not found.");
+                NotificationDialog.Show("Error", $"TV folder at {tvDirPath} not found.");
             }
 
-            string movieDirPath = driveLetter + ":\\media\\movie";
+            string movieDirPath = driveLetter.StartsWith("\\") ? driveLetter : $"{driveLetter}:\\media\\movie";
             if (!Directory.Exists(movieDirPath))
             {
-                NotificationDialog.Show("Error", "Movie folder on " + driveLetter + " drive not found.");
+                NotificationDialog.Show("Error", $"Movie folder on {movieDirPath} drive not found.");
             }
 
             tvPathList.AddRange(Directory.GetDirectories(tvDirPath));
@@ -1015,8 +1025,11 @@ namespace LVP_WPF
                 string langKey = langFolders[i].Replace(path, "").Split("\\")[1];
                 if (langKey.Length != 2) return result;
                 if (langKey.Equals("en")) continue;
-                string imgPath = "Resources\\flags\\" + langKey.ToUpper() + ".png";
-                if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + imgPath)) NotificationDialog.Show("Error", "Flag image does not exist for language key: " + langKey.ToUpper());
+                string imgPath = $"Resources\\flags\\{langKey.ToUpper()}.png";
+                if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + imgPath))
+                {
+                    NotificationDialog.Show("Error", $"Flag image does not exist for language key: {langKey.ToUpper()}");
+                }
                 result[langIndex++] = LoadImage(imgPath, 56);
             }
             return result;

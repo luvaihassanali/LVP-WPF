@@ -24,7 +24,7 @@ namespace LVP_WPF.Windows
                 }
                 else
                 {
-                    img = tvShow.Seasons[i].Poster == null ? ("Resources\\no-preview-seasons\\" + (i + 1).ToString() + ".png") : tvShow.Seasons[i].Poster;
+                    img = tvShow.Seasons[i].Poster == null ? $"Resources\\no-preview-seasons\\{i + 1}.png" : tvShow.Seasons[i].Poster;
                 }
                 seasonBoxes[i] = new SeasonWindowBox
                 {

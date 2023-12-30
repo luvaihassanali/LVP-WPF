@@ -10,9 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Hubs\**" />
     <Compile Remove="Utilities\**" />
+    <EmbeddedResource Remove="Hubs\**" />
     <EmbeddedResource Remove="Utilities\**" />
+    <None Remove="Hubs\**" />
     <None Remove="Utilities\**" />
+    <Page Remove="Hubs\**" />
     <Page Remove="Utilities\**" />
   </ItemGroup>
 

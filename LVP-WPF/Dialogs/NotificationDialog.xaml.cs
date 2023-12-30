@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using System;
+using System.Threading;
 using System.Windows;
 
 namespace LVP_WPF
@@ -9,6 +10,11 @@ namespace LVP_WPF
     {
         public static void Show(string caption, string message)
         {
+            if (System.Diagnostics.Debugger.IsAttached)
+            {
+                System.Diagnostics.Debugger.Break();
+            }
+
             NotificationDialog dialog = new NotificationDialog();
             dialog.Caption = caption;
             dialog.Message = message;

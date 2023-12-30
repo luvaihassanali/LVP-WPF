@@ -1,11 +1,8 @@
-﻿using LVP_WPF;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
-using System.IO;
 using System.IO.Ports;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -41,8 +38,10 @@ namespace MouseMoverClient
             Console.BackgroundColor = ConsoleColor.Black;
             //Console.CursorSize = 1;
             Console.CursorVisible = false;
+#pragma warning disable CA1416 // Validate platform compatibility
             Console.SetWindowSize(112, 27);
             Console.SetBufferSize(112, 27);
+#pragma warning restore CA1416 // Validate platform compatibility
             ConsoleHelper.SetWindowPosition(-10, -10);
             //ConsoleHelper.SetWindowPosition(Screen.PrimaryScreen.Bounds.Width / 4 - 10, Screen.PrimaryScreen.Bounds.Height / 4  - 10);
             int opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
@@ -188,7 +187,7 @@ namespace MouseMoverClient
             }
             catch (Exception e)
             {
-                Log("ConnectToServerException: " + e.Message);
+                Log($"ConnectToServerException: {e.Message}");
             }
             finally
             {
@@ -209,7 +208,7 @@ namespace MouseMoverClient
             while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
             {
                 buffer = Encoding.ASCII.GetString(bytes, 0, i);
-                Log("Received: " + buffer.Replace("\r\n", ""));
+                Log($"Received: {buffer.Replace("\r\n", "")}");
 
                 if (buffer.Contains("initack"))
                 {
@@ -249,7 +248,7 @@ namespace MouseMoverClient
             string[] dataSplit = data.Split(',');
             if (dataSplit.Length > 6)
             {
-                Log("Error. Message incorrect format: " + data);
+                Log($"Error. Message incorrect format: {data}");
                 return;
             }
             joystickX = Int32.Parse(dataSplit[0]);
@@ -336,7 +335,7 @@ namespace MouseMoverClient
         {
             serialPort = new SerialPort();
             string portNumber = ConfigurationManager.AppSettings["SerialPort"];
-            serialPort.PortName = "COM" + portNumber;
+            serialPort.PortName = $"COM{portNumber}";
             serialPort.BaudRate = 9600;
             serialPort.DataBits = 8;
             serialPort.Parity = Parity.None;
@@ -372,7 +371,7 @@ namespace MouseMoverClient
 #if DEBUG
                         path = path.Replace("Utilities\\MouseHub\\MouseHub\\bin\\Debug\\", "\\bin\\Debug\\net6.0-windows\\LVP-WPF.exe");
 #else
-                        path = ConfigurationManager.AppSettings["LVP-WPF-Path"] + "LVP-WPF.exe";
+                        path = $"{ConfigurationManager.AppSettings["LVP-WPF-Path"]}LVP-WPF.exe";
                         if (path.Contains("%USERPROFILE%")) { path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
 #endif
                         Process p = new Process();
@@ -383,7 +382,7 @@ namespace MouseMoverClient
                         //ConsoleHelper.StartMatrix();
                         break;
                     default:
-                        Log("Unknown msg received: " + msg);
+                        Log($"Unknown msg received: {msg}");
                         break;
                 }
             }
@@ -482,7 +481,7 @@ namespace MouseMoverClient
                 if (!SetCurrentConsoleFontEx(ConsoleOutputHandle, false, ref set))
                 {
                     var ex = Marshal.GetLastWin32Error();
-                    Console.WriteLine("Set error " + ex);
+                    Console.WriteLine($"Set error {ex}");
                     throw new System.ComponentModel.Win32Exception(ex);
                 }
 
@@ -497,7 +496,7 @@ namespace MouseMoverClient
             else
             {
                 var er = Marshal.GetLastWin32Error();
-                Console.WriteLine("Get error " + er);
+                Console.WriteLine($"Get error {er}");
                 throw new System.ComponentModel.Win32Exception(er);
             }
         }

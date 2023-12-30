@@ -12,18 +12,18 @@ namespace LVP_WPF
             string path = tvShow.Seasons[0].Episodes[0].Path;
             string[] pathParts = path.Split('\\');
             string root = "";
-            for (int i = 0; i < 4; i++) root += pathParts[i] + "\\";
+            for (int i = 0; i < 4; i++) root += $"{pathParts[i]}\\";
 
             tvShow.Overview = "Tom and Jerry is an American animated media franchise and series of comedy short films created in 1940 by William Hanna and Joseph Barbera. Best known for its 161 theatrical short films by Metro-Goldwyn-Mayer, the series centers on the rivalry between the titular characters of a cat named Tom and a mouse named Jerry. Many shorts also feature several recurring characters.";
             tvShow.Date = DateTime.Parse("1940-02-10T00:00:00");
             tvShow.RunningTime = 12;
-            tvShow.Poster = root + "poster.jpg";
-            tvShow.Backdrop = root + "backdrop.jpg";
+            tvShow.Poster = $"{root}poster.jpg";
+            tvShow.Backdrop = $"{root}backdrop.jpg";
             tvShow.Id = 1;
             tvShow.Cartoon = true;
 
             bool skipHeader = true;
-            string filmography = root + "filmography.csv";
+            string filmography = $"{root}filmography.csv";
             List<int> ids = new List<int>();
             List<string> titles = new List<string>();
             List<string> dates = new List<string>();
@@ -61,7 +61,7 @@ namespace LVP_WPF
 
                     if (String.Compare(episode.Name, title, System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
                     {
-                        throw new Exception("Episode name does not match, season " + season.Id + " episode: " + episode.Name + ". Should be " + title);
+                        throw new Exception($"Episode name does not match, season {season.Id} episode: {episode.Name}. Should be {title}");
                     }
 
                     episode.Id = id;
@@ -80,18 +80,18 @@ namespace LVP_WPF
             string path = tvShow.Seasons[0].Episodes[0].Path;
             string[] pathParts = path.Split('\\');
             string root = "";
-            for (int i = 0; i < 4; i++) root += pathParts[i] + "\\";
+            for (int i = 0; i < 4; i++) root += $"{pathParts[i]}\\";
 
             tvShow.Overview = "The Golden Collection series was launched following the success of the Walt Disney Treasures series which collected archived Disney material. These collections were made possible after the merger of Time Warner and Turner Broadcasting System, along with the subsequent transfer of video rights to the Turner library from MGM Home Entertainment to Warner Home Video. The cartoons included on the set are uncut, unedited, uncensored and digitally restored and remastered from the original black & white and successive exposure Technicolor film negatives (in the case of the Cinecolor shorts, the Technicolor reprints). However, some of the cartoons in these collections are derived from the \"Blue Ribbon\" reissues, as the original titles for these cartoons are presumably lost.";
             tvShow.Date = DateTime.Parse("1946-02-02T00:00:00");
             tvShow.RunningTime = 12;
-            tvShow.Poster = root + "poster.jpg";
-            tvShow.Backdrop = root + "backdrop.jpg";
+            tvShow.Poster = $"{root}poster.jpg";
+            tvShow.Backdrop = $"{root}backdrop.jpg";
             tvShow.Id = 2;
             tvShow.Cartoon = true;
 
             bool skipHeader = true;
-            string filmography = root + "filmography.csv";
+            string filmography = $"{root}filmography.csv";
             List<int> ids = new List<int>();
             List<string> titles = new List<string>();
             List<string> dates = new List<string>();
@@ -126,7 +126,7 @@ namespace LVP_WPF
                     string date = dates[index];
                     if (String.Compare(episode.Name, title, System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
                     {
-                        throw new Exception("Episode name does not match, season " + season.Id + " episode: " + episode.Name + ". Should be " + title);
+                        throw new Exception($"Episode name does not match, season {season.Id} episode: {episode.Name}. Should be {title}");
                     }
                     episode.Id = id;
                     episode.Date = DateTime.Parse(date);

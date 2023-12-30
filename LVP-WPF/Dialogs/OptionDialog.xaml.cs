@@ -12,8 +12,8 @@ namespace LVP_WPF
         public static int Show(string title, string path, string[][] info, DateTime?[] dates)
         {
             OptionDialog dialog = new OptionDialog();
-            dialog.Caption = title + "?";
-            dialog.Message = "Select the correct entry for: " + title;
+            dialog.Caption = $"{title}?";
+            dialog.Message = $"Select the correct entry for: {title}";
             dialog.Path = path;
             dialog.Topmost = true;
             OptionWindowBox[] entries = new OptionWindowBox[info[0].Length];
@@ -21,7 +21,7 @@ namespace LVP_WPF
             {
                 entries[i] = new OptionWindowBox
                 {
-                    Name = info[0][i] + " (" + dates[i].GetValueOrDefault().Year + ")",
+                    Name = $"{info[0][i]} ({dates[i].GetValueOrDefault().Year})",
                     Description = info[2][i].Equals(String.Empty) ? "No description." : info[2][i],
                     Id = Int32.Parse(info[1][i])
                 };

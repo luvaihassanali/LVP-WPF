@@ -4,7 +4,7 @@ VisualStudioVersion = 17.1.32328.378
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LVP-WPF", "LVP-WPF\LVP-WPF.csproj", "{3C195739-6C14-44C6-88B7-6BBE71F424B2}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MouseHub", "LVP-WPF\Utilities\MouseHub\MouseHub\MouseHub.csproj", "{A793F4E4-31A9-486C-B5F8-A86F04159161}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MouseHub", "LVP-WPF\Hubs\MouseHub\MouseHub\MouseHub.csproj", "{A793F4E4-31A9-486C-B5F8-A86F04159161}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -47,6 +47,7 @@ namespace LVP_WPF
             if (this.movies.Length != prevMedia.movies.Length) return false;
             if (this.tvShows.Length != prevMedia.tvShows.Length) return false;
 
+            //Compare by ID... or create GUID? make cache faster... multiple tasks??
             for (int i = 0; i < this.movies.Length; i++)
             {
                 if (!this.movies[i].Compare(prevMedia.movies[i])) return false;
@@ -313,7 +314,7 @@ namespace LVP_WPF
                 TvShow? t1 = (TvShow?)a;
                 TvShow? t2 = (TvShow?)b;
                 if (t1 != null && t2 != null) return String.Compare(t1.Name, t2.Name);
-                else throw new ArgumentNullException();
+                else throw new ArgumentNullException(nameof(a));
             }
         }
     }
@@ -367,11 +368,5 @@ namespace LVP_WPF
             if (!this.Path.Equals(otherEpisode.Path)) return false;
             return true;
         }
-
-        public override string ToString()
-        {
-            return "Episode: " + Path + " " + Date;
-        }
-
     }
 }

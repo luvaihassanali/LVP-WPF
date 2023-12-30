@@ -21,7 +21,7 @@ namespace LVP_WPF
             }
             else
             {
-                tmdbUrl = "https://www.themoviedb.org/tv/" + tvShow.Id.ToString() + "/season/" + (currSeason - 1);
+                tmdbUrl = $"https://www.themoviedb.org/tv/{tvShow.Id}/season/{currSeason - 1}";
             }
             dialog.ShowDialog();
             if (dialog.DialogResult != null && (bool)dialog.DialogResult)

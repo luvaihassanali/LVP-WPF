@@ -90,7 +90,7 @@ namespace LVP_WPF
 #if DEBUG
                 path = path.Replace("bin\\Debug\\net6.0-windows\\", "Utilities\\MouseHub\\MouseHub\\bin\\Debug\\MouseHub.exe");
 #else
-                path = ConfigurationManager.AppSettings["MouseHubPath"] + "MouseHub.exe";
+                path = $"{ConfigurationManager.AppSettings["MouseHubPath"]}MouseHub.exe";
                 if (path.Contains("%USERPROFILE%")) { path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE")); }
 #endif
                 Process.Start(path);
@@ -182,7 +182,7 @@ namespace LVP_WPF
             loadGrid.Visibility = Visibility.Hidden;
         }
 
-        private async void MainWindow_Fade(double direction)
+        private void MainWindow_Fade(double direction)
         {
             DoubleAnimation da = new DoubleAnimation();
             if (direction == 0.1)
