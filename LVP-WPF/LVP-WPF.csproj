@@ -204,7 +204,9 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" />
-    <PackageReference Include="FontAwesome.WPF" Version="4.7.0.9" />
+    <PackageReference Include="FontAwesome.WPF" Version="4.7.0.9">
+		<NoWarn>NU1701</NoWarn>
+	</PackageReference>
     <PackageReference Include="LibVLCSharp" Version="3.6.8" />
     <PackageReference Include="LibVLCSharp.WPF" Version="3.6.8" />
     <PackageReference Include="Microsoft.VisualStudio.SlowCheetah" Version="4.0.30">

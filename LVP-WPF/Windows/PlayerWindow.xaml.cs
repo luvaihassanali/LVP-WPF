@@ -16,8 +16,8 @@ namespace LVP_WPF.Windows
         static private Media currMedia;
         static private TvShowWindow? tvShowWindow;
         static internal LibVLC libVLC = new LibVLC(GuiModel.fontStyle, GuiModel.fontSize);
-        static public int subtitleTrack = Int32.MaxValue;
-        static public bool subtitleFile = false;
+        static internal int subtitleTrack = Int32.MaxValue;
+        static internal bool subtitleFile = false;
         private MediaPlayer mediaPlayer;
         private DispatcherTimer pollingTimer;
         InactivityTimer inactivityTimer;
@@ -74,8 +74,10 @@ namespace LVP_WPF.Windows
             mediaPlayer.EnableMouseInput = false;
             mediaPlayer.EnableKeyInput = false;
 
-            pollingTimer = new DispatcherTimer();
-            pollingTimer.Interval = TimeSpan.FromSeconds(3);
+            pollingTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(3)
+            };
             pollingTimer.Tick += PollingTimer_Tick;
             inactivityTimer = new InactivityTimer(TimeSpan.FromHours(2));
             inactivityTimer.Inactivity += InactivityDetected;
@@ -92,7 +94,7 @@ namespace LVP_WPF.Windows
 
                 if (TvShowWindow.historyWatch)
                 {
-                    hwTxtBlock.Text = $"{episode.Date.ToString("MMMM dd, yyyy")}\n{episode.Name}";
+                    hwTxtBlock.Text = $"{episode.Date:MMMM dd, yyyy}\n{episode.Name}";
                     hwGrid.Visibility = Visibility.Visible;
                     Task.Delay(5000).ContinueWith(t =>
                     {
@@ -177,7 +179,7 @@ namespace LVP_WPF.Windows
             inactivityTimer.Dispose();
         }
 
-        private void UpdateProgressBar(Episode episode)
+        private static void UpdateProgressBar(Episode episode)
         {
             tvShowWindow.Dispatcher.BeginInvoke(() =>
             {
@@ -212,7 +214,7 @@ namespace LVP_WPF.Windows
 
                 hwGrid.Dispatcher.BeginInvoke(() =>
                 {
-                    hwTxtBlock.Text = $"{MainWindow.model.HistoryEpisode.Date.ToString("MMMM dd, yyyy")}\n{MainWindow.model.HistoryEpisode.Name}";
+                    hwTxtBlock.Text = $"{MainWindow.model.HistoryEpisode.Date:MMMM dd, yyyy}\n{MainWindow.model.HistoryEpisode.Name}";
                     hwGrid.Visibility = Visibility.Visible;
                 });
                 Task.Delay(5000).ContinueWith(t =>
@@ -366,12 +368,12 @@ namespace LVP_WPF.Windows
 
         private void Control_MouseEnter(object sender, EventArgs e)
         {
-            if (pollingTimer != null) pollingTimer.Stop();
+            pollingTimer?.Stop();
         }
 
         private void Control_MouseLeave(object sender, EventArgs e)
         {
-            if (pollingTimer != null) pollingTimer.Start();
+            pollingTimer?.Start();
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)

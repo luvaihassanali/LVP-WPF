@@ -168,10 +168,10 @@ namespace LVP_WPF
             MainWindowBox item = (MainWindowBox)(sender as ListView).SelectedItem;
             if (item != null)
             {
-                var mediaItem = gui.mediaDict[item.Id];
-                if (mediaItem is Movie)
+                Media? mediaItem = gui.mediaDict[item.Id];
+                if (mediaItem is Movie movie)
                 {
-                    MovieWindow.Show((Movie)mediaItem);
+                    MovieWindow.Show(movie);
                 }
                 else
                 {

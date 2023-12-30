@@ -121,22 +121,15 @@ namespace LVP_WPF
         /// <param name="e">The <see cref="System.EventArgs"/> instance containing the event data.</param>
         void _timer_Tick(object sender, EventArgs e)
         {
-            var time = Environment.TickCount;
+            int time = Environment.TickCount;
 
             // The time when the inactivity event should be raised
-            var inactivityTime = _lastActivityTime + (int)TimeOut.TotalMilliseconds;
+            int inactivityTime = _lastActivityTime + (int)TimeOut.TotalMilliseconds;
 
             if (inactivityTime - time <= 0)
             {
-                var temp = Inactivity;
-
-                if (temp != null)
-                {
-                    temp(this, EventArgs.Empty);
-                }
-
+                Inactivity?.Invoke(this, EventArgs.Empty);
                 _lastActivityTime = time;
-
                 _timer.Interval = TimeOut;
             }
             else

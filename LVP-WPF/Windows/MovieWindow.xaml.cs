@@ -113,7 +113,7 @@ namespace LVP_WPF.Windows
             Task.Run(async () => { await media.Parse(MediaParseOptions.ParseLocal); }).Wait();
 
             subTrackComboBox.Items.Add("Subtitles (none)");
-            foreach (var track in media.Tracks)
+            foreach (MediaTrack track in media.Tracks)
             {
                 switch (track.TrackType)
                 {

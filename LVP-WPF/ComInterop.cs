@@ -86,9 +86,9 @@ namespace LVP_WPF
 
         private static string GetWindowTitle(IntPtr hWnd)
         {
-            var length = GetWindowTextLength(hWnd) + 1;
-            var title = new StringBuilder(length);
-            GetWindowText(hWnd, title, length);
+            int length = GetWindowTextLength(hWnd) + 1;
+            StringBuilder title = new StringBuilder(length);
+            _ = GetWindowText(hWnd, title, length);
             return title.ToString();
         }
 

@@ -482,7 +482,7 @@ namespace MouseMoverClient
                 // Get settings from current font
                 if (!SetCurrentConsoleFontEx(ConsoleOutputHandle, false, ref set))
                 {
-                    var ex = Marshal.GetLastWin32Error();
+                    int ex = Marshal.GetLastWin32Error();
                     Console.WriteLine($"Set error {ex}");
                     throw new System.ComponentModel.Win32Exception(ex);
                 }
@@ -497,7 +497,7 @@ namespace MouseMoverClient
             }
             else
             {
-                var er = Marshal.GetLastWin32Error();
+                int er = Marshal.GetLastWin32Error();
                 Console.WriteLine($"Get error {er}");
                 throw new System.ComponentModel.Win32Exception(er);
             }
@@ -744,9 +744,9 @@ namespace MouseMoverClient
 
         private static string GetWindowTitle(IntPtr hWnd)
         {
-            var length = GetWindowTextLength(hWnd) + 1;
-            var title = new StringBuilder(length);
-            GetWindowText(hWnd, title, length);
+            int length = GetWindowTextLength(hWnd) + 1;
+            StringBuilder title = new StringBuilder(length);
+            _ = GetWindowText(hWnd, title, length);
             return title.ToString();
         }
 

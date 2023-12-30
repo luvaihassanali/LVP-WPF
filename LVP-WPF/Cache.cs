@@ -37,8 +37,7 @@ namespace LVP_WPF
 
         internal static async Task Initialize(ProgressBar pb, MediaElement cofeeGif)
         {
-            string? driveString = ConfigurationManager.AppSettings["Drives"];
-            if (driveString != null && driveString.Equals(String.Empty)) return;
+            string driveString = ConfigurationManager.AppSettings["Drives"];
             string[] drives = driveString.Split(';');
             foreach (string drive in drives) { ProcessRootDirectory(drive); }
 
@@ -97,8 +96,10 @@ namespace LVP_WPF
 
         internal static async Task BuildCache()
         {
-            HttpClient client = new HttpClient();
-            client.Timeout = TimeSpan.FromMinutes(30);
+            HttpClient client = new HttpClient
+            {
+                Timeout = TimeSpan.FromMinutes(30)
+            };
 
             for (int i = 0; i < MainWindow.model.Movies.Length; i++)
             {
@@ -215,6 +216,8 @@ namespace LVP_WPF
                     return "English";
                 case "it":
                     return "Italian";
+                default:
+                    break;
             }
             return "";
 
@@ -299,13 +302,12 @@ namespace LVP_WPF
 
                 for (int j = 0; j < actualResults; j++)
                 {
-                    DateTime temp;
-                    dates[j] = DateTime.TryParse((string)tvObject["results"][j]["first_air_date"], out temp) ? temp : DateTime.MinValue.AddHours(9);
+                    dates[j] = DateTime.TryParse((string)tvObject["results"][j]["first_air_date"], out DateTime temp) ? temp : DateTime.MinValue.AddHours(9);
                     names[j] = (string)tvObject["results"][j]["name"];
-                    names[j] = names[j].fixBrokenQuotes();
+                    names[j] = names[j].FixBrokenQuotes();
                     ids[j] = (string)tvObject["results"][j]["id"];
                     overviews[j] = (string)tvObject["results"][j]["overview"];
-                    overviews[j] = overviews[j].fixBrokenQuotes();
+                    overviews[j] = overviews[j].FixBrokenQuotes();
                 }
 
                 string[][] info = new string[][] { names, ids, overviews };
@@ -322,10 +324,9 @@ namespace LVP_WPF
             string tvShowString = await tvShowContent.ReadAsStringAsync();
             tvObject = JObject.Parse(tvShowString);
 
-            DateTime tempDate;
-            tvShow.Date = DateTime.TryParse((string)tvObject["first_air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+            tvShow.Date = DateTime.TryParse((string)tvObject["first_air_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
             tvShow.Overview = (string)tvObject["overview"];
-            tvShow.Overview = tvShow.Overview.fixBrokenQuotes();
+            tvShow.Overview = tvShow.Overview.FixBrokenQuotes();
             tvShow.Poster = (string)tvObject["poster_path"];
             tvShow.Backdrop = (string)tvObject["backdrop_path"];
             int[] runtime = JObject.Parse(tvShowString)["episode_run_time"].Select(x => (int)x).ToArray();
@@ -338,8 +339,8 @@ namespace LVP_WPF
                 tvShow.RunningTime = -1;
             }
 
-            var genres = tvObject["genres"];
-            foreach (var genre in genres)
+            JToken? genres = tvObject["genres"];
+            foreach (JToken? genre in genres)
             {
                 string cartoonExceptionStr = ConfigurationManager.AppSettings["CartoonExceptions"];
                 string[] cartoonExceptions = cartoonExceptionStr.Split(";");
@@ -405,8 +406,7 @@ namespace LVP_WPF
                 if (season.Poster == null)
                 {
                     season.Poster = (string)seasonObject["poster_path"];
-                    DateTime tempDate;
-                    season.Date = DateTime.TryParse((string)seasonObject["air_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+                    season.Date = DateTime.TryParse((string)seasonObject["air_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
 
                     if (season.Poster != null)
                     {
@@ -446,14 +446,14 @@ namespace LVP_WPF
                             string jCurrMultiEpisodeName = (string)jEpisodesMulti[l]["name"];
                             string jCurrMultiEpisodeOverview = (string)jEpisodesMulti[l]["overview"];
                             string currMultiEpisodeName = multiEpNames[l];
-                            if (String.Compare(currMultiEpisodeName, jCurrMultiEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture,
+                            if (String.Compare(currMultiEpisodeName, jCurrMultiEpisodeName.FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture,
                                 System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
                             {
-                                string message = $"Multi episode name does not match retrieved data: Renaming file: '{currMultiEpisodeName}', to: '{jCurrMultiEpisodeName.fixBrokenQuotes()}' (Season {season.Id}).";
+                                string message = $"Multi episode name does not match retrieved data: Renaming file: '{currMultiEpisodeName}', to: '{jCurrMultiEpisodeName.FixBrokenQuotes()}' (Season {season.Id}).";
                                 InputDialog.Show($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
 
                                 string oldPath = episode.Path;
-                                string newPath = oldPath.Replace(currMultiEpisodeName, jCurrMultiEpisodeName.fixBrokenQuotes());
+                                string newPath = oldPath.Replace(currMultiEpisodeName, jCurrMultiEpisodeName.FixBrokenQuotes());
                                 string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
                                 foreach (char c in invalid)
                                 {
@@ -504,14 +504,14 @@ namespace LVP_WPF
                     }
 
                     string jEpisodeName = (string)jEpisode["name"];
-                    if (!(String.Compare(episode.Name, jEpisodeName.fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
+                    if (!(String.Compare(episode.Name, jEpisodeName.FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
                     {
-                        string message = $"Local episode name does not match retrieved data. Renaming file '{episode.Name}' to '{jEpisodeName.fixBrokenQuotes()}' (Season {season.Id}).";
+                        string message = $"Local episode name does not match retrieved data. Renaming file '{episode.Name}' to '{jEpisodeName.FixBrokenQuotes()}' (Season {season.Id}).";
                         InputDialog.Show($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
 
                         string oldPath = episode.Path;
                         jEpisodeName = (string)jEpisode["name"];
-                        string newPath = oldPath.Replace(episode.Name, jEpisodeName.fixBrokenQuotes());
+                        string newPath = oldPath.Replace(episode.Name, jEpisodeName.FixBrokenQuotes());
                         string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
                         foreach (char c in invalid)
                         {
@@ -534,13 +534,13 @@ namespace LVP_WPF
                         }
 
                         episode.Path = newPath;
-                        episode.Name = jEpisodeName.fixBrokenQuotes();
+                        episode.Name = jEpisodeName.FixBrokenQuotes();
                     }
 
                     episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
                     episode.Id = (int)jEpisode["episode_number"];
                     episode.Overview = (string)jEpisode["overview"];
-                    episode.Overview = episode.Overview.fixBrokenQuotes();
+                    episode.Overview = episode.Overview.FixBrokenQuotes();
                     episode.Backdrop = (string)jEpisode["still_path"];
 
                     if (episode.Backdrop != null)
@@ -609,12 +609,11 @@ namespace LVP_WPF
                 for (int j = 0; j < resultCount; j++)
                 {
                     names[j] = (string)movieObject["results"][j]["title"];
-                    names[j] = names[j].fixBrokenQuotes();
+                    names[j] = names[j].FixBrokenQuotes();
                     ids[j] = (string)movieObject["results"][j]["id"];
                     overviews[j] = (string)movieObject["results"][j]["overview"];
-                    overviews[j] = overviews[j].fixBrokenQuotes();
-                    DateTime temp;
-                    dates[j] = DateTime.TryParse((string)movieObject["results"][j]["release_date"], out temp) ? temp : DateTime.MinValue.AddHours(9);
+                    overviews[j] = overviews[j].FixBrokenQuotes();
+                    dates[j] = DateTime.TryParse((string)movieObject["results"][j]["release_date"], out DateTime temp) ? temp : DateTime.MinValue.AddHours(9);
                 }
 
                 string[][] info = new string[][] { names, ids, overviews };
@@ -636,7 +635,7 @@ namespace LVP_WPF
 
         private static async Task UpdateMovieData(Movie movie, JObject movieObject)
         {
-            if (!(String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
+            if (!(String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
             {
                 string message = $"Local movie name does not match retrieved data. Renaming file '{movie.Name.Replace(":", "")}' to '{((string)movieObject["title"]).Replace(":", "")}'.";
                 InputDialog.Show("Warning", message);
@@ -644,7 +643,7 @@ namespace LVP_WPF
                 string[] fileNamePath = oldPath.Split('\\');
                 string fileName = fileNamePath[fileNamePath.Length - 1];
                 string extension = fileName.Split('.')[1];
-                string newFileName = ((string)movieObject["title"]).Replace(":", "").fixBrokenQuotes(); ;
+                string newFileName = ((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes(); ;
                 string newPath = oldPath.Replace(fileName, $"{newFileName}.{extension}");
                 string invalid = new string(System.IO.Path.GetInvalidPathChars()) + '?';
                 foreach (char c in invalid)
@@ -656,12 +655,11 @@ namespace LVP_WPF
                 movie.Name = newFileName;
             }
 
-            DateTime tempDate;
-            movie.Date = DateTime.TryParse((string)movieObject["release_date"], out tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+            movie.Date = DateTime.TryParse((string)movieObject["release_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
             movie.Backdrop = (string)movieObject["backdrop_path"];
             movie.Poster = (string)movieObject["poster_path"];
             movie.Overview = (string)movieObject["overview"];
-            movie.Overview = movie.Overview.fixBrokenQuotes();
+            movie.Overview = movie.Overview.FixBrokenQuotes();
             movie.RunningTime = (int)movieObject["runtime"];
 
             if (movie.Backdrop != null)
@@ -679,7 +677,7 @@ namespace LVP_WPF
         {
             int pos = text.IndexOf(search);
             if (pos < 0) return text;
-            return text.Substring(0, pos) + replace + text.Substring(pos + search.Length);
+            return string.Concat(text.AsSpan(0, pos), replace, text.AsSpan(pos + search.Length));
         }
 
         internal static async Task<string> DownloadImage(string imagePath, string name, bool isMovie)
@@ -705,25 +703,23 @@ namespace LVP_WPF
 
             if (!File.Exists(filePath))
             {
-                using (FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, short.MaxValue, true))
+                using FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, short.MaxValue, true);
+                try
                 {
-                    try
+                    Uri requestUri = new Uri(url);
+                    HttpClientHandler handler = new HttpClientHandler
                     {
-                        Uri requestUri = new Uri(url);
-                        HttpClientHandler handler = new HttpClientHandler
-                        {
-                            PreAuthenticate = true,
-                            UseDefaultCredentials = true
-                        };
-                        var response = await (new HttpClient(handler)).GetAsync(requestUri,
-                            HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
-                        var content = response.EnsureSuccessStatusCode().Content;
-                        await content.CopyToAsync(fileStream).ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.TraceError(ex.ToString());
-                    }
+                        PreAuthenticate = true,
+                        UseDefaultCredentials = true
+                    };
+                    // To-do* factory
+                    HttpResponseMessage response = await new HttpClient(handler).GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+                    HttpContent content = response.EnsureSuccessStatusCode().Content;
+                    await content.CopyToAsync(fileStream).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Trace.TraceError(ex.ToString());
                 }
             }
 
@@ -799,8 +795,10 @@ namespace LVP_WPF
         {
             string[] path = targetDir.Split('\\');
             string name = path[path.Length - 1].Split('%')[0];
-            TvShow show = new TvShow(name.Trim());
-            show.Path = targetDir;
+            TvShow show = new TvShow(name.Trim())
+            {
+                Path = targetDir
+            };
 
             string[] seasonEntries = Directory.GetDirectories(targetDir);
             string[] seasonParts = seasonEntries[0].Split('\\');
@@ -936,8 +934,8 @@ namespace LVP_WPF
 
             string s5Part = s3Parts[s3Parts.Length - 1];
             string s6Part = s4Parts[s4Parts.Length - 1];
-            if (s5Part.Contains("#")) s5Part = s5Part.Split('#')[0];
-            if (s6Part.Contains("#")) s6Part = s6Part.Split('#')[0];
+            if (s5Part.Contains('#')) s5Part = s5Part.Split('#')[0];
+            if (s6Part.Contains('#')) s6Part = s6Part.Split('#')[0];
 
             int indexA = Int32.Parse(s5Part);
             int indexB = Int32.Parse(s6Part);
@@ -1039,25 +1037,25 @@ namespace LVP_WPF
             await Task.Delay(2000);
         }
     }
-}
 
-public class LibreTranslateResponse
-{
-    public string TranslatedText { get; set; }
-}
-
-public static class StringExtension
-{
-    private const string targetSingleQuoteSymbol = "'";
-    private const string genericSingleQuoteSymbol = "â€™";
-    private const string openSingleQuoteSymbol = "â€˜";
-    private const string closeSingleQuoteSymbol = "â€™";
-    private const string frenchAccentAigu = "Ã©";
-    private const string frenchAccentGrave = "Ã";
-
-    public static string fixBrokenQuotes(this string str)
+    public class LibreTranslateResponse
     {
-        return str.Replace(genericSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(openSingleQuoteSymbol, targetSingleQuoteSymbol)
-            .Replace(closeSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(frenchAccentAigu, "e").Replace(frenchAccentGrave, "a").Replace("%", "percent").Replace("  ", " ");
+        public string TranslatedText { get; set; }
+    }
+
+    public static class StringExtension
+    {
+        private const string targetSingleQuoteSymbol = "'";
+        private const string genericSingleQuoteSymbol = "â€™";
+        private const string openSingleQuoteSymbol = "â€˜";
+        private const string closeSingleQuoteSymbol = "â€™";
+        private const string frenchAccentAigu = "Ã©";
+        private const string frenchAccentGrave = "Ã";
+
+        public static string FixBrokenQuotes(this string str)
+        {
+            return str.Replace(genericSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(openSingleQuoteSymbol, targetSingleQuoteSymbol)
+                .Replace(closeSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(frenchAccentAigu, "e").Replace(frenchAccentGrave, "a").Replace("%", "percent").Replace("  ", " ");
+        }
     }
 }
