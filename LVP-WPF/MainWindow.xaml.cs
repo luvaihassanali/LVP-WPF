@@ -87,15 +87,10 @@ namespace LVP_WPF
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            inactivityTimer.Dispose();
+            inactivityTimer?.Dispose();
             Cache.SaveData();
             GuiModel.RestoreSystemCursor();
-
-            if (tcpWorker != null)
-            {
-                tcpWorker.StopThread();
-            }
-
+            tcpWorker?.StopThread();
             PlayerWindow.libVLC.Dispose();
 
             if (mouseHubKilled)

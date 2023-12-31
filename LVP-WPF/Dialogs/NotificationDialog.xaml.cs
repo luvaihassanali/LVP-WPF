@@ -14,10 +14,12 @@ namespace LVP_WPF
                 System.Diagnostics.Debugger.Break();
             }
 
-            NotificationDialog dialog = new NotificationDialog();
-            dialog.Caption = caption;
-            dialog.Message = message;
-            dialog.Topmost = true;
+            NotificationDialog dialog = new NotificationDialog
+            {
+                Caption = caption,
+                Message = message,
+                Topmost = true
+            };
             dialog.ShowDialog();
         }
 

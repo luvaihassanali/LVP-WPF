@@ -364,7 +364,10 @@ namespace LVP_WPF.Windows
                     string[] pathParts = m.Path.Split("\\");
                     string path = "";
                     string name = pathParts[pathParts.Length - 1].Split(".")[0];
-                    for (int i = 0; i < pathParts.Length - 1; i++) path += $"{pathParts[i]}\\";
+                    for (int i = 0; i < pathParts.Length - 1; i++)
+                    {
+                        path += $"{pathParts[i]}\\";
+                    }
                     path += $"{name}.srt";
                     mediaPlayer.AddSlave(MediaSlaveType.Subtitle, $"file:///{path}", true);
                 }

@@ -16,7 +16,24 @@ namespace LVP_WPF
             string path = tvShow.Seasons[0].Episodes[0].Path;
             string[] pathParts = path.Split('\\');
             string root = "";
-            for (int i = 0; i < 4; i++) root += $"{pathParts[i]}\\";
+
+            int idx;
+            switch (pathParts.Length)
+            {
+                case 6:
+                    idx = 4;
+                    break;
+                case 8:
+                    idx = 6;
+                    break;
+                default:
+                    throw new Exception("Unrecognized # of path parts for custom cache");
+            }
+
+            for (int i = 0; i < idx; i++)
+            {
+                root += $"{pathParts[i]}\\";
+            }
 
             tvShow.Overview = "Tom and Jerry is an American animated media franchise and series of comedy short films created in 1940 by William Hanna and Joseph Barbera. Best known for its 161 theatrical short films by Metro-Goldwyn-Mayer, the series centers on the rivalry between the titular characters of a cat named Tom and a mouse named Jerry. Many shorts also feature several recurring characters.";
             tvShow.Date = DateTime.Parse("1940-02-10T00:00:00");
@@ -87,11 +104,29 @@ namespace LVP_WPF
             {
                 return;
             }
-
+            // C: 1 Media 2 tv 3 Looney Tunes % S01-S24.Golden.Collection.DVDRip.x264-JCH[rartv] 4 Season 1 5 episode.mkv
+            
             string path = tvShow.Seasons[0].Episodes[0].Path;
             string[] pathParts = path.Split('\\');
             string root = "";
-            for (int i = 0; i < 4; i++) root += $"{pathParts[i]}\\";
+
+            int idx;
+            switch (pathParts.Length)
+            {
+                case 6:
+                    idx = 4;
+                    break;
+                case 8:
+                    idx = 6;
+                    break;
+                default:
+                    throw new Exception("Unrecognized # of path parts for custom cache");
+            }
+
+            for (int i = 0; i < idx; i++)
+            {
+                root += $"{pathParts[i]}\\";
+            }
 
             tvShow.Overview = "The Golden Collection series was launched following the success of the Walt Disney Treasures series which collected archived Disney material. These collections were made possible after the merger of Time Warner and Turner Broadcasting System, along with the subsequent transfer of video rights to the Turner library from MGM Home Entertainment to Warner Home Video. The cartoons included on the set are uncut, unedited, uncensored and digitally restored and remastered from the original black & white and successive exposure Technicolor film negatives (in the case of the Cinecolor shorts, the Technicolor reprints). However, some of the cartoons in these collections are derived from the \"Blue Ribbon\" reissues, as the original titles for these cartoons are presumably lost.";
             tvShow.Date = DateTime.Parse("1946-02-02T00:00:00");

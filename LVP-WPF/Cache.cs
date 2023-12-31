@@ -39,30 +39,36 @@ namespace LVP_WPF
 
         private static IHttpClientFactory factory = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
 
-        internal static async Task Initialize(ProgressBar pb, MediaElement cofeeGif)
+        internal static async Task Initialize(ProgressBar pb, MediaElement cf)
         {
-            string driveString = ConfigurationManager.AppSettings["Drives"];
-            string[] drives = driveString.Split(';');
-            foreach (string drive in drives) { ProcessRootDirectory(drive); }
-
-            MainWindow.model = new MainModel(moviePathList.Count, tvPathList.Count);
-            for (int i = 0; i < moviePathList.Count; i++)
+            await Task.Run(() =>
             {
-                MainWindow.model.Movies[i] = ProcessMovieDirectory(moviePathList[i]);
-                mediaCount++;
-            }
+                string driveString = ConfigurationManager.AppSettings["Drives"];
+                string[] drives = driveString.Split(';');
+                foreach (string drive in drives)
+                {
+                    ProcessRootDirectory(drive);
+                }
 
-            for (int i = 0; i < tvPathList.Count; i++)
-            {
-                MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
-            }
+                MainWindow.model = new MainModel(moviePathList.Count, tvPathList.Count);
+                for (int i = 0; i < moviePathList.Count; i++)
+                {
+                    MainWindow.model.Movies[i] = ProcessMovieDirectory(moviePathList[i]);
+                    mediaCount++;
+                }
+
+                for (int i = 0; i < tvPathList.Count; i++)
+                {
+                    MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
+                }
+            });
 
             update = CheckForUpdates();
             if (update)
             {
                 //To-do: Detect file extension changes and episode deletions
                 pb.Visibility = Visibility.Visible;
-                cofeeGif.Visibility = Visibility.Visible;
+                cf.Visibility = Visibility.Visible;
                 MainWindow.gui.ProgressBarMax = mediaCount;
                 await BuildCache();
             }
@@ -487,8 +493,6 @@ namespace LVP_WPF
 
                                 try
                                 {
-                                    // To-do* wtf is going on here
-                                    System.Diagnostics.Debugger.Break();
                                     char drive = newPath[0];
                                     string drivePath = $"{drive}:";
                                     newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
@@ -545,10 +549,8 @@ namespace LVP_WPF
 
                         try
                         {
-                            // To-do* wtf is going on here
-                            System.Diagnostics.Debugger.Break();
                             char drive = newPath[0];
-                            string drivePath = $"{drive}:";
+                            string drivePath = drive == '\\' ? $"{drive}" : $"{drive}:";
                             newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
                             File.Move(oldPath, newPath);
                             CheckSubtitleName(tvShow, season, oldPath, newPath);
@@ -717,8 +719,6 @@ namespace LVP_WPF
             string url = apiImageUrl + imagePath;
             string dirPath;
             string filePath;
-            CancellationTokenSource source = new CancellationTokenSource();
-            CancellationToken token = source.Token;
 
             if (isMovie)
             {
@@ -731,7 +731,10 @@ namespace LVP_WPF
                 filePath = dirPath + imagePath.Replace("/", "\\");
             }
 
-            if (!Directory.Exists(dirPath)) Directory.CreateDirectory(dirPath);
+            if (!Directory.Exists(dirPath))
+            {
+                Directory.CreateDirectory(dirPath);
+            }
 
             if (!File.Exists(filePath))
             {
@@ -739,15 +742,9 @@ namespace LVP_WPF
                 try
                 {
                     Uri requestUri = new Uri(url);
-                    HttpClientHandler handler = new HttpClientHandler
-                    {
-                        PreAuthenticate = true,
-                        UseDefaultCredentials = true
-                    };
-                    // To-do* factory
-                    HttpResponseMessage response = await client.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+                    HttpResponseMessage response = await client.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead);
                     HttpContent content = response.EnsureSuccessStatusCode().Content;
-                    await content.CopyToAsync(fileStream).ConfigureAwait(false);
+                    await content.CopyToAsync(fileStream);
                 }
                 catch (Exception ex)
                 {
@@ -1033,17 +1030,16 @@ namespace LVP_WPF
         internal static void ProcessRootDirectory(string driveLetter)
         {
             // To-do*
-            // http factory
-            // wtf -tod
+            // why cache so slow 1000 dl at X kb?
             // add gui for ID
-            // austin powers
-            string tvDirPath = driveLetter.StartsWith("\\") ? driveLetter : $"{driveLetter}:\\media\\tv";
+            // austin powers, dbz gt?
+            string tvDirPath = driveLetter.StartsWith("\\") ? $"{driveLetter}\\tv" : $"{driveLetter}:\\media\\tv";
             if (!Directory.Exists(tvDirPath))
             {
                 NotificationDialog.Show("Error", $"TV folder at {tvDirPath} not found.");
             }
 
-            string movieDirPath = driveLetter.StartsWith("\\") ? driveLetter : $"{driveLetter}:\\media\\movie";
+            string movieDirPath = driveLetter.StartsWith("\\") ? $"{driveLetter}\\movie" : $"{driveLetter}:\\media\\movie";
             if (!Directory.Exists(movieDirPath))
             {
                 NotificationDialog.Show("Error", $"Movie folder on {movieDirPath} drive not found.");

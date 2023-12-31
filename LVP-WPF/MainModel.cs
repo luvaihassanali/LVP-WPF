@@ -93,7 +93,7 @@ namespace LVP_WPF
                         this.movies[j].Date = prevMedia.movies[i].Date;
                         this.movies[j].Backdrop = prevMedia.movies[i].Backdrop;
                         this.movies[j].RunningTime = prevMedia.movies[i].RunningTime;
-                        Cache.mediaCount--;
+                        //Cache.mediaCount--;
                     }
                     else
                     {
@@ -169,7 +169,7 @@ namespace LVP_WPF
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].SavedTime = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].SavedTime;
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Length = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Length;
                         this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Translated = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Translated;
-                        Cache.mediaCount -= 2;
+                        //Cache.mediaCount -= 2;
                     }
                 }
             }
@@ -196,7 +196,7 @@ namespace LVP_WPF
                         this.tvShows[l].Seasons[j].Episodes[k].Path = prevMedia.TvShows[i].Seasons[j].Episodes[k].Path;
                         this.tvShows[l].Seasons[j].Episodes[k].SavedTime = prevMedia.TvShows[i].Seasons[j].Episodes[k].SavedTime;
                         this.tvShows[l].Seasons[j].Episodes[k].Length = prevMedia.TvShows[i].Seasons[j].Episodes[k].Length;
-                        Cache.mediaCount--;
+                        //Cache.mediaCount--;
                     }
                 }
             }
