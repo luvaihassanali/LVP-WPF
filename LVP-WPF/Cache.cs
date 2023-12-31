@@ -1,7 +1,9 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
@@ -34,6 +36,8 @@ namespace LVP_WPF
         public static int mediaCount = 0;
         public static bool update = false;
         private static bool launchTranslator = false;
+
+        private static IHttpClientFactory factory = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
 
         internal static async Task Initialize(ProgressBar pb, MediaElement cofeeGif)
         {
@@ -99,10 +103,13 @@ namespace LVP_WPF
 
         internal static async Task BuildCache()
         {
-            HttpClient client = new HttpClient
+            /*HttpClient client = new HttpClient
             {
                 Timeout = TimeSpan.FromMinutes(30)
-            };
+            };*/
+
+            using HttpClient client = factory.CreateClient();
+            client.Timeout = TimeSpan.FromMinutes(30);
 
             for (int i = 0; i < MainWindow.model.Movies.Length; i++)
             {
@@ -367,12 +374,12 @@ namespace LVP_WPF
 
             if (tvShow.Backdrop != null)
             {
-                tvShow.Backdrop = await DownloadImage(tvShow.Backdrop, tvShow.Name, false);
+                tvShow.Backdrop = await DownloadImage(tvShow.Backdrop, tvShow.Name, false, client);
             }
 
             if (tvShow.Poster != null)
             {
-                tvShow.Poster = await DownloadImage(tvShow.Poster, tvShow.Name, false);
+                tvShow.Poster = await DownloadImage(tvShow.Poster, tvShow.Name, false, client);
             }
         }
 
@@ -428,7 +435,7 @@ namespace LVP_WPF
 
                     if (season.Poster != null)
                     {
-                        season.Poster = await DownloadImage(season.Poster, tvShow.Name, false);
+                        season.Poster = await DownloadImage(season.Poster, tvShow.Name, false, client);
                     }
                 }
 
@@ -504,7 +511,7 @@ namespace LVP_WPF
 
                         if (episode.Backdrop != null)
                         {
-                            episode.Backdrop = await DownloadImage(episode.Backdrop, tvShow.Name, false);
+                            episode.Backdrop = await DownloadImage(episode.Backdrop, tvShow.Name, false, client);
                         }
                         jEpIndex += (numEps);
                         continue;
@@ -563,7 +570,7 @@ namespace LVP_WPF
 
                     if (episode.Backdrop != null)
                     {
-                        episode.Backdrop = await DownloadImage(episode.Backdrop, tvShow.Name, false);
+                        episode.Backdrop = await DownloadImage(episode.Backdrop, tvShow.Name, false, client);
                     }
                     jEpIndex++;
                     MainWindow.gui.ProgressBarValue++;
@@ -652,10 +659,10 @@ namespace LVP_WPF
             string movieString = await movieContent.ReadAsStringAsync();
 
             movieObject = JObject.Parse(movieString);
-            await UpdateMovieData(movie, movieObject);
+            await UpdateMovieData(movie, movieObject, client);
         }
 
-        private static async Task UpdateMovieData(Movie movie, JObject movieObject)
+        private static async Task UpdateMovieData(Movie movie, JObject movieObject, HttpClient client)
         {
             if (!(String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
             {
@@ -686,12 +693,12 @@ namespace LVP_WPF
 
             if (movie.Backdrop != null)
             {
-                movie.Backdrop = await DownloadImage(movie.Backdrop, movie.Name, true);
+                movie.Backdrop = await DownloadImage(movie.Backdrop, movie.Name, true, client);
             }
 
             if (movie.Poster != null)
             {
-                movie.Poster = await DownloadImage(movie.Poster, movie.Name, true);
+                movie.Poster = await DownloadImage(movie.Poster, movie.Name, true, client);
             }
         }
 
@@ -705,7 +712,7 @@ namespace LVP_WPF
             return string.Concat(text.AsSpan(0, pos), replace, text.AsSpan(pos + search.Length));
         }
 
-        internal static async Task<string> DownloadImage(string imagePath, string name, bool isMovie)
+        internal static async Task<string> DownloadImage(string imagePath, string name, bool isMovie, HttpClient client)
         {
             string url = apiImageUrl + imagePath;
             string dirPath;
@@ -738,7 +745,7 @@ namespace LVP_WPF
                         UseDefaultCredentials = true
                     };
                     // To-do* factory
-                    HttpResponseMessage response = await new HttpClient(handler).GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
+                    HttpResponseMessage response = await client.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
                     HttpContent content = response.EnsureSuccessStatusCode().Content;
                     await content.CopyToAsync(fileStream).ConfigureAwait(false);
                 }
@@ -1026,7 +1033,6 @@ namespace LVP_WPF
         internal static void ProcessRootDirectory(string driveLetter)
         {
             // To-do*
-            // push
             // http factory
             // wtf -tod
             // add gui for ID
