@@ -3,13 +3,11 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -36,12 +34,12 @@ namespace LVP_WPF
         public static int mediaCount = 0;
         public static bool update = false;
         private static bool launchTranslator = false;
+        private static TextBox logTxtBox;
 
-        private static IHttpClientFactory factory = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
-
-        internal static async Task Initialize(ProgressBar pb, MediaElement cf)
+        internal static async Task Initialize(ProgressBar pb, MediaElement cf, TextBox tf)
         {
-            await Task.Run(() =>
+            logTxtBox = tf;
+            await Task.Run(async () =>
             {
                 string driveString = ConfigurationManager.AppSettings["Drives"];
                 string[] drives = driveString.Split(';');
@@ -61,61 +59,60 @@ namespace LVP_WPF
                 {
                     MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
                 }
-            });
 
-            update = CheckForUpdates();
-            if (update)
-            {
-                //To-do: Detect file extension changes and episode deletions
-                pb.Visibility = Visibility.Visible;
-                cf.Visibility = Visibility.Visible;
-                MainWindow.gui.ProgressBarMax = mediaCount;
-                await BuildCache();
-            }
-
-            for (int i = 0; i < MainWindow.model.Movies.Length; i++)
-            {
-                MainWindow.gui.mediaDict[MainWindow.model.Movies[i].Id] = MainWindow.model.Movies[i];
-            }
-
-            for (int i = 0; i < MainWindow.model.TvShows.Length; i++)
-            {
-                MainWindow.gui.mediaDict[MainWindow.model.TvShows[i].Id] = MainWindow.model.TvShows[i];
-            }
-
-            if (MainWindow.model.HistoryList.Count == 0 || update)
-            {
-                MainWindow.model.HistoryList.Clear();
-                foreach (TvShow t in MainWindow.model.TvShows)
+                update = CheckForUpdates();
+                if (update)
                 {
-                    if (t.Cartoon)
+                    //To-do: Detect file extension changes and episode deletions
+                    Application.Current.Dispatcher.Invoke(delegate
                     {
-                        continue;
-                    }
-                    foreach (Season s in t.Seasons)
+                        pb.Visibility = Visibility.Visible;
+                        cf.Visibility = Visibility.Visible;
+                        tf.Visibility = Visibility.Visible;
+                    });
+                    MainWindow.gui.ProgressBarMax = mediaCount;
+                    await BuildCache();
+                }
+
+                for (int i = 0; i < MainWindow.model.Movies.Length; i++)
+                {
+                    MainWindow.gui.mediaDict[MainWindow.model.Movies[i].Id] = MainWindow.model.Movies[i];
+                }
+
+                for (int i = 0; i < MainWindow.model.TvShows.Length; i++)
+                {
+                    MainWindow.gui.mediaDict[MainWindow.model.TvShows[i].Id] = MainWindow.model.TvShows[i];
+                }
+
+                if (MainWindow.model.HistoryList.Count == 0 || update)
+                {
+                    MainWindow.model.HistoryList.Clear();
+                    foreach (TvShow t in MainWindow.model.TvShows)
                     {
-                        foreach (Episode e in s.Episodes)
+                        if (t.Cartoon)
                         {
-                            MainWindow.model.HistoryList.Add(e);
+                            continue;
+                        }
+                        foreach (Season s in t.Seasons)
+                        {
+                            foreach (Episode e in s.Episodes)
+                            {
+                                MainWindow.model.HistoryList.Add(e);
+                            }
                         }
                     }
+                    MainWindow.model.HistoryList.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
                 }
-                MainWindow.model.HistoryList.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
-            }
-
+            });
         }
 
         #region BuildCache functions
 
         internal static async Task BuildCache()
         {
-            /*HttpClient client = new HttpClient
-            {
-                Timeout = TimeSpan.FromMinutes(30)
-            };*/
-
+            IHttpClientFactory factory = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
             using HttpClient client = factory.CreateClient();
-            client.Timeout = TimeSpan.FromMinutes(30);
+            client.Timeout = TimeSpan.FromMinutes(1);
 
             for (int i = 0; i < MainWindow.model.Movies.Length; i++)
             {
@@ -242,7 +239,6 @@ namespace LVP_WPF
                     break;
             }
             return "";
-
         }
 
         private static async Task<string> GetTranslation(string target, string msg, HttpClient client)
@@ -293,7 +289,7 @@ namespace LVP_WPF
             FormUrlEncodedContent content = new FormUrlEncodedContent(values);
             try
             {
-                HttpResponseMessage response = await client.PostAsync("http://localhost:5000/translate", content);
+                using HttpResponseMessage response = await client.PostAsync("http://localhost:5000/translate", content);
                 string responseString = await response.Content.ReadAsStringAsync();
                 LibreTranslateResponse resp = JsonConvert.DeserializeObject<LibreTranslateResponse>(responseString);
                 return resp.TranslatedText;
@@ -309,6 +305,7 @@ namespace LVP_WPF
         private static async Task BuildTvShowGeneralData(TvShow tvShow, HttpClient client)
         {
             string tvSearchUrl = apiTvSearchUrl + tvShow.Name;
+            Log($"GET search tv show {tvSearchUrl}");
             using HttpResponseMessage tvSearchResponse = await client.GetAsync(tvSearchUrl);
             using HttpContent tvSearchContent = tvSearchResponse.Content;
             string tvResourceString = await tvSearchContent.ReadAsStringAsync();
@@ -339,7 +336,10 @@ namespace LVP_WPF
                 }
 
                 string[][] info = new string[][] { names, ids, overviews };
-                tvShow.Id = OptionDialog.Show(tvShow.Name, tvShow.Seasons[0].Episodes[0].Path, info, dates);
+                Application.Current.Dispatcher.Invoke(delegate
+                {
+                    tvShow.Id = OptionDialog.Show(tvShow.Name, tvShow.Seasons[0].Episodes[0].Path, info, dates);
+                });
             }
             else
             {
@@ -347,6 +347,7 @@ namespace LVP_WPF
             }
 
             string tvShowUrl = apiTvShowUrl.Replace("{tv_id}", tvShow.Id.ToString());
+            Log($"GET tv show {tvShowUrl}");
             using HttpResponseMessage tvShowResponse = await client.GetAsync(tvShowUrl);
             using HttpContent tvShowContent = tvShowResponse.Content;
             string tvShowString = await tvShowContent.ReadAsStringAsync();
@@ -401,6 +402,7 @@ namespace LVP_WPF
                 }
 
                 string seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
+                Log($"GET tv season {seasonUrl}");
                 using HttpResponseMessage tvSeasonResponse = await client.GetAsync(seasonUrl);
                 using HttpContent tvSeasonContent = tvSeasonResponse.Content;
                 string seasonString = await tvSeasonContent.ReadAsStringAsync();
@@ -411,6 +413,7 @@ namespace LVP_WPF
                 {
                     seasonIndex = 1;
                     string seasonUrl1Idx = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
+                    Log($"GET tv season {seasonUrl1Idx}");
                     using HttpResponseMessage tvSeasonResponse1Idx = await client.GetAsync(seasonUrl1Idx);
                     using HttpContent tvSeasonContent1Idx = tvSeasonResponse1Idx.Content;
                     seasonString = await tvSeasonContent1Idx.ReadAsStringAsync();
@@ -423,6 +426,7 @@ namespace LVP_WPF
                     {
                         seasonIndex++;
                         seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
+                        Log($"GET tv season {seasonUrl}");
                         using HttpResponseMessage tvSeasonResponseSpecials = await client.GetAsync(seasonUrl);
                         using HttpContent tvSeasonContentSpecials = tvSeasonResponseSpecials.Content;
                         seasonString = await tvSeasonContentSpecials.ReadAsStringAsync();
@@ -617,6 +621,7 @@ namespace LVP_WPF
             }
 
             string movieSearchUrl = apiMovieSearchUrl + movie.Name;
+            Log($"GET search movie {movieSearchUrl}");
             using HttpResponseMessage movieSearchResponse = await client.GetAsync(movieSearchUrl);
             using HttpContent movieSearchContent = movieSearchResponse.Content;
             string movieResourceString = await movieSearchContent.ReadAsStringAsync();
@@ -648,7 +653,10 @@ namespace LVP_WPF
                 }
 
                 string[][] info = new string[][] { names, ids, overviews };
-                movie.Id = OptionDialog.Show(movie.Name, movie.Path, info, dates);
+                Application.Current.Dispatcher.Invoke(delegate
+                {
+                    movie.Id = OptionDialog.Show(movie.Name, movie.Path, info, dates);
+                });
             }
             else
             {
@@ -656,6 +664,7 @@ namespace LVP_WPF
             }
 
             string movieUrl = apiMovieUrl.Replace("{movie_id}", movie.Id.ToString());
+            Log($"GET movie {movieUrl}");
             using HttpResponseMessage movieResponse = await client.GetAsync(movieUrl);
             using HttpContent movieContent = movieResponse.Content;
             string movieString = await movieContent.ReadAsStringAsync();
@@ -741,10 +750,11 @@ namespace LVP_WPF
                 using FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, short.MaxValue, true);
                 try
                 {
-                    Uri requestUri = new Uri(url);
-                    HttpResponseMessage response = await client.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead);
-                    HttpContent content = response.EnsureSuccessStatusCode().Content;
+                    Log($"GET image {url}");
+                    using HttpResponseMessage response = await client.GetAsync(new Uri(url), HttpCompletionOption.ResponseHeadersRead);
+                    using HttpContent content = response.EnsureSuccessStatusCode().Content;
                     await content.CopyToAsync(fileStream);
+
                 }
                 catch (Exception ex)
                 {
@@ -759,6 +769,7 @@ namespace LVP_WPF
 
         internal static bool CheckForUpdates()
         {
+            Log("Check for updates start...");
             MainModel prevMedia = null;
             if (File.Exists(jsonFile))
             {
@@ -781,12 +792,13 @@ namespace LVP_WPF
             {
                 MainWindow.model.Ingest(prevMedia);
             }
-
+            Log("Check for updates end");
             return result;
         }
 
         internal static Movie ProcessMovieDirectory(string targetDir)
         {
+            Log($"Process movies dir {targetDir}");
             string[] movieEntry = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
             string[] path = movieEntry[0].Split('\\');
             string[] movieName = path[path.Length - 1].Split('.');
@@ -796,6 +808,7 @@ namespace LVP_WPF
 
         internal static TvShow ProcessMultiLangTvDirectory(string folder, TvShow tvShow)
         {
+            Log($"Process multi lang tv show dir {folder}");
             tvShow.MultiLang = true;
             tvShow.MultiLangLastWatched = new List<Episode>();
             tvShow.MultiLangCurrSeason = new List<int>();
@@ -826,6 +839,7 @@ namespace LVP_WPF
 
         internal static TvShow ProcessTvDirectory(string targetDir)
         {
+            Log($"Process tv show dir {targetDir}");
             string[] path = targetDir.Split('\\');
             string name = path[path.Length - 1].Split('%')[0];
             TvShow show = new TvShow(name.Trim())
@@ -885,6 +899,7 @@ namespace LVP_WPF
                     continue;
                 }
 
+                Log($"Process tv show season dir {seasonEntries[i]}");
                 Season season = new Season(i + 1);
                 string[] episodeEntries = Directory.GetFiles(seasonEntries[i]).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
                 try
@@ -938,6 +953,7 @@ namespace LVP_WPF
 
         internal static void ProcessExtrasDirectory(List<Episode> extras, string targetDir)
         {
+            Log($"Process extras dir {targetDir}");
             string[] rootEntries = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
             foreach (string entry in rootEntries)
             {
@@ -1030,19 +1046,36 @@ namespace LVP_WPF
         internal static void ProcessRootDirectory(string driveLetter)
         {
             // To-do*
+            // fix progress -> make counter? log?
             // why cache so slow 1000 dl at X kb?
             // add gui for ID
             // austin powers, dbz gt?
-            string tvDirPath = driveLetter.StartsWith("\\") ? $"{driveLetter}\\tv" : $"{driveLetter}:\\media\\tv";
+
+            Log($"Process root dir {driveLetter}");
+#if DEBUG
+            string tvDirPath = $"{driveLetter}\\media\\tv";
+#else
+            string tvDirPath = $"{driveLetter}:\\media\\tv";
+#endif
             if (!Directory.Exists(tvDirPath))
             {
-                NotificationDialog.Show("Error", $"TV folder at {tvDirPath} not found.");
+                Application.Current.Dispatcher.Invoke(delegate
+                {
+                    NotificationDialog.Show("Error", $"TV folder at {tvDirPath} not found.");
+                });
             }
 
-            string movieDirPath = driveLetter.StartsWith("\\") ? $"{driveLetter}\\movie" : $"{driveLetter}:\\media\\movie";
+#if DEBUG
+            string movieDirPath = $"{driveLetter}\\media\\movie";
+#else
+            string movieDirPath = $"{driveLetter}:\\media\\movie";
+#endif
             if (!Directory.Exists(movieDirPath))
             {
-                NotificationDialog.Show("Error", $"Movie folder on {movieDirPath} drive not found.");
+                Application.Current.Dispatcher.Invoke(delegate
+                {
+                    NotificationDialog.Show("Error", $"Movie folder on {movieDirPath} drive not found.");
+                });
             }
 
             tvPathList.AddRange(Directory.GetDirectories(tvDirPath));
@@ -1098,6 +1131,20 @@ namespace LVP_WPF
             string jsonString = JsonConvert.SerializeObject(MainWindow.model);
             File.WriteAllText(jsonFile, jsonString);
             await Task.Delay(2000);
+        }
+
+        private static void Log(string msg)
+        {
+#if DEBUG
+            Debug.WriteLine(msg);
+#endif
+            logTxtBox.Dispatcher.Invoke(delegate
+            {
+                logTxtBox.Text += MainWindow.gui.ProgressBarValue != 0 ?  $"[{MainWindow.gui.ProgressBarValue}/{MainWindow.gui.ProgressBarMax}] {msg}\n" : $"{msg}\n";
+                logTxtBox.Focus();
+                logTxtBox.CaretIndex = logTxtBox.Text.Length;
+                logTxtBox.ScrollToEnd();
+            });
         }
     }
 

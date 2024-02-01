@@ -11,24 +11,30 @@ namespace LVP_WPF
 
         public static bool Show(string caption, string message, TvShow tvShow = null, int currSeason = 0)
         {
-            InputDialog dialog = new InputDialog();
-            dialog.Caption = caption;
-            dialog.Message = message;
-            dialog.Topmost = true;
-            if (tvShow == null)
+            bool res = false;
+            Application.Current.Dispatcher.Invoke(delegate
             {
-                dialog.tmdbBtn.Visibility = Visibility.Hidden;
-            }
-            else
-            {
-                tmdbUrl = $"https://www.themoviedb.org/tv/{tvShow.Id}/season/{currSeason - 1}";
-            }
-            dialog.ShowDialog();
-            if (dialog.DialogResult != null && (bool)dialog.DialogResult)
-            {
-                return true;
-            }
-            return false;
+                InputDialog dialog = new InputDialog
+                {
+                    Caption = caption,
+                    Message = message,
+                    Topmost = true
+                };
+                if (tvShow == null)
+                {
+                    dialog.tmdbBtn.Visibility = Visibility.Hidden;
+                }
+                else
+                {
+                    tmdbUrl = $"https://www.themoviedb.org/tv/{tvShow.Id}/season/{currSeason - 1}";
+                }
+                dialog.ShowDialog();
+                if (dialog.DialogResult != null && (bool)dialog.DialogResult)
+                {
+                    res = true;
+                }
+            });
+            return res;
         }
 
         [ObservableProperty]

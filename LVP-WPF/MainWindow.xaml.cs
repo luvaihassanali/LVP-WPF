@@ -47,7 +47,7 @@ namespace LVP_WPF
                 }
             });
 
-            await Cache.Initialize(progressBar, coffeeGif);
+            await Cache.Initialize(progressBar, coffeeGif, logTxtBox);
             if (model == null)
             {
                 return;
@@ -64,6 +64,10 @@ namespace LVP_WPF
                 if (coffeeGif.Visibility == Visibility.Visible)
                 {
                     coffeeGif.Visibility = Visibility.Hidden;
+                }
+                if (logTxtBox.Visibility == Visibility.Visible)
+                {
+                    logTxtBox.Visibility = Visibility.Hidden;
                 }
 
                 coffeeGif.Source = null;

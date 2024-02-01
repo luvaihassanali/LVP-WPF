@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.IO;
 
 namespace MediaIndexUtil
 {
@@ -533,12 +534,47 @@ namespace MediaIndexUtil
 
         private void TreeButton_Click(object sender, EventArgs e)
         {
-            Cursor.Current = Cursors.WaitCursor;
-            if (currentFolder.EndsWith("\\")) currentFolder = currentFolder.Substring(0, currentFolder.Length - 1);
+            Application.UseWaitCursor = true; 
             string[] directoryParts = currentFolder.Split("\\");
-            DirectoryInfo treeFolder = Directory.CreateDirectory(directoryParts[directoryParts.Length - 1]);
-            CreateTree(currentFolder, treeFolder);
-            Cursor.Current = Cursors.Arrow;
+            string path = directoryParts[directoryParts.Length - 1];
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
+            }
+            Directory.CreateDirectory(path);
+            CreateTreeV2(currentFolder);
+            Application.UseWaitCursor = false;
+            return;
+        }
+
+        private void CreateTreeV2(string path)
+        {
+            string[] dParts = path.Split("\\");
+            string rootDir = dParts[dParts.Length - 1];
+            foreach (string file in Directory.EnumerateFiles(path, "*.*", SearchOption.AllDirectories))
+            {
+                Debug.WriteLine(file);
+                string[] directoryParts = file.Split("\\");
+                string filename = directoryParts[directoryParts.Length - 1];
+                string rootPath = file.Substring(0, file.Length - filename.Length);
+                string folderPath = rootDir + rootPath.Replace(path, "");
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                string[] filenameParts = filename.Split(".");
+                string title = filenameParts[0];
+                string ext = filenameParts[1];
+                if (ext.Equals("srt"))
+                {
+                    File.WriteAllText(folderPath + "\\" + title + ".srt", "blank");
+                }
+                else
+                {
+                    File.WriteAllText(folderPath + "\\" + title + ".txt", "blank");
+                }
+            }
         }
 
         private void CreateTree(string currentDirectory, DirectoryInfo treeFolder)
@@ -571,7 +607,11 @@ namespace MediaIndexUtil
 
         private void OpenFolderButton_Click(object sender, EventArgs e)
         {
-            folderBrowserDialog1.ShowDialog();
+            DialogResult d = folderBrowserDialog1.ShowDialog();
+            if (d.Equals(DialogResult.Cancel))
+            {
+                return;
+            }
             string path = folderBrowserDialog1.SelectedPath;
             listView1.Items.Clear();
             listView2.Items.Clear();

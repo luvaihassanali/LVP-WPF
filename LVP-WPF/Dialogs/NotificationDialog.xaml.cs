@@ -11,16 +11,19 @@ namespace LVP_WPF
         {
             if (System.Diagnostics.Debugger.IsAttached)
             {
-                System.Diagnostics.Debugger.Break();
+                System.Diagnostics.Debugger.Launch();
             }
 
-            NotificationDialog dialog = new NotificationDialog
+            Application.Current.Dispatcher.Invoke(delegate
             {
-                Caption = caption,
-                Message = message,
-                Topmost = true
-            };
-            dialog.ShowDialog();
+                NotificationDialog dialog = new NotificationDialog
+                {
+                    Caption = caption,
+                    Message = message,
+                    Topmost = true
+                };
+                dialog.ShowDialog();
+            });
         }
 
         [ObservableProperty]

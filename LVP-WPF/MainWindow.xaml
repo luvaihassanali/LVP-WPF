@@ -73,6 +73,9 @@
             <MediaElement Name="coffeeGif" MediaEnded="Coffee_Gif_Ended" Source="Resources\coffee.gif" MaxWidth="498" MaxHeight="431" LoadedBehavior="Play" Visibility="Hidden" />
             <ProgressBar Name="progressBar" Value="{Binding ProgressBarValue}" Maximum="{Binding ProgressBarMax}" Width="498" Height= "10" IsIndeterminate="False"
                          HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,428,0,0" Background="#FF9CCAC4" Foreground="#FF068494" BorderBrush="#FF9CCAC4" Visibility="Hidden"/>
+            <TextBox Name="logTxtBox" FontSize="14" Foreground="White" FontFamily="Consolas" BorderThickness="0"
+                     TextWrapping="Wrap" Background="Transparent" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Margin="0,624,0,0" Visibility="Visible">
+            </TextBox>
         </Grid>
     </Grid>
 </Window>
