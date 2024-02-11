@@ -8,9 +8,11 @@ namespace LVP_WPF
     public partial class OptionDialog : Window
     {
         private static int returnId = -1;
+        internal static bool shown = false;
 
         public static int Show(string title, string path, string[][] info, DateTime?[] dates)
         {
+            shown = true;
             OptionDialog dialog = new OptionDialog();
             dialog.Caption = $"{title}?";
             dialog.Message = $"Select the correct entry for: {title}";
@@ -28,6 +30,7 @@ namespace LVP_WPF
             }
             dialog.OptionListView.ItemsSource = entries;
             dialog.ShowDialog();
+            shown = false;
             return returnId;
         }
 
@@ -65,6 +68,18 @@ namespace LVP_WPF
         private void OptionWindow_Loaded(object sender, RoutedEventArgs e)
         {
             OptionListView.SelectedIndex = 0;
+        }
+
+        private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                ContinueButton_Click(null, null);
+            }
+            else if (e.Key == System.Windows.Input.Key.Down)
+            {
+                OptionListView.SelectedIndex++;
+            }
         }
     }
 }

@@ -60,10 +60,18 @@ namespace LVP_WPF
                     MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
                 }
 
-                update = CheckForUpdates();
+                try
+                {
+                    update = CheckForUpdates();
+                }
+                catch (Exception ex)
+                {
+                    NotificationDialog.Show(ex.Message, ex.StackTrace);
+                }
+
                 if (update)
                 {
-                    //To-do: Detect file extension changes and episode deletions
+                    //To-do MultiLang: Detect file extension changes and episode deletions
                     Application.Current.Dispatcher.Invoke(delegate
                     {
                         pb.Visibility = Visibility.Visible;
@@ -544,7 +552,7 @@ namespace LVP_WPF
 
                         string oldPath = episode.Path;
                         jEpisodeName = (string)jEpisode["name"];
-                        string newPath = oldPath.Replace(episode.Name, jEpisodeName.FixBrokenQuotes());
+                        string newPath = ReplaceLastOccurrence(oldPath, episode.Name, jEpisodeName.FixBrokenQuotes());
                         string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
                         foreach (char c in invalid)
                         {
@@ -583,6 +591,16 @@ namespace LVP_WPF
                 }
                 seasonIndex++;
             }
+        }
+
+        public static string ReplaceLastOccurrence(string source, string find, string replace)
+        {
+            int place = source.LastIndexOf(find);
+
+            if (place == -1)
+                return source;
+
+            return source.Remove(place, find.Length).Insert(place, replace);
         }
 
         private static void CheckSubtitleName(TvShow tvShow, Season season, string oldPath, string newPath)
@@ -818,7 +836,7 @@ namespace LVP_WPF
 
             string[] langFolders = Directory.GetDirectories(folder);
             Array.Sort(langFolders);
-            //To-do: not assume en will be index 0 (i = 1)
+            //To-do MultiLang: not assume en will be index 0 (i = 1)
             for (int i = 1; i < langFolders.Length; i++)
             {
                 string langFolder = langFolders[i];
@@ -842,7 +860,7 @@ namespace LVP_WPF
             Log($"Process tv show dir {targetDir}");
             string[] path = targetDir.Split('\\');
             string name = path[path.Length - 1].Split('%')[0];
-            TvShow show = new TvShow(name.Trim())
+            TvShow show = new TvShow(name.Trim(), targetDir)
             {
                 Path = targetDir
             };
@@ -853,7 +871,7 @@ namespace LVP_WPF
 
             if (folderName.Length == 2)
             {
-                //To-do: english not first folder so show.Seasons not english default
+                //To-do MultiLang: english not first folder so show.Seasons not english default
                 Array.Sort(seasonEntries);
                 seasonEntries = Directory.GetDirectories(seasonEntries[0]);
                 Array.Sort(seasonEntries, SeasonComparer);
@@ -1045,12 +1063,6 @@ namespace LVP_WPF
 
         internal static void ProcessRootDirectory(string driveLetter)
         {
-            // To-do*
-            // fix progress -> make counter? log?
-            // why cache so slow 1000 dl at X kb?
-            // add gui for ID
-            // austin powers, dbz gt?
-
             Log($"Process root dir {driveLetter}");
 #if DEBUG
             string tvDirPath = $"{driveLetter}\\media\\tv";
@@ -1128,6 +1140,26 @@ namespace LVP_WPF
 
         internal static async void SaveData()
         {
+            List<Movie> movies = new List<Movie>();
+            foreach (Movie m in MainWindow.model.Movies)
+            {
+                if (m.Id != 0)
+                {
+                    movies.Add(m);
+                }
+            }
+
+            List<TvShow> tvShows = new List<TvShow>();
+            foreach (TvShow t in MainWindow.model.TvShows)
+            {
+                if (t.Id != 0)
+                {
+                    tvShows.Add(t);
+                }
+            }
+
+            MainWindow.model.Movies = movies.ToArray();
+            MainWindow.model.TvShows = tvShows.ToArray();
             string jsonString = JsonConvert.SerializeObject(MainWindow.model);
             File.WriteAllText(jsonFile, jsonString);
             await Task.Delay(2000);
@@ -1140,7 +1172,7 @@ namespace LVP_WPF
 #endif
             logTxtBox.Dispatcher.Invoke(delegate
             {
-                logTxtBox.Text += MainWindow.gui.ProgressBarValue != 0 ?  $"[{MainWindow.gui.ProgressBarValue}/{MainWindow.gui.ProgressBarMax}] {msg}\n" : $"{msg}\n";
+                logTxtBox.Text += MainWindow.gui.ProgressBarValue != 1 ?  $"[{MainWindow.gui.ProgressBarValue}/{MainWindow.gui.ProgressBarMax}] {msg}\n" : $"{msg}\n";
                 logTxtBox.Focus();
                 logTxtBox.CaretIndex = logTxtBox.Text.Length;
                 logTxtBox.ScrollToEnd();

@@ -33,6 +33,11 @@ namespace LVP_WPF
 
         private void GlobalKeyUp(object sender, KeyEventArgs e)
         {
+            if (OptionDialog.shown)
+            {
+                return;
+            }
+
             switch (e.Key)
             {
                 case Key.Up:

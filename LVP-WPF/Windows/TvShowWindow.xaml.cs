@@ -523,7 +523,7 @@ namespace LVP_WPF.Windows
             if (!tvShow.Name.Contains(langComboBox.SelectedValue.ToString()))
             {
                 SwitchMultiLangTvIndex(tvShow, langComboBox.SelectedValue.ToString());
-                this.ShowName = tvShow.Name.Contains("(") ? tvShow.Name : $"{tvShow.Name} ({tvShow.Date.GetValueOrDefault().Year})";
+                this.ShowName = tvShow.Name.Contains('(') ? tvShow.Name : $"{tvShow.Name} ({tvShow.Date.GetValueOrDefault().Year})";
                 this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : tvShow.Overview;
                 UpdateTvWindowSeasonChange(tvShow.CurrSeason);
                 await GenerateEpisodeItemContainers();
@@ -537,7 +537,7 @@ namespace LVP_WPF.Windows
             loadGrid.Visibility = Visibility.Hidden;
         }
 
-        // To-do if 3+ langs then need to preserve same order as build cache (alphabetical?)
+        // To-do MultiLang: if 3+ langs then need to preserve same order as build cache (alphabetical?)
         internal void SwitchMultiLangTvIndex(TvShow tvShow, string lang)
         {
             int index = 0;

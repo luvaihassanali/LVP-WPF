@@ -85,14 +85,15 @@ namespace LVP_WPF
 
                     if (String.Compare(episode.Name, title, System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
                     {
+#if !DEBUG
                         throw new Exception($"Episode name does not match, season {season.Id} episode: {episode.Name}. Should be {title}");
+#endif
                     }
 
                     episode.Id = id;
                     episode.Overview = overview;
                     episode.Date = DateTime.Parse(date);
-                    //To-do: libvlc screen snip
-                    //episode.Backdrop
+                    //episode.Backdrop (libvlc screen snip)
                     index++;
                 }
             }
@@ -175,7 +176,9 @@ namespace LVP_WPF
                     string date = dates[index];
                     if (String.Compare(episode.Name, title, System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
                     {
+#if !DEBUG
                         throw new Exception($"Episode name does not match, season {season.Id} episode: {episode.Name}. Should be {title}");
+#endif
                     }
                     episode.Id = id;
                     episode.Date = DateTime.Parse(date);

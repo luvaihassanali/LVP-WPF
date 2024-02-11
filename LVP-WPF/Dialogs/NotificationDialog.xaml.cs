@@ -37,6 +37,11 @@ namespace LVP_WPF
             InitializeComponent();
         }
 
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            Cache.SaveData();
+        }
+
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
             GuiModel.RestoreSystemCursor();

@@ -54,8 +54,6 @@ namespace LVP_WPF
                 return false;
             }
 
-
-            //Compare by ID... or create GUID? make cache faster... multiple tasks??
             for (int i = 0; i < this.movies.Length; i++)
             {
                 if (!this.movies[i].Compare(prevMedia.movies[i]))
@@ -83,7 +81,7 @@ namespace LVP_WPF
             {
                 for (int j = 0; j < this.movies.Length; j++)
                 {
-                    if (String.Compare(this.movies[j].Name, prevMedia.movies[i].Name, System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0)
+                    if (this.movies[j].Path.Equals(prevMedia.movies[i].Path))
                     {
                         this.movies[j].Name = prevMedia.movies[i].Name;
                         this.movies[j].Overview = prevMedia.movies[i].Overview;
@@ -106,7 +104,7 @@ namespace LVP_WPF
             {
                 for (int l = 0; l < this.tvShows.Length; l++)
                 {
-                    if (String.Compare(this.tvShows[l].Name, prevMedia.tvShows[i].Name, System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0)
+                    if (this.tvShows[l].Path.Equals(prevMedia.tvShows[i].Path))
                     {
                         this.tvShows[l].Name = prevMedia.tvShows[i].Name;
                         this.tvShows[l].Cartoon = prevMedia.tvShows[i].Cartoon;
@@ -205,7 +203,6 @@ namespace LVP_WPF
 
     public class Media
     {
-        //To-do: move other common vars into Media class and update variables to auto property
         public int Id { get; set; }
         public string Name { get; set; }
         public string Path { get; set; }
@@ -227,17 +224,7 @@ namespace LVP_WPF
 
         internal bool Compare(Movie localMovie)
         {
-            if (!this.Name.Equals(localMovie.Name))
-            {
-                return false;
-            }
-
-            if (!this.Path.Equals(localMovie.Path))
-            {
-                return false;
-            }
-
-            return true;
+            return this.Path.Equals(localMovie.Path);
         }
 
         public static IComparer SortMoviesAlphabetically()
@@ -259,12 +246,13 @@ namespace LVP_WPF
 
     public class TvShow : Media
     {
-        public TvShow(string n)
+        public TvShow(string n, string p)
         {
             Name = n;
             CurrSeason = 1;
             Cartoon = false;
             MultiLang = false;
+            Path = p;
         }
 
         public bool Cartoon { get; set; }
@@ -285,7 +273,7 @@ namespace LVP_WPF
 
         internal bool Compare(TvShow localShow)
         {
-            if (!this.Name.Split(" (")[0].Equals(localShow.Name.Split(" (")[0]))
+            if (!this.Path.Equals(localShow.Path))
             {
                 return false;
             }
@@ -312,8 +300,6 @@ namespace LVP_WPF
                     return false;
                 }
 
-
-                // To-do: map seasons and compare each one. Adding/removing from multi lang tv show won't trigger update
                 for (int i = 0; i < this.MultiLangSeasons.Count; i++)
                 {
                     Season[] a = this.MultiLangSeasons[i];
@@ -434,17 +420,7 @@ namespace LVP_WPF
 
         internal bool Compare(Episode otherEpisode)
         {
-            if (!this.Name.Equals(otherEpisode.Name))
-            {
-                return false;
-            }
-
-            if (!this.Path.Equals(otherEpisode.Path))
-            {
-                return false;
-            }
-
-            return true;
+            return this.Path.Equals(otherEpisode.Path);
         }
     }
 }
