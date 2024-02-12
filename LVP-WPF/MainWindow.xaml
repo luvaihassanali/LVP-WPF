@@ -9,7 +9,7 @@
         mc:Ignorable="d"
         Title="MainWindow" Width="1200" Height="800" Background="Black" Loaded="MainWindow_Loaded" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
         RenderOptions.BitmapScalingMode="HighQuality" AllowsTransparency="True" WindowStyle="None" WindowState="Maximized" FontFamily="Segoe UI Black" FontSize="64" 
-        PreviewMouseWheel="MainWindow_PreviewMouseWheel" Icon="/Resources/movie.ico" Closing="MainWindow_Closing">
+        PreviewMouseWheel="MainWindow_PreviewMouseWheel" Icon="/Resources/movie.ico" Closing="MainWindow_Closing" ContentRendered="Window_ContentRendered">
     <Grid>
         <ScrollViewer Name="scrollViewer" ScrollChanged="ScrollViewer_ScrollChanged" VerticalScrollBarVisibility="Hidden" PanningMode="Both">
             <Grid Name="mainGrid" Opacity="0.1">
@@ -74,7 +74,7 @@
             <ProgressBar Name="progressBar" Value="{Binding ProgressBarValue}" Maximum="{Binding ProgressBarMax}" Width="498" Height= "10" IsIndeterminate="False"
                          HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,428,0,0" Background="#FF9CCAC4" Foreground="#FF068494" BorderBrush="#FF9CCAC4" Visibility="Hidden"/>
             <TextBox Name="logTxtBox" FontSize="14" Foreground="White" FontFamily="Consolas" BorderThickness="0"
-                     TextWrapping="Wrap" Background="Transparent" AcceptsReturn="True" VerticalScrollBarVisibility="Hidden" Margin="0,624,0,0" Visibility="Visible">
+                     TextWrapping="Wrap" Background="Transparent" AcceptsReturn="True" VerticalScrollBarVisibility="Hidden" Margin="10,0,0,0" MaxHeight="300" Visibility="Visible" VerticalAlignment="Bottom" Height="300">
             </TextBox>
         </Grid>
     </Grid>

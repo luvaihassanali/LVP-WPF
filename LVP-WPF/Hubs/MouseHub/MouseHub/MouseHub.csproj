@@ -46,4 +46,17 @@
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
     <PackageReference Include="System.IO.Ports" Version="7.0.0" />
   </ItemGroup>
+  <ItemGroup>
+    <None Update="App.config">
+      <TransformOnBuild>true</TransformOnBuild>
+    </None>
+    <None Update="App.Debug.config">
+      <IsTransformFile>true</IsTransformFile>
+      <DependentUpon>App.config</DependentUpon>
+    </None>
+    <None Update="App.Release.config">
+      <IsTransformFile>true</IsTransformFile>
+      <DependentUpon>App.config</DependentUpon>
+    </None>
+  </ItemGroup>
 </Project>

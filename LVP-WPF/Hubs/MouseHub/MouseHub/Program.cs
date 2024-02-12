@@ -17,6 +17,7 @@ namespace MouseMoverClient
     class Program
     {
         private static bool connectionEstablished;
+        private static bool launched;
         private static string esp8266ServerIp;
         private static int esp8266ServerPort;
         private static int joystickX;
@@ -42,7 +43,7 @@ namespace MouseMoverClient
             Console.SetWindowSize(112, 27);
             Console.SetBufferSize(112, 27);
 #pragma warning restore CA1416 // Validate platform compatibility
-            ConsoleHelper.SetWindowPosition(-10, -10);
+            ConsoleHelper.SetWindowPosition(-8, -8);
             //ConsoleHelper.SetWindowPosition(Screen.PrimaryScreen.Bounds.Width / 4 - 10, Screen.PrimaryScreen.Bounds.Height / 4  - 10);
             int opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
             ConsoleHelper.SetWindowTransparency(opacity); // /256
@@ -211,7 +212,8 @@ namespace MouseMoverClient
             while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
             {
                 buffer = Encoding.ASCII.GetString(bytes, 0, i);
-                Log($"Received: {buffer.Replace("\r\n", "")}");
+                string logStr = buffer.Replace("\r\n", "");
+                Log($"------> Received: {logStr}");
 
                 if (buffer.Contains("initack"))
                 {
@@ -369,25 +371,33 @@ namespace MouseMoverClient
                 switch (msg)
                 {
                     case "power":
-                        // Send cursor to centre of screen
-                        Cursor.Position = new Point(960, 540);
-                        DoMouseClick();
-                        string path = AppDomain.CurrentDomain.BaseDirectory;
+                        if (!launched)
+                        {
+                            // Send cursor to centre of screen
+                            Cursor.Position = new Point(960, 540);
+                            DoMouseClick();
+                            string path = AppDomain.CurrentDomain.BaseDirectory;
 #if DEBUG
                         path = path.Replace("Utilities\\MouseHub\\MouseHub\\bin\\Debug\\", "\\bin\\Debug\\net6.0-windows\\LVP-WPF.exe");
 #else
-                        path = $"{ConfigurationManager.AppSettings["LVP-WPF-Path"]}LVP-WPF.exe";
-                        if (path.Contains("%USERPROFILE%"))
-                        {
-                            path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
-                        }
+                            path = $"{ConfigurationManager.AppSettings["LVP-WPF-Path"]}LVP-WPF.exe";
+                            if (path.Contains("%USERPROFILE%"))
+                            {
+                                path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
+                            }
 #endif
-                        Process p = new Process();
-                        p.StartInfo = new ProcessStartInfo();
-                        p.StartInfo.FileName = path;
-                        p.StartInfo.WorkingDirectory = path.Replace("LVP-WPF.exe", "");
-                        p.Start();
-                        //ConsoleHelper.StartMatrix();
+                            Process p = new Process();
+                            p.StartInfo = new ProcessStartInfo();
+                            p.StartInfo.FileName = path;
+                            p.StartInfo.WorkingDirectory = path.Replace("LVP-WPF.exe", "");
+                            p.Start();
+                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
+                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
+                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
+                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
+                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
+                            launched = true;
+                        }
                         break;
                     default:
                         Log($"Unknown msg received: {msg}");

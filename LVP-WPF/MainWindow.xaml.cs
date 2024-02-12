@@ -38,13 +38,6 @@ namespace LVP_WPF
 #if RELEASE
                 GuiModel.InitializeCustomCursor();
 #endif
-                ComInterop.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
-                Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
-                if (mouseHubProcess.Length != 0)
-                {
-                    mouseHubProcess[0].Kill();
-                    mouseHubKilled = true;
-                }
             });
 
             await Cache.Initialize(progressBar, coffeeGif, logTxtBox);
@@ -87,6 +80,20 @@ namespace LVP_WPF
             {
                 snow.Visibility = Visibility.Visible;
             }
+        }
+
+        private void Window_ContentRendered(object sender, EventArgs e)
+        {
+            _ = Task.Run(() =>
+            {
+                ComInterop.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
+                Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
+                if (mouseHubProcess.Length != 0)
+                {
+                    mouseHubProcess[0].Kill();
+                    mouseHubKilled = true;
+                }
+            });
         }
 
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
