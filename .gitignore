@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Claude Code local settings (per-project tool permissions)
+.claude/
+
+# Local secrets / machine-local config overrides (loaded by App.config via <appSettings file="..."/>)
+appsettings.local.config
