@@ -260,6 +260,12 @@
     <None Update="Resources\noprev_wide.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="appsettings.local.config" Condition="Exists('$(MSBuildThisFileDirectory)appsettings.local.config')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="appsettings.local.config.example">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

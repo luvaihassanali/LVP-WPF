@@ -17,16 +17,16 @@ namespace LVP_WPF
 {
     internal static class Cache
     {
-        private const string apiKey = "?api_key=c69c4effc7beb9c473d22b8f85d59e4c";
         private const string apiUrl = "https://api.themoviedb.org/3/";
         private const string apiImageUrl = "http://image.tmdb.org/t/p/original";
-        private const string apiTvSearchUrl = $"{apiUrl}search/tv{apiKey}&query=";
-        private const string apiMovieSearchUrl = $"{apiUrl}search/movie{apiKey}&query=";
         private const string jsonFile = "media.json";
 
-        private static string apiTvShowUrl = $"{apiUrl}tv/{{tv_id}}{apiKey}";
-        private static string apiTvSeasonUrl = $"{apiUrl}tv/{{tv_id}}/season/{{season_number}}{apiKey}";
-        private static string apiMovieUrl = $"{apiUrl}movie/{{movie_id}}{apiKey}";
+        private static readonly string apiKey = $"?api_key={ConfigurationManager.AppSettings["TmdbApiKey"]}";
+        private static readonly string apiTvSearchUrl = $"{apiUrl}search/tv{apiKey}&query=";
+        private static readonly string apiMovieSearchUrl = $"{apiUrl}search/movie{apiKey}&query=";
+        private static readonly string apiTvShowUrl = $"{apiUrl}tv/{{tv_id}}{apiKey}";
+        private static readonly string apiTvSeasonUrl = $"{apiUrl}tv/{{tv_id}}/season/{{season_number}}{apiKey}";
+        private static readonly string apiMovieUrl = $"{apiUrl}movie/{{movie_id}}{apiKey}";
 
         private static List<string> tvPathList = new List<string>();
         private static List<string> moviePathList = new List<string>();
