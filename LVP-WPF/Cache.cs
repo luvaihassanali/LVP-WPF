@@ -1,9 +1,7 @@
 ﻿using LVP_WPF.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
@@ -12,22 +10,12 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media.Imaging;
 
 namespace LVP_WPF
 {
     internal static class Cache
     {
-        private const string apiUrl = "https://api.themoviedb.org/3/";
-        private const string apiImageUrl = "http://image.tmdb.org/t/p/original";
-
         private static readonly MediaRepository _repository = new MediaRepository("media.json");
-        private static readonly string apiKey = $"?api_key={ConfigurationManager.AppSettings["TmdbApiKey"]}";
-        private static readonly string apiTvSearchUrl = $"{apiUrl}search/tv{apiKey}&query=";
-        private static readonly string apiMovieSearchUrl = $"{apiUrl}search/movie{apiKey}&query=";
-        private static readonly string apiTvShowUrl = $"{apiUrl}tv/{{tv_id}}{apiKey}";
-        private static readonly string apiTvSeasonUrl = $"{apiUrl}tv/{{tv_id}}/season/{{season_number}}{apiKey}";
-        private static readonly string apiMovieUrl = $"{apiUrl}movie/{{movie_id}}{apiKey}";
 
         public static int mediaCount = 0;
         public static bool update = false;
@@ -126,12 +114,16 @@ namespace LVP_WPF
             using HttpClient client = factory.CreateClient();
             client.Timeout = TimeSpan.FromMinutes(1);
 
+            string apiKey = ConfigurationManager.AppSettings["TmdbApiKey"];
+            string cacheRoot = $"{AppDomain.CurrentDomain.BaseDirectory}cache";
+            TmdbClient tmdb = new TmdbClient(apiKey, client, cacheRoot, Log);
+
             string translatorPath = $"{ConfigurationManager.AppSettings["LibreTranslatePath"]}libretranslate.exe";
-            using Translator translator = new Translator(translatorPath);
+            using Translator translator = new Translator(translatorPath, client);
 
             for (int i = 0; i < MainWindow.model.Movies.Length; i++)
             {
-                await BuildMovieCacheAsync(MainWindow.model.Movies[i], client);
+                await BuildMovieCacheAsync(MainWindow.model.Movies[i], tmdb);
                 MainWindow.gui.ProgressBarValue++;
             }
 
@@ -149,7 +141,7 @@ namespace LVP_WPF
                 }
                 else
                 {
-                    await BuildTvShowCache(tvShow, client, translator);
+                    await BuildTvShowCache(tvShow, tmdb, translator);
                 }
             }
 
@@ -158,13 +150,13 @@ namespace LVP_WPF
             SaveData();
         }
 
-        private static async Task BuildTvShowCache(TvShow tvShow, HttpClient client, Translator translator)
+        private static async Task BuildTvShowCache(TvShow tvShow, TmdbClient tmdb, Translator translator)
         {
             if (tvShow.Id == 0)
             {
-                await BuildTvShowGeneralData(tvShow, client);
+                await BuildTvShowGeneralData(tvShow, tmdb);
             }
-            await BuildSeasonCache(tvShow, client);
+            await BuildSeasonCache(tvShow, tmdb);
 
             if (tvShow.MultiLang)
             {
@@ -173,15 +165,15 @@ namespace LVP_WPF
                     Season[] currSeason = tvShow.Seasons;
                     tvShow.Seasons = tvShow.MultiLangSeasons[i];
                     // Build Season cache again some translated shows have different episodes # per season
-                    await BuildSeasonCache(tvShow, client);
+                    await BuildSeasonCache(tvShow, tmdb);
                     tvShow.MultiLangSeasons[i] = tvShow.Seasons;
                     tvShow.Seasons = currSeason;
                 }
-                await ApplyMultiLangTvShowTranslations(tvShow, client, translator);
+                await ApplyMultiLangTvShowTranslations(tvShow, translator);
             }
         }
 
-        private static async Task ApplyMultiLangTvShowTranslations(TvShow tvShow, HttpClient client, Translator translator)
+        private static async Task ApplyMultiLangTvShowTranslations(TvShow tvShow, Translator translator)
         {
             bool skippedEnglish = false;
             bool overviewTranslated = false;
@@ -213,15 +205,15 @@ namespace LVP_WPF
                             if (!overviewTranslated)
                             {
                                 overviewTranslated = true;
-                                string overview = await translator.TranslateAsync(langKey, tvShow.Overview, client);
+                                string overview = await translator.TranslateAsync(langKey, tvShow.Overview);
                                 if (!tvShow.MultiLangOverview.Contains(overview))
                                 {
                                     tvShow.MultiLangOverview.Add(overview);
                                 }
                             }
 
-                            multiLangSeason.Episodes[l].Name = await translator.TranslateAsync(langKey, multiLangSeason.Episodes[l].Name, client);
-                            multiLangSeason.Episodes[l].Overview = await translator.TranslateAsync(langKey, multiLangSeason.Episodes[l].Overview, client);
+                            multiLangSeason.Episodes[l].Name = await translator.TranslateAsync(langKey, multiLangSeason.Episodes[l].Name);
+                            multiLangSeason.Episodes[l].Overview = await translator.TranslateAsync(langKey, multiLangSeason.Episodes[l].Overview);
                             MainWindow.gui.ProgressBarValue++;
                             multiLangSeason.Episodes[l].Translated = true;
                         }
@@ -230,14 +222,9 @@ namespace LVP_WPF
             }
         }
 
-        private static async Task BuildTvShowGeneralData(TvShow tvShow, HttpClient client)
+        private static async Task BuildTvShowGeneralData(TvShow tvShow, TmdbClient tmdb)
         {
-            string tvSearchUrl = apiTvSearchUrl + tvShow.Name;
-            Log($"GET search tv show {tvSearchUrl}");
-            using HttpResponseMessage tvSearchResponse = await client.GetAsync(tvSearchUrl);
-            using HttpContent tvSearchContent = tvSearchResponse.Content;
-            string tvResourceString = await tvSearchContent.ReadAsStringAsync();
-            JObject tvObject = JObject.Parse(tvResourceString);
+            JObject tvObject = await tmdb.SearchTvAsync(tvShow.Name);
             int totalResults = (int)tvObject["total_results"];
 
             if (totalResults == 0)
@@ -274,19 +261,14 @@ namespace LVP_WPF
                 tvShow.Id = (int)tvObject["results"][0]["id"];
             }
 
-            string tvShowUrl = apiTvShowUrl.Replace("{tv_id}", tvShow.Id.ToString());
-            Log($"GET tv show {tvShowUrl}");
-            using HttpResponseMessage tvShowResponse = await client.GetAsync(tvShowUrl);
-            using HttpContent tvShowContent = tvShowResponse.Content;
-            string tvShowString = await tvShowContent.ReadAsStringAsync();
-            tvObject = JObject.Parse(tvShowString);
+            tvObject = await tmdb.GetTvShowAsync(tvShow.Id);
 
             tvShow.Date = DateTime.TryParse((string)tvObject["first_air_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
             tvShow.Overview = (string)tvObject["overview"];
             tvShow.Overview = tvShow.Overview.FixBrokenQuotes();
             tvShow.Poster = (string)tvObject["poster_path"];
             tvShow.Backdrop = (string)tvObject["backdrop_path"];
-            int[] runtime = JObject.Parse(tvShowString)["episode_run_time"].Select(x => (int)x).ToArray();
+            int[] runtime = tvObject["episode_run_time"].Select(x => (int)x).ToArray();
             if (runtime.Length != 0)
             {
                 tvShow.RunningTime = runtime[0];
@@ -309,16 +291,16 @@ namespace LVP_WPF
 
             if (tvShow.Backdrop != null)
             {
-                tvShow.Backdrop = await DownloadImage(tvShow.Backdrop, tvShow.Name, false, client);
+                tvShow.Backdrop = await tmdb.DownloadImageAsync(tvShow.Backdrop, false, tvShow.Name);
             }
 
             if (tvShow.Poster != null)
             {
-                tvShow.Poster = await DownloadImage(tvShow.Poster, tvShow.Name, false, client);
+                tvShow.Poster = await tmdb.DownloadImageAsync(tvShow.Poster, false, tvShow.Name);
             }
         }
 
-        private static async Task BuildSeasonCache(TvShow tvShow, HttpClient client)
+        private static async Task BuildSeasonCache(TvShow tvShow, TmdbClient tmdb)
         {
             int seasonIndex = 0;
             for (int j = 0; j < tvShow.Seasons.Length; j++)
@@ -329,23 +311,12 @@ namespace LVP_WPF
                     continue;
                 }
 
-                string seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
-                Log($"GET tv season {seasonUrl}");
-                using HttpResponseMessage tvSeasonResponse = await client.GetAsync(seasonUrl);
-                using HttpContent tvSeasonContent = tvSeasonResponse.Content;
-                string seasonString = await tvSeasonContent.ReadAsStringAsync();
-
-                JObject seasonObject = JObject.Parse(seasonString);
+                JObject seasonObject = await tmdb.GetTvSeasonAsync(tvShow.Id, seasonIndex);
                 //{"success":false,"status_code":34,"status_message":"The resource you requested could not be found."}
-                if (seasonString.ToLower().Contains("\"success\":false"))
+                if (seasonObject["success"] != null && (bool)seasonObject["success"] == false)
                 {
                     seasonIndex = 1;
-                    string seasonUrl1Idx = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
-                    Log($"GET tv season {seasonUrl1Idx}");
-                    using HttpResponseMessage tvSeasonResponse1Idx = await client.GetAsync(seasonUrl1Idx);
-                    using HttpContent tvSeasonContent1Idx = tvSeasonResponse1Idx.Content;
-                    seasonString = await tvSeasonContent1Idx.ReadAsStringAsync();
-                    seasonObject = JObject.Parse(seasonString);
+                    seasonObject = await tmdb.GetTvSeasonAsync(tvShow.Id, seasonIndex);
                 }
 
                 try
@@ -353,12 +324,7 @@ namespace LVP_WPF
                     if (((string)seasonObject["name"]).Contains("Specials"))
                     {
                         seasonIndex++;
-                        seasonUrl = apiTvSeasonUrl.Replace("{tv_id}", tvShow.Id.ToString()).Replace("{season_number}", seasonIndex.ToString());
-                        Log($"GET tv season {seasonUrl}");
-                        using HttpResponseMessage tvSeasonResponseSpecials = await client.GetAsync(seasonUrl);
-                        using HttpContent tvSeasonContentSpecials = tvSeasonResponseSpecials.Content;
-                        seasonString = await tvSeasonContentSpecials.ReadAsStringAsync();
-                        seasonObject = JObject.Parse(seasonString);
+                        seasonObject = await tmdb.GetTvSeasonAsync(tvShow.Id, seasonIndex);
                     }
                 }
                 catch
@@ -373,7 +339,7 @@ namespace LVP_WPF
 
                     if (season.Poster != null)
                     {
-                        season.Poster = await DownloadImage(season.Poster, tvShow.Name, false, client);
+                        season.Poster = await tmdb.DownloadImageAsync(season.Poster, false, tvShow.Name);
                     }
                 }
 
@@ -447,7 +413,7 @@ namespace LVP_WPF
 
                         if (episode.Backdrop != null)
                         {
-                            episode.Backdrop = await DownloadImage(episode.Backdrop, tvShow.Name, false, client);
+                            episode.Backdrop = await tmdb.DownloadImageAsync(episode.Backdrop, false, tvShow.Name);
                         }
                         jEpIndex += (numEps);
                         continue;
@@ -504,7 +470,7 @@ namespace LVP_WPF
 
                     if (episode.Backdrop != null)
                     {
-                        episode.Backdrop = await DownloadImage(episode.Backdrop, tvShow.Name, false, client);
+                        episode.Backdrop = await tmdb.DownloadImageAsync(episode.Backdrop, false, tvShow.Name);
                     }
                     jEpIndex++;
                     MainWindow.gui.ProgressBarValue++;
@@ -551,20 +517,14 @@ namespace LVP_WPF
             }
         }
 
-        private static async Task BuildMovieCacheAsync(Movie movie, HttpClient client)
+        private static async Task BuildMovieCacheAsync(Movie movie, TmdbClient tmdb)
         {
             if (movie.Id != 0)
             {
                 return;
             }
 
-            string movieSearchUrl = apiMovieSearchUrl + movie.Name;
-            Log($"GET search movie {movieSearchUrl}");
-            using HttpResponseMessage movieSearchResponse = await client.GetAsync(movieSearchUrl);
-            using HttpContent movieSearchContent = movieSearchResponse.Content;
-            string movieResourceString = await movieSearchContent.ReadAsStringAsync();
-
-            JObject movieObject = JObject.Parse(movieResourceString);
+            JObject movieObject = await tmdb.SearchMovieAsync(movie.Name);
             int numMovieObjects = (int)movieObject["total_results"];
 
             if (numMovieObjects == 0)
@@ -601,17 +561,11 @@ namespace LVP_WPF
                 movie.Id = (int)movieObject["results"][0]["id"];
             }
 
-            string movieUrl = apiMovieUrl.Replace("{movie_id}", movie.Id.ToString());
-            Log($"GET movie {movieUrl}");
-            using HttpResponseMessage movieResponse = await client.GetAsync(movieUrl);
-            using HttpContent movieContent = movieResponse.Content;
-            string movieString = await movieContent.ReadAsStringAsync();
-
-            movieObject = JObject.Parse(movieString);
-            await UpdateMovieData(movie, movieObject, client);
+            movieObject = await tmdb.GetMovieAsync(movie.Id);
+            await UpdateMovieData(movie, movieObject, tmdb);
         }
 
-        private static async Task UpdateMovieData(Movie movie, JObject movieObject, HttpClient client)
+        private static async Task UpdateMovieData(Movie movie, JObject movieObject, TmdbClient tmdb)
         {
             if (!(String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
             {
@@ -642,12 +596,12 @@ namespace LVP_WPF
 
             if (movie.Backdrop != null)
             {
-                movie.Backdrop = await DownloadImage(movie.Backdrop, movie.Name, true, client);
+                movie.Backdrop = await tmdb.DownloadImageAsync(movie.Backdrop, true, movie.Name);
             }
 
             if (movie.Poster != null)
             {
-                movie.Poster = await DownloadImage(movie.Poster, movie.Name, true, client);
+                movie.Poster = await tmdb.DownloadImageAsync(movie.Poster, true, movie.Name);
             }
         }
 
@@ -659,48 +613,6 @@ namespace LVP_WPF
                 return text;
             }
             return string.Concat(text.AsSpan(0, pos), replace, text.AsSpan(pos + search.Length));
-        }
-
-        internal static async Task<string> DownloadImage(string imagePath, string name, bool isMovie, HttpClient client)
-        {
-            string url = apiImageUrl + imagePath;
-            string dirPath;
-            string filePath;
-
-            if (isMovie)
-            {
-                dirPath = $"{AppDomain.CurrentDomain.BaseDirectory}cache\\movies\\{name}";
-                filePath = dirPath + imagePath.Replace("/", "\\");
-            }
-            else
-            {
-                dirPath = $"{AppDomain.CurrentDomain.BaseDirectory}cache\\tv\\{name}";
-                filePath = dirPath + imagePath.Replace("/", "\\");
-            }
-
-            if (!Directory.Exists(dirPath))
-            {
-                Directory.CreateDirectory(dirPath);
-            }
-
-            if (!File.Exists(filePath))
-            {
-                using FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, short.MaxValue, true);
-                try
-                {
-                    Log($"GET image {url}");
-                    using HttpResponseMessage response = await client.GetAsync(new Uri(url), HttpCompletionOption.ResponseHeadersRead);
-                    using HttpContent content = response.EnsureSuccessStatusCode().Content;
-                    await content.CopyToAsync(fileStream);
-
-                }
-                catch (Exception ex)
-                {
-                    Trace.TraceError(ex.ToString());
-                }
-            }
-
-            return filePath;
         }
 
         #endregion

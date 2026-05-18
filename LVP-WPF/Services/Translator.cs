@@ -20,18 +20,21 @@ namespace LVP_WPF.Services
         private static readonly TimeSpan StartupWait = TimeSpan.FromSeconds(10);
 
         private readonly string _executablePath;
+        private readonly HttpClient _httpClient;
         private bool _started;
 
         /// <param name="executablePath">
         /// Path to libretranslate.exe. May contain %APPDATA% / %LOCALAPPDATA% /
         /// any environment variable; expanded on first use.
         /// </param>
-        public Translator(string executablePath)
+        /// <param name="httpClient">Reused for all translate calls; caller owns its lifetime.</param>
+        public Translator(string executablePath, HttpClient httpClient)
         {
             _executablePath = executablePath;
+            _httpClient = httpClient;
         }
 
-        public async Task<string> TranslateAsync(string targetLang, string text, HttpClient client)
+        public async Task<string> TranslateAsync(string targetLang, string text)
         {
 #if DEBUG
             await Task.Delay(1);
@@ -49,7 +52,7 @@ namespace LVP_WPF.Services
             FormUrlEncodedContent content = new FormUrlEncodedContent(values);
             try
             {
-                using HttpResponseMessage response = await client.PostAsync(TranslateEndpoint, content);
+                using HttpResponseMessage response = await _httpClient.PostAsync(TranslateEndpoint, content);
                 string responseString = await response.Content.ReadAsStringAsync();
                 LibreTranslateResponse resp = JsonConvert.DeserializeObject<LibreTranslateResponse>(responseString);
                 return resp.TranslatedText;
