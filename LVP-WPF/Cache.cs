@@ -29,9 +29,6 @@ namespace LVP_WPF
         private static readonly string apiTvSeasonUrl = $"{apiUrl}tv/{{tv_id}}/season/{{season_number}}{apiKey}";
         private static readonly string apiMovieUrl = $"{apiUrl}movie/{{movie_id}}{apiKey}";
 
-        private static List<string> tvPathList = new List<string>();
-        private static List<string> moviePathList = new List<string>();
-        private static int extrasIdx = -1;
         public static int mediaCount = 0;
         public static bool update = false;
         private static bool launchTranslator = false;
@@ -42,24 +39,31 @@ namespace LVP_WPF
             logTxtBox = tf;
             await Task.Run(async () =>
             {
-                string driveString = ConfigurationManager.AppSettings["Drives"];
-                string[] drives = driveString.Split(';');
-                foreach (string drive in drives)
+                string[] drives = ConfigurationManager.AppSettings["Drives"].Split(';');
+                string[] langKeys = ConfigurationManager.AppSettings["Languages"].Split(";");
+
+                LibraryRoot[] roots = drives.Select(d =>
                 {
-                    ProcessRootDirectory(drive);
+#if DEBUG
+                    return new LibraryRoot($"{d}\\media\\tv", $"{d}\\media\\movie");
+#else
+                    return new LibraryRoot($"{d}:\\media\\tv", $"{d}:\\media\\movie");
+#endif
+                }).ToArray();
+
+                LibraryScanner scanner = new LibraryScanner(langKeys);
+                ScanResult scanResult = scanner.Scan(roots);
+
+                foreach (string warning in scanResult.Warnings)
+                {
+                    Application.Current.Dispatcher.Invoke(delegate
+                    {
+                        NotificationDialog.Show("Error", warning);
+                    });
                 }
 
-                MainWindow.model = new MainModel(moviePathList.Count, tvPathList.Count);
-                for (int i = 0; i < moviePathList.Count; i++)
-                {
-                    MainWindow.model.Movies[i] = ProcessMovieDirectory(moviePathList[i]);
-                    mediaCount++;
-                }
-
-                for (int i = 0; i < tvPathList.Count; i++)
-                {
-                    MainWindow.model.TvShows[i] = ProcessTvDirectory(tvPathList[i]);
-                }
+                MainWindow.model = scanResult.Model;
+                mediaCount = scanResult.MediaCount;
 
                 try
                 {
@@ -807,286 +811,6 @@ namespace LVP_WPF
             }
             Log("Check for updates end");
             return result;
-        }
-
-        internal static Movie ProcessMovieDirectory(string targetDir)
-        {
-            Log($"Process movies dir {targetDir}");
-            string[] movieEntry = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
-            string[] path = movieEntry[0].Split('\\');
-            string[] movieName = path[path.Length - 1].Split('.');
-            Movie movie = new Movie(movieName[0].Trim(), movieEntry[0]);
-            return movie;
-        }
-
-        internal static TvShow ProcessMultiLangTvDirectory(string folder, TvShow tvShow)
-        {
-            Log($"Process multi lang tv show dir {folder}");
-            tvShow.MultiLang = true;
-            tvShow.MultiLangLastWatched = new List<Episode>();
-            tvShow.MultiLangCurrSeason = new List<int>();
-            tvShow.MultiLangSeasons = new List<Season[]>();
-            tvShow.MultiLangOverview = new List<string>();
-            tvShow.MultiLangName = new List<string>();
-
-            string[] langFolders = Directory.GetDirectories(folder);
-            Array.Sort(langFolders);
-            //To-do MultiLang: not assume en will be index 0 (i = 1)
-            for (int i = 1; i < langFolders.Length; i++)
-            {
-                string langFolder = langFolders[i];
-                string[] langParts = langFolder.Split('\\');
-                string langKey = langParts[langParts.Length - 1];
-                string language = GetLangCode(langKey);
-                tvShow.MultiLangName.Add($"{tvShow.Name} ({language})");
-                tvShow.MultiLangCurrSeason.Add(1);
-                tvShow.MultiLangLastWatched.Add(null);
-
-                string[] seasonEntries = Directory.GetDirectories(langFolder);
-                Array.Sort(seasonEntries, SeasonComparer);
-                tvShow.MultiLangSeasons.Add(ProcessTvShowSeasonDirectories(seasonEntries, tvShow));
-
-            }
-            return tvShow;
-        }
-
-        internal static TvShow ProcessTvDirectory(string targetDir)
-        {
-            Log($"Process tv show dir {targetDir}");
-            string[] path = targetDir.Split('\\');
-            string name = path[path.Length - 1].Split('%')[0];
-            TvShow show = new TvShow(name.Trim(), targetDir)
-            {
-                Path = targetDir
-            };
-
-            string[] seasonEntries = Directory.GetDirectories(targetDir);
-            string[] seasonParts = seasonEntries[0].Split('\\');
-            string folderName = seasonParts[seasonParts.Length - 1];
-
-            if (folderName.Length == 2)
-            {
-                //To-do MultiLang: english not first folder so show.Seasons not english default
-                Array.Sort(seasonEntries);
-                seasonEntries = Directory.GetDirectories(seasonEntries[0]);
-                Array.Sort(seasonEntries, SeasonComparer);
-                show.Seasons = ProcessTvShowSeasonDirectories(seasonEntries, show);
-                return ProcessMultiLangTvDirectory(targetDir, show);
-            }
-            else
-            {
-                Array.Sort(seasonEntries, SeasonComparer);
-                show.Seasons = ProcessTvShowSeasonDirectories(seasonEntries, show);
-            }
-
-            return show;
-        }
-
-        private static Season[] ProcessTvShowSeasonDirectories(string[] seasonEntries, TvShow tvShow)
-        {
-            Season[] seasons = new Season[seasonEntries.Length];
-            for (int i = 0; i < seasonEntries.Length; i++)
-            {
-                if (!seasonEntries[i].Contains("Extras") && !seasonEntries[i].Contains("Season") && !IsMultiLangSeasonFolder(seasonEntries[i]))
-                {
-                    NotificationDialog.Show("Error", $"{tvShow.Name} contains unknown season folder, index: {i + 1}");
-                }
-
-                if (seasonEntries[i].Contains("Extras"))
-                {
-                    Season extras = new Season(-1);
-                    List<Episode> extraEpisodes = new List<Episode>();
-                    ProcessExtrasDirectory(extraEpisodes, seasonEntries[i]);
-                    extras.Episodes = new Episode[extraEpisodes.Count];
-                    for (int j = 0; j < extraEpisodes.Count; j++)
-                    {
-                        mediaCount++;
-                        extras.Episodes[j] = extraEpisodes[j];
-                    }
-                    seasons[seasonEntries.Length - 1] = extras;
-                    continue;
-                }
-
-                if (!seasonEntries[i].Contains("Season"))
-                {
-                    continue;
-                }
-
-                Log($"Process tv show season dir {seasonEntries[i]}");
-                Season season = new Season(i + 1);
-                string[] episodeEntries = Directory.GetFiles(seasonEntries[i]).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
-                try
-                {
-                    Array.Sort(episodeEntries, CompareIndex);
-                }
-                catch
-                {
-                    NotificationDialog.Show("Error", $"Episode is missing separator in {tvShow.Name}, Season {i + 1}");
-                }
-                season.Episodes = new Episode[episodeEntries.Length];
-
-                for (int j = 0; j < episodeEntries.Length; j++)
-                {
-                    mediaCount++;
-                    if (tvShow.MultiLang)
-                    {
-                        mediaCount++;
-                    }
-                    try
-                    {
-                        string[] namePath = episodeEntries[j].Split('\\');
-                        string[] episodeNameNumber = namePath[namePath.Length - 1].Split(new[] { '%' }, 2);
-                        int fileSuffixIndex = episodeNameNumber[1].LastIndexOf('.');
-                        string episodeName = episodeNameNumber[1].Substring(0, fileSuffixIndex).Trim();
-                        Episode episode = new Episode(0, episodeName, episodeEntries[j]);
-                        season.Episodes[j] = episode;
-                    }
-                    catch
-                    {
-                        NotificationDialog.Show("Error", $"Episode is missing separator in {tvShow.Name}, Season {i + 1}");
-                    }
-                }
-                seasons[i] = season;
-            }
-            return seasons;
-        }
-
-        private static bool IsMultiLangSeasonFolder(string folder)
-        {
-            string[] langKeys = ConfigurationManager.AppSettings["Languages"].Split(";");
-            string[] folderParts = folder.Split("\\");
-            string langKey = folderParts[folderParts.Length - 1];
-            if (langKeys.Contains(langKey))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        internal static void ProcessExtrasDirectory(List<Episode> extras, string targetDir)
-        {
-            Log($"Process extras dir {targetDir}");
-            string[] rootEntries = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
-            foreach (string entry in rootEntries)
-            {
-                string[] namePath = entry.Split('\\');
-                string[] episodeNameNumber = namePath[namePath.Length - 1].Split('%');
-                int fileSuffixIndex;
-                string episodeName;
-
-                if (episodeNameNumber.Length == 1)
-                {
-                    fileSuffixIndex = episodeNameNumber[0].LastIndexOf('.');
-                    episodeName = episodeNameNumber[0].Substring(0, fileSuffixIndex).Trim();
-                }
-                else
-                {
-                    fileSuffixIndex = episodeNameNumber[1].LastIndexOf('.');
-                    episodeName = episodeNameNumber[1].Substring(0, fileSuffixIndex).Trim();
-                }
-
-                Episode ep = new Episode(extrasIdx--, episodeName, entry);
-                extras.Add(ep);
-            }
-
-            string[] subDirs = Directory.GetDirectories(targetDir);
-            foreach (string subDir in subDirs)
-            {
-                ProcessExtrasDirectory(extras, subDir);
-            }
-        }
-
-        internal static int CompareIndex(string s1, string s2)
-        {
-            string[] s1Parts = s1.Split('%');
-            string[] s2Parts = s2.Split('%');
-            string[] s3Parts = s1Parts[s1Parts.Length - 2].Split('\\');
-            string[] s4Parts = s2Parts[s2Parts.Length - 2].Split('\\');
-
-            string s5Part = s3Parts[s3Parts.Length - 1];
-            string s6Part = s4Parts[s4Parts.Length - 1];
-            if (s5Part.Contains('#'))
-            {
-                s5Part = s5Part.Split('#')[0];
-            }
-            if (s6Part.Contains('#'))
-            {
-                s6Part = s6Part.Split('#')[0];
-            }
-
-            int indexA = Int32.Parse(s5Part);
-            int indexB = Int32.Parse(s6Part);
-            if (indexA == indexB)
-            {
-                return 0;
-            }
-            else if (indexA > indexB)
-            {
-                return 1;
-            }
-            else
-            {
-                return -1;
-            }
-        }
-
-        internal static int SeasonComparer(string seasonB, string seasonA)
-        {
-            if (seasonB.Contains("Extras"))
-            {
-                return 1;
-            }
-            else if (seasonA.Contains("Extras"))
-            {
-                return -1;
-            }
-            string[] seasonValuePathA = seasonA.Split();
-            string[] seasonValuePathB = seasonB.Split();
-            int seasonValueA = Int32.Parse(seasonValuePathA[seasonValuePathA.Length - 1]);
-            int seasonValueB = Int32.Parse(seasonValuePathB[seasonValuePathB.Length - 1]);
-            if (seasonValueA == seasonValueB)
-            {
-                return 0;
-            }
-            if (seasonValueA < seasonValueB)
-            {
-                return 1;
-            }
-            return -1;
-        }
-
-        internal static void ProcessRootDirectory(string driveLetter)
-        {
-            Log($"Process root dir {driveLetter}");
-#if DEBUG
-            string tvDirPath = $"{driveLetter}\\media\\tv";
-#else
-            string tvDirPath = $"{driveLetter}:\\media\\tv";
-#endif
-            if (!Directory.Exists(tvDirPath))
-            {
-                Application.Current.Dispatcher.Invoke(delegate
-                {
-                    NotificationDialog.Show("Error", $"TV folder at {tvDirPath} not found.");
-                });
-            }
-
-#if DEBUG
-            string movieDirPath = $"{driveLetter}\\media\\movie";
-#else
-            string movieDirPath = $"{driveLetter}:\\media\\movie";
-#endif
-            if (!Directory.Exists(movieDirPath))
-            {
-                Application.Current.Dispatcher.Invoke(delegate
-                {
-                    NotificationDialog.Show("Error", $"Movie folder on {movieDirPath} drive not found.");
-                });
-            }
-
-            tvPathList.AddRange(Directory.GetDirectories(tvDirPath));
-            moviePathList.AddRange(Directory.GetDirectories(movieDirPath));
         }
 
         internal static BitmapImage LoadImage(string filename, int pixelWidth)
