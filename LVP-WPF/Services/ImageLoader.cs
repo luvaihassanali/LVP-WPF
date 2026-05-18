@@ -1,0 +1,67 @@
+using System;
+using System.IO;
+using System.Windows.Media.Imaging;
+
+namespace LVP_WPF.Services
+{
+    /// <summary>
+    /// Decodes images off the UI thread (BitmapCacheOption.OnLoad + Freeze)
+    /// so they can be safely handed to bindings on any thread.
+    /// </summary>
+    internal static class ImageLoader
+    {
+        /// <summary>
+        /// Loads a bitmap from disk, decoded to the given width. Paths that
+        /// start with "Resources\" are resolved against the app base directory.
+        /// </summary>
+        public static BitmapImage Load(string filename, int pixelWidth)
+        {
+            if (filename.Contains("Resources\\"))
+            {
+                filename = AppDomain.CurrentDomain.BaseDirectory + filename;
+            }
+
+            BitmapImage image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.UriSource = new Uri(filename);
+            image.DecodePixelWidth = pixelWidth;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+
+        /// <summary>
+        /// For multi-language TV shows, returns up to 16 flag images (one per
+        /// non-English language folder found directly under <paramref name="path"/>).
+        /// English is intentionally skipped - the main image is already the
+        /// English-language poster.
+        /// </summary>
+        public static BitmapImage[] LoadFlags(string path)
+        {
+            BitmapImage[] result = new BitmapImage[16];
+            string[] langFolders = Directory.GetDirectories(path);
+            int langIndex = 0;
+            for (int i = 0; i < langFolders.Length; i++)
+            {
+                string langKey = langFolders[i].Replace(path, "").Split("\\")[1];
+                if (langKey.Length != 2)
+                {
+                    return result;
+                }
+                if (langKey.Equals("en"))
+                {
+                    continue;
+                }
+
+                string imgPath = $"Resources\\flags\\{langKey.ToUpper()}.png";
+                if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + imgPath))
+                {
+                    NotificationDialog.Show("Error", $"Flag image does not exist for language key: {langKey.ToUpper()}");
+                }
+                result[langIndex++] = Load(imgPath, 56);
+            }
+            return result;
+        }
+    }
+}

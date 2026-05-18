@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
+using LVP_WPF.Services;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -30,8 +31,8 @@ namespace LVP_WPF.Windows
                 MovieName = $"{movie.Name} ({movie.Date.GetValueOrDefault().Year})",
                 RunningTime = $"Running time: {temp.Hours} {hour} {temp.Minutes} minutes",
                 Description = movie.Overview, //.Length > 1011 ? $"{movie.Overview.Substring(0, 1011)}..." : movie.Overview;
-                Backdrop = Cache.LoadImage(img, 960),
-                Overlay = Cache.LoadImage("Resources\\play.png", 960)
+                Backdrop = ImageLoader.Load(img, 960),
+                Overlay = ImageLoader.Load("Resources\\play.png", 960)
             };
             window.ShowDialog();
         }

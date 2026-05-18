@@ -813,50 +813,6 @@ namespace LVP_WPF
             return result;
         }
 
-        internal static BitmapImage LoadImage(string filename, int pixelWidth)
-        {
-            string path = AppDomain.CurrentDomain.BaseDirectory;
-            if (filename.Contains("Resources\\"))
-            {
-                filename = path + filename;
-            }
-            BitmapImage image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.UriSource = new Uri(filename);
-            image.DecodePixelWidth = pixelWidth;
-            image.EndInit();
-            image.Freeze();
-            return image;
-        }
-
-        internal static BitmapImage[] LoadFlags(string path)
-        {
-            BitmapImage[] result = new BitmapImage[16];
-            string[] langFolders = Directory.GetDirectories(path);
-            int langIndex = 0;
-            for (int i = 0; i < langFolders.Length; i++)
-            {
-                string langKey = langFolders[i].Replace(path, "").Split("\\")[1];
-                if (langKey.Length != 2)
-                {
-                    return result;
-                }
-                if (langKey.Equals("en"))
-                {
-                    continue;
-                }
-
-                string imgPath = $"Resources\\flags\\{langKey.ToUpper()}.png";
-                if (!File.Exists(AppDomain.CurrentDomain.BaseDirectory + imgPath))
-                {
-                    NotificationDialog.Show("Error", $"Flag image does not exist for language key: {langKey.ToUpper()}");
-                }
-                result[langIndex++] = LoadImage(imgPath, 56);
-            }
-            return result;
-        }
-
         internal static void SaveData()
         {
             _repository.Save(MainWindow.model);

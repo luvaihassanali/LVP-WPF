@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LVP_WPF.Services;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -29,7 +30,7 @@ namespace LVP_WPF.Windows
                 seasonBoxes[i] = new SeasonWindowBox
                 {
                     Id = tvShow.Seasons[i].Id,
-                    Image = Cache.LoadImage(img, 200)
+                    Image = ImageLoader.Load(img, 200)
                 };
             }
             seasons = seasonBoxes;

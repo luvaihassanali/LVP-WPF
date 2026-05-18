@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LVP_WPF.Dialogs;
+using LVP_WPF.Services;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -37,11 +38,11 @@ namespace LVP_WPF.Windows
             window.ShowName += $" ({tvShow.Date.GetValueOrDefault().Year})";
             window.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : tvShow.Overview;
             string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
-            window.Backdrop = Cache.LoadImage(img, 960);
+            window.Backdrop = ImageLoader.Load(img, 960);
             window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : $"Season {tvShow.CurrSeason}";
             int index = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
             Episode[] episodes = tvShow.Seasons[index].Episodes;
-            window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
+            window.Overlay = ImageLoader.Load("Resources\\play.png", 960);
             TvShowWindow.episodes = CreateEpisodeListItems(episodes);
             window.EpisodeListView.ItemsSource = TvShowWindow.episodes;
             window.ShowDialog();
@@ -207,10 +208,10 @@ namespace LVP_WPF.Windows
                     Id = episodes[i].Id,
                     Name = episodes[i].Name,
                     Description = description,
-                    Image = Cache.LoadImage(img, 300),
+                    Image = ImageLoader.Load(img, 300),
                     Progress = (int)episodes[i].SavedTime,
                     Total = (int)total,
-                    Overlay = Cache.LoadImage("Resources\\play.png", 960),
+                    Overlay = ImageLoader.Load("Resources\\play.png", 960),
                     Opacity = 0
                 };
             }
