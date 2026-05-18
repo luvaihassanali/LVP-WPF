@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net10.0-windows</TargetFramework>
     <RootNamespace>LVP_WPF</RootNamespace>
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
@@ -209,7 +209,7 @@
 	</PackageReference>
     <PackageReference Include="LibVLCSharp" Version="3.6.8" />
     <PackageReference Include="LibVLCSharp.WPF" Version="3.6.8" />
-    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.SlowCheetah" Version="4.0.30">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -218,8 +218,7 @@
     <PackageReference Include="Serilog" Version="2.12.0" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="2.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
-    <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
-    <PackageReference Include="System.IO.Ports" Version="7.0.0" />
+    <PackageReference Include="System.IO.Ports" Version="10.0.0" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.18" />
     <PackageReference Include="WpfSnowfall" Version="1.1.0" />
   </ItemGroup>
@@ -274,14 +273,6 @@
       <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
       <SubType>Designer</SubType>
     </Page>
-  </ItemGroup>
-
-  <ItemGroup>
-    <EditorConfigFiles Remove="C:\Users\luv\source\repos\LVP-WPF\LVP-WPF\.editorconfig" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EditorConfigFiles Remove="C:\Users\luv\source\repos\LVP-WPF\LVP-WPF\.editorconfig" />
   </ItemGroup>
 
 </Project>
