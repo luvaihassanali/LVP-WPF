@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using LVP_WPF.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -19,8 +20,8 @@ namespace LVP_WPF
     {
         private const string apiUrl = "https://api.themoviedb.org/3/";
         private const string apiImageUrl = "http://image.tmdb.org/t/p/original";
-        private const string jsonFile = "media.json";
 
+        private static readonly MediaRepository _repository = new MediaRepository("media.json");
         private static readonly string apiKey = $"?api_key={ConfigurationManager.AppSettings["TmdbApiKey"]}";
         private static readonly string apiTvSearchUrl = $"{apiUrl}search/tv{apiKey}&query=";
         private static readonly string apiMovieSearchUrl = $"{apiUrl}search/movie{apiKey}&query=";
@@ -788,18 +789,12 @@ namespace LVP_WPF
         internal static bool CheckForUpdates()
         {
             Log("Check for updates start...");
-            MainModel prevMedia = null;
-            if (File.Exists(jsonFile))
-            {
-                string jsonString = File.ReadAllText(jsonFile);
-                prevMedia = JsonConvert.DeserializeObject<MainModel>(jsonString);
-            }
+            MainModel? prevMedia = _repository.Load();
 
             if (prevMedia == null)
             {
                 return true;
             }
-
 
             bool result = !MainWindow.model.Compare(prevMedia);
             if (!result)
@@ -1138,31 +1133,9 @@ namespace LVP_WPF
             return result;
         }
 
-        internal static async void SaveData()
+        internal static void SaveData()
         {
-            List<Movie> movies = new List<Movie>();
-            foreach (Movie m in MainWindow.model.Movies)
-            {
-                if (m.Id != 0)
-                {
-                    movies.Add(m);
-                }
-            }
-
-            List<TvShow> tvShows = new List<TvShow>();
-            foreach (TvShow t in MainWindow.model.TvShows)
-            {
-                if (t.Id != 0)
-                {
-                    tvShows.Add(t);
-                }
-            }
-
-            MainWindow.model.Movies = movies.ToArray();
-            MainWindow.model.TvShows = tvShows.ToArray();
-            string jsonString = JsonConvert.SerializeObject(MainWindow.model);
-            File.WriteAllText(jsonFile, jsonString);
-            await Task.Delay(2000);
+            _repository.Save(MainWindow.model);
         }
 
         private static void Log(string msg)
