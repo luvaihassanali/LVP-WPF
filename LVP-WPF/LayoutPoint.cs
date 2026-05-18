@@ -816,6 +816,12 @@ namespace LVP_WPF.Windows
                     ToggleButton tb = (ToggleButton)control;
                     CenterMouseOverToggleButton(tb);
                 }
+
+                if (control as Label != null)
+                {
+                    Label l = (Label)control;
+                    CenterMouseOverLabel(l);
+                }
             }
             catch (Exception ex)
             {
@@ -864,6 +870,19 @@ namespace LVP_WPF.Windows
                 ComInterop.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
+
+
+        private static void CenterMouseOverLabel(Label l)
+        {
+            l.Dispatcher.Invoke(() =>
+            {
+                Point target = l.PointToScreen(new Point(0, 0));
+                target.X += l.ActualWidth / 2;
+                target.Y += l.ActualHeight / 2;
+                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
+            });
+        }
+
 
         private static void CenterMouseOverToggleButton(ToggleButton tb)
         {
