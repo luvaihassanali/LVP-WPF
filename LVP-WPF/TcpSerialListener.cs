@@ -190,10 +190,11 @@ namespace LVP_WPF
                 DebugLog("Sent init");
                 StartTimer();
 
-                while (true)
-                {
-                    RunServerWorker(stream, result, data);
-                }
+                // RunServerWorker reads the stream until EOF, then closes
+                // both the stream and the tcpClient. The old `while (true)`
+                // here was a no-op in practice: a second call would Read
+                // from a closed stream, throw, and bail to the outer catch.
+                RunServerWorker(stream, result, data);
             }
             catch (Exception e)
             {
