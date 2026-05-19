@@ -26,6 +26,7 @@ namespace LVP_WPF.Services
         private readonly TmdbClient _tmdb;
         private readonly Translator _translator;
         private readonly Action? _onItemEnriched;
+        private readonly Action? _saveCheckpoint;
 
         /// <param name="onItemEnriched">
         /// Optional callback fired once per indexed unit of work (per episode
@@ -33,11 +34,17 @@ namespace LVP_WPF.Services
         /// Used by the orchestrator to drive a progress bar; the enricher
         /// itself doesn't know what "progress" means.
         /// </param>
-        public MediaEnricher(TmdbClient tmdb, Translator translator, Action? onItemEnriched = null)
+        /// <param name="saveCheckpoint">
+        /// Optional callback invoked before a blocking error dialog is shown
+        /// (no TMDB match found). Lets the orchestrator persist partial
+        /// progress so killing the app at the dialog doesn't lose work.
+        /// </param>
+        public MediaEnricher(TmdbClient tmdb, Translator translator, Action? onItemEnriched = null, Action? saveCheckpoint = null)
         {
             _tmdb = tmdb;
             _translator = translator;
             _onItemEnriched = onItemEnriched;
+            _saveCheckpoint = saveCheckpoint;
         }
 
         public async Task EnrichMovieAsync(Movie movie)
@@ -52,7 +59,7 @@ namespace LVP_WPF.Services
 
             if (numMovieObjects == 0)
             {
-                Cache.SaveData();
+                _saveCheckpoint?.Invoke();
                 NotificationDialog.Show("Error", $"No movie found for: {movie.Name}");
             }
             else if (numMovieObjects != 1)
@@ -131,7 +138,7 @@ namespace LVP_WPF.Services
 
             if (totalResults == 0)
             {
-                Cache.SaveData();
+                _saveCheckpoint?.Invoke();
                 NotificationDialog.Show("Error", $"No tv show found for: {tvShow.Name}");
             }
             else if (totalResults != 1)

@@ -116,7 +116,11 @@ namespace LVP_WPF
             string translatorPath = $"{ConfigurationManager.AppSettings["LibreTranslatePath"]}libretranslate.exe";
             using Translator translator = new Translator(translatorPath, client);
 
-            MediaEnricher enricher = new MediaEnricher(tmdb, translator, () => MainWindow.gui.ProgressBarValue++);
+            MediaEnricher enricher = new MediaEnricher(
+                tmdb,
+                translator,
+                onItemEnriched: () => MainWindow.gui.ProgressBarValue++,
+                saveCheckpoint: SaveData);
 
             foreach (Movie movie in MainWindow.model.Movies)
             {
