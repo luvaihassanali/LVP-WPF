@@ -5,7 +5,6 @@ using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 
 namespace LVP_WPF.Services
 {
@@ -25,6 +24,7 @@ namespace LVP_WPF.Services
     {
         private readonly TmdbClient _tmdb;
         private readonly Translator _translator;
+        private readonly IUserPrompts _prompts;
         private readonly Action? _onItemEnriched;
         private readonly Action? _saveCheckpoint;
 
@@ -39,10 +39,11 @@ namespace LVP_WPF.Services
         /// (no TMDB match found). Lets the orchestrator persist partial
         /// progress so killing the app at the dialog doesn't lose work.
         /// </param>
-        public MediaEnricher(TmdbClient tmdb, Translator translator, Action? onItemEnriched = null, Action? saveCheckpoint = null)
+        public MediaEnricher(TmdbClient tmdb, Translator translator, IUserPrompts prompts, Action? onItemEnriched = null, Action? saveCheckpoint = null)
         {
             _tmdb = tmdb;
             _translator = translator;
+            _prompts = prompts;
             _onItemEnriched = onItemEnriched;
             _saveCheckpoint = saveCheckpoint;
         }
@@ -60,7 +61,7 @@ namespace LVP_WPF.Services
             if (numMovieObjects == 0)
             {
                 _saveCheckpoint?.Invoke();
-                NotificationDialog.Show("Error", $"No movie found for: {movie.Name}");
+                _prompts.ShowError("Error", $"No movie found for: {movie.Name}");
             }
             else if (numMovieObjects != 1)
             {
@@ -81,10 +82,7 @@ namespace LVP_WPF.Services
                 }
 
                 string[][] info = new string[][] { names, ids, overviews };
-                Application.Current.Dispatcher.Invoke(delegate
-                {
-                    movie.Id = OptionDialog.Show(movie.Name, movie.Path, info, dates);
-                });
+                movie.Id = _prompts.ChooseOption(movie.Name, movie.Path, info, dates);
             }
             else
             {
@@ -139,7 +137,7 @@ namespace LVP_WPF.Services
             if (totalResults == 0)
             {
                 _saveCheckpoint?.Invoke();
-                NotificationDialog.Show("Error", $"No tv show found for: {tvShow.Name}");
+                _prompts.ShowError("Error", $"No tv show found for: {tvShow.Name}");
             }
             else if (totalResults != 1)
             {
@@ -160,10 +158,7 @@ namespace LVP_WPF.Services
                 }
 
                 string[][] info = new string[][] { names, ids, overviews };
-                Application.Current.Dispatcher.Invoke(delegate
-                {
-                    tvShow.Id = OptionDialog.Show(tvShow.Name, tvShow.Seasons[0].Episodes[0].Path, info, dates);
-                });
+                tvShow.Id = _prompts.ChooseOption(tvShow.Name, tvShow.Seasons[0].Episodes[0].Path, info, dates);
             }
             else
             {
@@ -232,7 +227,7 @@ namespace LVP_WPF.Services
                 }
                 catch
                 {
-                    NotificationDialog.Show("Error", $"Season first index error: {tvShow.Name}, ID = {tvShow.Id}");
+                    _prompts.ShowError("Error", $"Season first index error: {tvShow.Name}, ID = {tvShow.Id}");
                 }
 
                 if (season.Poster == null)
@@ -262,7 +257,7 @@ namespace LVP_WPF.Services
                     if (k > jEpisodes.Count - 1)
                     {
                         string message = $"Episode index out of TMDB episodes range S{seasonIndex}E{jEpIndex}";
-                        NotificationDialog.Show($"Error: {tvShow.Name}", message);
+                        _prompts.ShowError($"Error: {tvShow.Name}", message);
                     }
                     Episode episode = episodes[k];
 
@@ -282,7 +277,7 @@ namespace LVP_WPF.Services
                                 System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
                             {
                                 string message = $"Multi episode name does not match retrieved data: Renaming file: '{currMultiEpisodeName}', to: '{jCurrMultiEpisodeName.FixBrokenQuotes()}' (Season {season.Id}).";
-                                InputDialog.Show($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
+                                _prompts.ShowNotice($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
 
                                 string oldPath = episode.Path;
                                 string newPath = oldPath.Replace(currMultiEpisodeName, jCurrMultiEpisodeName.FixBrokenQuotes());
@@ -303,7 +298,7 @@ namespace LVP_WPF.Services
                                 }
                                 catch (Exception e)
                                 {
-                                    NotificationDialog.Show("Error", e.Message);
+                                    _prompts.ShowError("Error", e.Message);
                                 }
                             }
                             multiEpisodeOverview += (jCurrMultiEpisodeOverview + Environment.NewLine + Environment.NewLine);
@@ -330,14 +325,14 @@ namespace LVP_WPF.Services
                     catch
                     {
                         string message = $"Episode index out of TMDB episodes range S{seasonIndex}E{k + 1}";
-                        NotificationDialog.Show($"Error: {tvShow.Name}", message);
+                        _prompts.ShowError($"Error: {tvShow.Name}", message);
                     }
 
                     string jEpisodeName = (string)jEpisode["name"];
                     if (!(String.Compare(episode.Name, jEpisodeName.FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
                     {
                         string message = $"Local episode name does not match retrieved data. Renaming file '{episode.Name}' to '{jEpisodeName.FixBrokenQuotes()}' (Season {season.Id}).";
-                        InputDialog.Show($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
+                        _prompts.ShowNotice($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
 
                         string oldPath = episode.Path;
                         jEpisodeName = (string)jEpisode["name"];
@@ -358,7 +353,7 @@ namespace LVP_WPF.Services
                         }
                         catch (Exception e)
                         {
-                            NotificationDialog.Show("Error", e.Message);
+                            _prompts.ShowError("Error", e.Message);
                         }
 
                         episode.Path = newPath;
@@ -387,7 +382,7 @@ namespace LVP_WPF.Services
             if (!(String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
             {
                 string message = $"Local movie name does not match retrieved data. Renaming file '{movie.Name.Replace(":", "")}' to '{((string)movieObject["title"]).Replace(":", "")}'.";
-                InputDialog.Show("Warning", message);
+                _prompts.ShowNotice("Warning", message);
                 string oldPath = movie.Path;
                 string[] fileNamePath = oldPath.Split('\\');
                 string fileName = fileNamePath[fileNamePath.Length - 1];
@@ -471,7 +466,7 @@ namespace LVP_WPF.Services
             }
         }
 
-        private static void CheckSubtitleName(TvShow tvShow, Season season, string oldPath, string newPath)
+        private void CheckSubtitleName(TvShow tvShow, Season season, string oldPath, string newPath)
         {
             if (!tvShow.MultiLang) return;
 
@@ -486,12 +481,12 @@ namespace LVP_WPF.Services
                 temp = newSrtPath.Split("\\");
                 string newSubFileName = temp[temp.Length - 1];
                 string subMsg = $"Renaming subtitle file {oldSubFileName} to {newSubFileName} (Season {season.Id}).";
-                InputDialog.Show($"Warning: {tvShow.Name}", subMsg, tvShow, season.Id + 1);
+                _prompts.ShowNotice($"Warning: {tvShow.Name}", subMsg, tvShow, season.Id + 1);
                 File.Move(oldSrtPath, newSrtPath);
             }
             else if (!oldPath.Contains("\\en\\"))
             {
-                NotificationDialog.Show("Error", $"No subtitle file found {oldSrtPath} (Season {season.Id}).");
+                _prompts.ShowError("Error", $"No subtitle file found {oldSrtPath} (Season {season.Id}).");
             }
         }
 

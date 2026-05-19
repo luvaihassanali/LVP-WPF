@@ -21,6 +21,7 @@ namespace LVP_WPF.Services
 
         private readonly string _executablePath;
         private readonly HttpClient _httpClient;
+        private readonly IUserPrompts _prompts;
         private bool _started;
 
         /// <param name="executablePath">
@@ -28,10 +29,12 @@ namespace LVP_WPF.Services
         /// any environment variable; expanded on first use.
         /// </param>
         /// <param name="httpClient">Reused for all translate calls; caller owns its lifetime.</param>
-        public Translator(string executablePath, HttpClient httpClient)
+        /// <param name="prompts">Used for the startup announcement and any failure popups.</param>
+        public Translator(string executablePath, HttpClient httpClient, IUserPrompts prompts)
         {
             _executablePath = executablePath;
             _httpClient = httpClient;
+            _prompts = prompts;
         }
 
         public async Task<string> TranslateAsync(string targetLang, string text)
@@ -59,7 +62,7 @@ namespace LVP_WPF.Services
             }
             catch (Exception ex)
             {
-                NotificationDialog.Show("Error", ex.Message);
+                _prompts.ShowError("Error", ex.Message);
                 throw new Exception("LibreTranslate failure");
             }
 #endif
@@ -75,7 +78,7 @@ namespace LVP_WPF.Services
                 string path = Environment.ExpandEnvironmentVariables(_executablePath);
                 if (!File.Exists(path))
                 {
-                    NotificationDialog.Show("Error", $"LibreTranslate exe does not exist at {path}");
+                    _prompts.ShowError("Error", $"LibreTranslate exe does not exist at {path}");
                 }
 
                 Process proc = new Process();
@@ -85,7 +88,7 @@ namespace LVP_WPF.Services
                 proc.Start();
             }
 
-            InputDialog.Show("Information", "LibreTranslate launched. Waiting 10 seconds till ready...");
+            _prompts.ShowNotice("Information", "LibreTranslate launched. Waiting 10 seconds till ready...");
             await Task.Delay(StartupWait);
             _started = true;
         }

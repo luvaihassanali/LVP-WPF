@@ -113,12 +113,15 @@ namespace LVP_WPF
             string cacheRoot = $"{AppDomain.CurrentDomain.BaseDirectory}cache";
             TmdbClient tmdb = new TmdbClient(apiKey, client, cacheRoot, Log);
 
+            IUserPrompts prompts = new WpfUserPrompts();
+
             string translatorPath = $"{ConfigurationManager.AppSettings["LibreTranslatePath"]}libretranslate.exe";
-            using Translator translator = new Translator(translatorPath, client);
+            using Translator translator = new Translator(translatorPath, client, prompts);
 
             MediaEnricher enricher = new MediaEnricher(
                 tmdb,
                 translator,
+                prompts,
                 onItemEnriched: () => MainWindow.gui.ProgressBarValue++,
                 saveCheckpoint: SaveData);
 
