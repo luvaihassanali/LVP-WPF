@@ -18,18 +18,26 @@ namespace LVP_WPF.Services
     ///   - Cartoon-genre detection (with CartoonExceptions config override)
     ///   - The "Tom and Jerry" / "Looney Tunes" custom-cache shortcuts
     ///
-    /// Progress reporting still ticks MainWindow.gui.ProgressBarValue inline -
-    /// removing that UI coupling is a follow-up.
+    /// Progress is reported via the optional onItemEnriched callback passed
+    /// to the constructor (one tick per indexed unit of work).
     /// </summary>
     internal sealed class MediaEnricher
     {
         private readonly TmdbClient _tmdb;
         private readonly Translator _translator;
+        private readonly Action? _onItemEnriched;
 
-        public MediaEnricher(TmdbClient tmdb, Translator translator)
+        /// <param name="onItemEnriched">
+        /// Optional callback fired once per indexed unit of work (per episode
+        /// during season-cache builds, per episode during translations).
+        /// Used by the orchestrator to drive a progress bar; the enricher
+        /// itself doesn't know what "progress" means.
+        /// </param>
+        public MediaEnricher(TmdbClient tmdb, Translator translator, Action? onItemEnriched = null)
         {
             _tmdb = tmdb;
             _translator = translator;
+            _onItemEnriched = onItemEnriched;
         }
 
         public async Task EnrichMovieAsync(Movie movie)
@@ -361,7 +369,7 @@ namespace LVP_WPF.Services
                         episode.Backdrop = await _tmdb.DownloadImageAsync(episode.Backdrop, false, tvShow.Name);
                     }
                     jEpIndex++;
-                    MainWindow.gui.ProgressBarValue++;
+                    _onItemEnriched?.Invoke();
                 }
                 seasonIndex++;
             }
@@ -448,7 +456,7 @@ namespace LVP_WPF.Services
 
                             multiLangSeason.Episodes[l].Name = await _translator.TranslateAsync(langKey, multiLangSeason.Episodes[l].Name);
                             multiLangSeason.Episodes[l].Overview = await _translator.TranslateAsync(langKey, multiLangSeason.Episodes[l].Overview);
-                            MainWindow.gui.ProgressBarValue++;
+                            _onItemEnriched?.Invoke();
                             multiLangSeason.Episodes[l].Translated = true;
                         }
                     }

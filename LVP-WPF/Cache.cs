@@ -15,8 +15,6 @@ namespace LVP_WPF
     {
         private static readonly MediaRepository _repository = new MediaRepository("media.json");
 
-        public static int mediaCount = 0;
-        public static bool update = false;
         private static TextBox logTxtBox;
 
         internal static async Task Initialize(ProgressBar pb, MediaElement cf, TextBox tf)
@@ -48,18 +46,19 @@ namespace LVP_WPF
                 }
 
                 MainWindow.model = scanResult.Model;
-                mediaCount = scanResult.MediaCount;
 
+                bool needsRebuild;
                 try
                 {
-                    update = CheckForUpdates();
+                    needsRebuild = CheckForUpdates();
                 }
                 catch (Exception ex)
                 {
                     NotificationDialog.Show(ex.Message, ex.StackTrace);
+                    needsRebuild = false;
                 }
 
-                if (update)
+                if (needsRebuild)
                 {
                     //To-do MultiLang: Detect file extension changes and episode deletions
                     Application.Current.Dispatcher.Invoke(delegate
@@ -68,7 +67,7 @@ namespace LVP_WPF
                         cf.Visibility = Visibility.Visible;
                         tf.Visibility = Visibility.Visible;
                     });
-                    MainWindow.gui.ProgressBarMax = mediaCount;
+                    MainWindow.gui.ProgressBarMax = scanResult.MediaCount;
                     await BuildCache();
                 }
 
@@ -82,7 +81,7 @@ namespace LVP_WPF
                     MainWindow.gui.mediaDict[MainWindow.model.TvShows[i].Id] = MainWindow.model.TvShows[i];
                 }
 
-                if (MainWindow.model.HistoryList.Count == 0 || update)
+                if (MainWindow.model.HistoryList.Count == 0 || needsRebuild)
                 {
                     MainWindow.model.HistoryList.Clear();
                     foreach (TvShow t in MainWindow.model.TvShows)
@@ -117,7 +116,7 @@ namespace LVP_WPF
             string translatorPath = $"{ConfigurationManager.AppSettings["LibreTranslatePath"]}libretranslate.exe";
             using Translator translator = new Translator(translatorPath, client);
 
-            MediaEnricher enricher = new MediaEnricher(tmdb, translator);
+            MediaEnricher enricher = new MediaEnricher(tmdb, translator, () => MainWindow.gui.ProgressBarValue++);
 
             foreach (Movie movie in MainWindow.model.Movies)
             {
