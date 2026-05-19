@@ -16,6 +16,15 @@ namespace LVP_WPF.Services
         /// <summary>Placeholder used when a movie or TV show has no cached backdrop or episode still.</summary>
         public const string DefaultBackdrop = "Resources\\noPrevWide.png";
 
+        /// <summary>
+        /// The translucent play-button overlay shown when the user hovers over
+        /// a backdrop or episode tile. Decoded once and shared - the underlying
+        /// BitmapImage is Freeze()d so it's safe to assign onto multiple
+        /// bindings from any thread.
+        /// </summary>
+        private static BitmapImage? _playOverlay;
+        public static BitmapImage PlayOverlay => _playOverlay ??= Load("Resources\\play.png", 960);
+
         /// <summary>Load a poster image (300px wide), falling back to <see cref="DefaultPoster"/> when path is null.</summary>
         public static BitmapImage LoadPoster(string? path, int pixelWidth = 300)
             => Load(path ?? DefaultPoster, pixelWidth);

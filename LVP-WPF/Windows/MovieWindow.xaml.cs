@@ -31,7 +31,7 @@ namespace LVP_WPF.Windows
                 RunningTime = $"Running time: {temp.Hours} {hour} {temp.Minutes} minutes",
                 Description = movie.Overview, //.Length > 1011 ? $"{movie.Overview.Substring(0, 1011)}..." : movie.Overview;
                 Backdrop = ImageLoader.LoadBackdrop(movie.Backdrop),
-                Overlay = ImageLoader.Load("Resources\\play.png", 960)
+                Overlay = ImageLoader.PlayOverlay
             };
             window.ShowDialog();
         }

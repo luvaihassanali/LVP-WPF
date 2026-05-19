@@ -38,7 +38,7 @@ namespace LVP_WPF.Windows
             window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : $"Season {tvShow.CurrSeason}";
             int index = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
             Episode[] episodes = tvShow.Seasons[index].Episodes;
-            window.Overlay = ImageLoader.Load("Resources\\play.png", 960);
+            window.Overlay = ImageLoader.PlayOverlay;
             TvShowWindow.episodes = CreateEpisodeListItems(episodes);
             window.EpisodeListView.ItemsSource = TvShowWindow.episodes;
             window.ShowDialog();
@@ -206,7 +206,7 @@ namespace LVP_WPF.Windows
                     Image = ImageLoader.LoadBackdrop(episodes[i].Backdrop, 300),
                     Progress = (int)episodes[i].SavedTime,
                     Total = (int)total,
-                    Overlay = ImageLoader.Load("Resources\\play.png", 960),
+                    Overlay = ImageLoader.PlayOverlay,
                     Opacity = 0
                 };
             }
