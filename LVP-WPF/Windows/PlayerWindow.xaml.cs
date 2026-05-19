@@ -324,15 +324,10 @@ namespace LVP_WPF.Windows
             bool useSrtFile = SubtitleConfig.HasSrtFile && SubtitleConfig.EnableSubtitles;
             if (useSrtFile)
             {
-                string[] pathParts = m.Path.Split("\\");
-                string name = pathParts[pathParts.Length - 1].Split(".")[0];
-                string path = "";
-                for (int i = 0; i < pathParts.Length - 1; i++)
-                {
-                    path += $"{pathParts[i]}\\";
-                }
-                path += $"{name}.srt";
-                mediaPlayer.AddSlave(MediaSlaveType.Subtitle, $"file:///{path}", true);
+                string dir = System.IO.Path.GetDirectoryName(m.Path) ?? "";
+                string name = System.IO.Path.GetFileNameWithoutExtension(m.Path);
+                string srtPath = System.IO.Path.Combine(dir, $"{name}.srt");
+                mediaPlayer.AddSlave(MediaSlaveType.Subtitle, $"file:///{srtPath}", true);
             }
             else
             {

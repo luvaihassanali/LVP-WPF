@@ -125,15 +125,10 @@ namespace LVP_WPF.Windows
                 return;
             }
 
-            string[] pathParts = movie.Path.Split("\\");
-            string path = "";
-            for (int i = 0; i < pathParts.Length - 1; i++)
-            {
-                path += $"{pathParts[i]}\\";
-            }
-            string name = pathParts[pathParts.Length - 1].Split('.')[0];
-
-            string[] movieFiles = Directory.GetFiles(path);
+            string dir = Path.GetDirectoryName(movie.Path) ?? "";
+            string[] movieFiles = Directory.GetFiles(dir);
+            // If the directory has only one file (the movie itself), there's
+            // no companion .srt; nothing to enable.
             if (movieFiles.Length == 1)
             {
                 return;
