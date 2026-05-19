@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LVP_WPF.Dialogs;
+using LVP_WPF.Models;
 using LVP_WPF.Services;
 using LVP_WPF.Util;
 using Serilog;

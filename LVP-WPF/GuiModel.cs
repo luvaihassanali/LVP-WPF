@@ -1,9 +1,9 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LVP_WPF.Models;
 using LVP_WPF.Windows;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows.Controls;
-using System.Windows.Media.Imaging;
 
 namespace LVP_WPF
 {
@@ -56,43 +56,5 @@ namespace LVP_WPF
             fontSize = "--freetype-fontsize=48";
             fontStyle = "--freetype-font=Segoe UI";
         }
-
-    }
-
-    public partial class MainWindowBox
-    {
-        public int Id { get; set; }
-        public string Title { get; set; }
-        public BitmapImage Image { get; set; }
-        public BitmapImage[] Flags { get; set; }
-    }
-
-    public class OptionWindowBox
-    {
-        public string Description { get; set; }
-        public string Name { get; set; }
-        public int Id { get; set; }
-    }
-
-    public class SeasonWindowBox
-    {
-        public int Id { get; set; }
-        public BitmapImage Image { get; set; }
-    }
-
-    public partial class EpisodeWindowBox : ObservableObject
-    {
-        [ObservableProperty]
-        private int progress;
-        [ObservableProperty]
-        private int total;
-        [ObservableProperty]
-        private double opacity;
-
-        public int Id { get; set; }
-        public string Description { get; set; }
-        public string Name { get; set; }
-        public BitmapImage Image { get; set; }
-        public BitmapImage Overlay { get; set; }
     }
 }

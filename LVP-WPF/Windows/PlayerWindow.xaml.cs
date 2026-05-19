@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
+using LVP_WPF.Models;
 using Serilog;
 using System;
 using System.Threading;

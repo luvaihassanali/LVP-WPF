@@ -1,4 +1,5 @@
-﻿using LVP_WPF.Services;
+﻿using LVP_WPF.Models;
+using LVP_WPF.Services;
 using LVP_WPF.Util;
 using LVP_WPF.Windows;
 using Serilog;
