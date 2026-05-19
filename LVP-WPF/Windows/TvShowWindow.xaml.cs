@@ -22,6 +22,8 @@ namespace LVP_WPF.Windows
     [ObservableObject]
     public partial class TvShowWindow : Window
     {
+        private const int OverviewMaxLen = 370;
+
         static internal TvShow tvShow;
         static internal EpisodeWindowBox[] episodes;
         static internal bool historyWatch = false;
@@ -38,7 +40,7 @@ namespace LVP_WPF.Windows
             TvShowWindow window = new TvShowWindow();
             window.ShowName = tvShow.Name.Contains("(") ? tvShow.Name.Split(" (")[0] : tvShow.Name;
             window.ShowName += $" ({tvShow.Date.GetValueOrDefault().Year})";
-            window.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : tvShow.Overview;
+            window.Description = tvShow.Overview.Length > OverviewMaxLen ? $"{tvShow.Overview.Substring(0, OverviewMaxLen)}..." : tvShow.Overview;
             string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
             window.Backdrop = ImageLoader.Load(img, 960);
             window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : $"Season {tvShow.CurrSeason}";
@@ -192,7 +194,7 @@ namespace LVP_WPF.Windows
                 string description;
                 if (episodes[i].Overview != null)
                 {
-                    description = episodes[i].Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{episodes[i].Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : episodes[i].Overview;
+                    description = episodes[i].Overview.Length > OverviewMaxLen ? $"{episodes[i].Overview.Substring(0, OverviewMaxLen)}..." : episodes[i].Overview;
                 }
                 else
                 {
@@ -527,7 +529,7 @@ namespace LVP_WPF.Windows
             {
                 SwitchMultiLangTvIndex(tvShow, langComboBox.SelectedValue.ToString());
                 this.ShowName = tvShow.Name.Contains('(') ? tvShow.Name : $"{tvShow.Name} ({tvShow.Date.GetValueOrDefault().Year})";
-                this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : tvShow.Overview;
+                this.Description = tvShow.Overview.Length > OverviewMaxLen ? $"{tvShow.Overview.Substring(0, OverviewMaxLen)}..." : tvShow.Overview;
                 UpdateTvWindowSeasonChange(tvShow.CurrSeason);
                 await GenerateEpisodeItemContainers();
             }

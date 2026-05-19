@@ -7,10 +7,21 @@ using System.Windows.Controls;
 
 namespace LVP_WPF
 {
+    /// <summary>
+    /// Bindable view-model state for MainWindow and the cross-window control
+    /// references (close buttons, scroll viewers, etc.) that LayoutPoint pokes
+    /// at while moving the cursor between windows.
+    ///
+    /// Non-view-model concerns that used to live here have been split out:
+    ///   - Static helpers   -> Util/WpfTreeHelpers.cs
+    ///   - Cursor swap      -> Services/CursorManager.cs
+    ///   - Cursor X/Y/flag  -> Services/CursorConfig.cs
+    ///   - Item-model DTOs  -> Models/*.cs
+    ///   - VLC font opts    -> PlayerWindow private const
+    ///   - OVERVIEW_MAX_LEN -> TvShowWindow private const
+    /// </summary>
     public partial class GuiModel : ObservableObject
     {
-        public const int OVERVIEW_MAX_LEN = 370;
-
         [ObservableProperty]
         private int progressBarValue = 1;
         [ObservableProperty]
@@ -22,13 +33,6 @@ namespace LVP_WPF
         [ObservableProperty]
         ObservableCollection<MainWindowBox> cartoons = new ObservableCollection<MainWindowBox>();
 
-        static public bool hideCursor = false;
-        static public int hideCursorX = 35;
-        static public int hideCursorY = 1100;
-        static public int centerX = 960;
-        static public int centerY = 540;
-        static public string fontSize;
-        static public string fontStyle;
         public bool isPlaying = false;
         public bool scrollViewerAdjust = false;
         public Button mainCloseButton;
@@ -41,20 +45,5 @@ namespace LVP_WPF
         public ScrollViewer episodeScrollViewer;
         public ScrollViewer seasonScrollViewer;
         public ScrollViewer langScrollViewer;
-
-        public GuiModel(string? h)
-        {
-            if (h != null)
-            {
-                hideCursor = bool.Parse(h);
-            }
-            else
-            {
-                hideCursor = false;
-            }
-
-            fontSize = "--freetype-fontsize=48";
-            fontStyle = "--freetype-font=Segoe UI";
-        }
     }
 }

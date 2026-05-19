@@ -1,4 +1,5 @@
-﻿using LVP_WPF.Windows;
+﻿using LVP_WPF.Services;
+using LVP_WPF.Windows;
 using Serilog;
 using System;
 using System.Configuration;
@@ -49,7 +50,7 @@ namespace LVP_WPF
             esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
             serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
             layoutPoint = new LayoutPoint(g);
-            if (GuiModel.hideCursor)
+            if (CursorConfig.HideCursor)
             {
                 Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
             }
@@ -222,7 +223,7 @@ namespace LVP_WPF
                 if (buffer.Contains("initack"))
                 {
                     DebugLog("initack received");
-                    ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+                    ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
                     DoMouseClick();
                     StopTimer();
                     StartTimer();
@@ -254,7 +255,7 @@ namespace LVP_WPF
 
         private void ParseTcpDataIn(string data)
         {
-            if (GuiModel.hideCursor)
+            if (CursorConfig.HideCursor)
             {
                 Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
             }
@@ -378,7 +379,7 @@ namespace LVP_WPF
                 string msg = serialPort.ReadLine();
                 msg = msg.Replace("\r", "");
                 Log.Information(msg);
-                if (GuiModel.hideCursor)
+                if (CursorConfig.HideCursor)
                 {
                     Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
                 }

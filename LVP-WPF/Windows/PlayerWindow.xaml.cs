@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
 using LVP_WPF.Models;
+using LVP_WPF.Services;
 using Serilog;
 using System;
 using System.Threading;
@@ -16,7 +17,9 @@ namespace LVP_WPF.Windows
     {
         static private Media currMedia;
         static private TvShowWindow? tvShowWindow;
-        static internal LibVLC libVLC = new LibVLC(GuiModel.fontStyle, GuiModel.fontSize);
+        private const string VlcFontStyle = "--freetype-font=Segoe UI";
+        private const string VlcFontSize = "--freetype-fontsize=48";
+        static internal LibVLC libVLC = new LibVLC(VlcFontStyle, VlcFontSize);
         static internal int subtitleTrack = Int32.MaxValue;
         static internal bool subtitleFile = false;
         private MediaPlayer mediaPlayer;
@@ -115,7 +118,7 @@ namespace LVP_WPF.Windows
             MainWindow.gui.playerWindow = this;
             MainWindow.gui.playerCloseButton = this.closeButton;
             TcpSerialListener.layoutPoint.Select("PlayerWindow");
-            ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+            ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
         }
 
         private void PlayerWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -503,7 +506,7 @@ namespace LVP_WPF.Windows
                     buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(1); });
                     mediaPlayer.Play();
                     pollingTimer.Start();
-                    ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+                    ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
                     TcpSerialListener.DoMouseClick();
                 }
             }

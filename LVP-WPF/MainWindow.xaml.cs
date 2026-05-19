@@ -27,7 +27,8 @@ namespace LVP_WPF
         public MainWindow()
         {
             InitializeComponent();
-            gui = new GuiModel(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
+            CursorConfig.Initialize();
+            gui = new GuiModel();
             DataContext = gui;
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
@@ -91,7 +92,7 @@ namespace LVP_WPF
         {
             _ = Task.Run(() =>
             {
-                ComInterop.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
+                ComInterop.SetCursorPos(CursorConfig.CenterX, CursorConfig.CenterY);
                 Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
                 if (mouseHubProcess.Length != 0)
                 {
