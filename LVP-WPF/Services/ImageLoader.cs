@@ -67,7 +67,7 @@ namespace LVP_WPF.Services
             int langIndex = 0;
             for (int i = 0; i < langFolders.Length; i++)
             {
-                string langKey = langFolders[i].Replace(path, "").Split("\\")[1];
+                string langKey = Path.GetFileName(langFolders[i]);
                 if (langKey.Length != 2)
                 {
                     return result;

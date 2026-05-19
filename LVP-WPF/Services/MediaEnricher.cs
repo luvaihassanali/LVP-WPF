@@ -467,17 +467,11 @@ namespace LVP_WPF.Services
         {
             if (!tvShow.MultiLang) return;
 
-            int separatorIndex = oldPath.LastIndexOf(".");
-            string oldSrtPath = $"{oldPath.Substring(0, separatorIndex)}.srt";
+            string oldSrtPath = Path.ChangeExtension(oldPath, ".srt");
             if (File.Exists(oldSrtPath))
             {
-                int newSeparatorIndex = newPath.LastIndexOf(".");
-                string newSrtPath = $"{newPath.Substring(0, newSeparatorIndex)}.srt";
-                string[] temp = oldSrtPath.Split("\\");
-                string oldSubFileName = temp[temp.Length - 1];
-                temp = newSrtPath.Split("\\");
-                string newSubFileName = temp[temp.Length - 1];
-                string subMsg = $"Renaming subtitle file {oldSubFileName} to {newSubFileName} (Season {season.Id}).";
+                string newSrtPath = Path.ChangeExtension(newPath, ".srt");
+                string subMsg = $"Renaming subtitle file {Path.GetFileName(oldSrtPath)} to {Path.GetFileName(newSrtPath)} (Season {season.Id}).";
                 _prompts.ShowNotice($"Warning: {tvShow.Name}", subMsg, tvShow, season.Id + 1);
                 File.Move(oldSrtPath, newSrtPath);
             }
