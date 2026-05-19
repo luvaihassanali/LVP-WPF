@@ -489,46 +489,33 @@ namespace LVP_WPF.Windows
             return p.y < 0 || p.x < 0 || p.y >= columns || p.x >= grid.Count;
         }
 
+        // Walk one cell at a time in the requested direction until we hit
+        // an occupied cell (return its coords) or leave the grid (return
+        // sentinel (-1, -1)). Skipping over empty cells matters for the
+        // sparse last-row case: a row with only the first two slots filled
+        // shouldn't trap the cursor when the user navigates right.
         private static (int x, int y) NextOccupied((int x, int y) current, (int x, int y) move, List<int[]> grid, List<Image[]> controls, int columns)
         {
             (int x, int y) next = (current.x + move.x, current.y + move.y);
             if (IsOutOfRange(next, grid, columns)) return (-1, -1);
             if (controls[next.x][next.y] == null)
             {
-                // NOTE: this preserves an existing bug from the pre-consolidation
-                // code (NextMainGridPoint/NextSeasonGridPoint both did this):
-                // the recursive result is discarded, so in practice NextOccupied
-                // only inspects the immediate next cell. Kept unchanged here to
-                // avoid altering daily-driver navigation behavior; can be fixed
-                // intentionally in a separate commit if desired.
-                NextOccupied(next, move, grid, controls, columns);
+                return NextOccupied(next, move, grid, controls, columns);
             }
-            else
-            {
-                return next;
-            }
-            return (-1, -1);
+            return next;
         }
 
+        // From `point`, search left and right within the same row for the
+        // nearest occupied cell. Returns sentinel (-1, -1) if the entire
+        // row is empty (shouldn't happen in practice).
         private static (int x, int y) ClosestOccupied((int x, int y) point, List<Image[]> controls, int columns)
         {
             int low = point.y - 1;
             int high = point.y + 1;
-            // NOTE: existing code used `low >= 0 || high > {columns}` as the loop
-            // condition. The `> columns` half is almost certainly a bug (should
-            // probably be `< columns`), and combining with || rather than && also
-            // looks wrong - but the function still terminates because both bounds
-            // only update inside their guard. Preserved as-is.
-            while (low >= 0 || high > columns)
+            while (low >= 0 || high < columns)
             {
-                if (low >= 0)
-                {
-                    if (controls[point.x][low] != null) return (point.x, low);
-                }
-                if (high < columns)
-                {
-                    if (controls[point.x][high] != null) return (point.x, high);
-                }
+                if (low >= 0 && controls[point.x][low] != null) return (point.x, low);
+                if (high < columns && controls[point.x][high] != null) return (point.x, high);
                 low--;
                 high++;
             }
