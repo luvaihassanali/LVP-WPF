@@ -18,8 +18,8 @@ namespace LVP_WPF.Windows
 
         public static void Show(Movie m)
         {
-            PlayerWindow.subtitleTrack = Int32.MaxValue;
-            PlayerWindow.subtitleFile = false;
+            SubtitleConfig.Track = Int32.MaxValue;
+            SubtitleConfig.HasSrtFile = false;
             movie = m;
 
             TimeSpan temp = TimeSpan.FromMinutes(movie.RunningTime);
@@ -191,17 +191,17 @@ namespace LVP_WPF.Windows
         {
             if (subTrackComboBox.SelectedIndex == 0)
             {
-                PlayerWindow.subtitleTrack = Int32.MaxValue;
-                PlayerWindow.subtitleFile = false;
+                SubtitleConfig.Track = Int32.MaxValue;
+                SubtitleConfig.HasSrtFile = false;
             }
             else
             {
                 if (srtFileExists)
                 {
-                    PlayerWindow.subtitleFile = true;
+                    SubtitleConfig.HasSrtFile = true;
                     return;
                 }
-                PlayerWindow.subtitleTrack = subTrackComboBox.SelectedIndex - 1;
+                SubtitleConfig.Track = subTrackComboBox.SelectedIndex - 1;
             }
         }
 

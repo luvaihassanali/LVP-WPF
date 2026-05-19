@@ -20,8 +20,6 @@ namespace LVP_WPF.Windows
         private const string VlcFontStyle = "--freetype-font=Segoe UI";
         private const string VlcFontSize = "--freetype-fontsize=48";
         static internal LibVLC libVLC = new LibVLC(VlcFontStyle, VlcFontSize);
-        static internal int subtitleTrack = Int32.MaxValue;
-        static internal bool subtitleFile = false;
         private MediaPlayer mediaPlayer;
         private DispatcherTimer pollingTimer;
         InactivityTimer inactivityTimer;
@@ -323,30 +321,22 @@ namespace LVP_WPF.Windows
             media.AddOption(":avcodec-hw=auto");
             media.AddOption(":no-mkv-preload-local-dir");
 
-            if (subtitleFile)
+            bool useSrtFile = SubtitleConfig.HasSrtFile && SubtitleConfig.EnableSubtitles;
+            if (useSrtFile)
             {
-                if (TvShowWindow.subtitleSwitch)
+                string[] pathParts = m.Path.Split("\\");
+                string name = pathParts[pathParts.Length - 1].Split(".")[0];
+                string path = "";
+                for (int i = 0; i < pathParts.Length - 1; i++)
                 {
-                    string[] pathParts = m.Path.Split("\\");
-                    string path = "";
-                    string name = pathParts[pathParts.Length - 1].Split(".")[0];
-                    for (int i = 0; i < pathParts.Length - 1; i++)
-                    {
-                        path += $"{pathParts[i]}\\";
-                    }
-                    path += $"{name}.srt";
-                    mediaPlayer.AddSlave(MediaSlaveType.Subtitle, $"file:///{path}", true);
+                    path += $"{pathParts[i]}\\";
                 }
-                else
-                {
-                    string subtitleTrackOption = String.Format(":sub-track={0}", subtitleTrack);
-                    media.AddOption(subtitleTrackOption);
-                }
+                path += $"{name}.srt";
+                mediaPlayer.AddSlave(MediaSlaveType.Subtitle, $"file:///{path}", true);
             }
             else
             {
-                string subtitleTrackOption = String.Format(":sub-track={0}", subtitleTrack);
-                media.AddOption(subtitleTrackOption);
+                media.AddOption($":sub-track={SubtitleConfig.Track}");
             }
             return media;
         }

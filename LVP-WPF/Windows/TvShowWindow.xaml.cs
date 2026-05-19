@@ -26,7 +26,6 @@ namespace LVP_WPF.Windows
         static internal TvShow tvShow;
         static internal EpisodeWindowBox[] episodes;
         static internal List<TvShow> cartoons = new List<TvShow>();
-        static internal bool subtitleSwitch = true;
 
         public static void Show(TvShow t)
         {
@@ -142,7 +141,7 @@ namespace LVP_WPF.Windows
                 item = item.Split(")")[0];
                 langComboBox.Items.Add(item);
                 lang = item;
-                PlayerWindow.subtitleFile = true;
+                SubtitleConfig.HasSrtFile = true;
             }
             else
             {
@@ -502,7 +501,7 @@ namespace LVP_WPF.Windows
 
             if (langComboBox.SelectedIndex == 0)
             {
-                PlayerWindow.subtitleFile = false;
+                SubtitleConfig.HasSrtFile = false;
                 toggleButton.Visibility = Visibility.Hidden;
                 if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
                 {
@@ -511,7 +510,7 @@ namespace LVP_WPF.Windows
             }
             else
             {
-                PlayerWindow.subtitleFile = true;
+                SubtitleConfig.HasSrtFile = true;
                 toggleButton.Visibility = Visibility.Visible;
                 if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton == null)
                 {
@@ -583,12 +582,12 @@ namespace LVP_WPF.Windows
 
         private void toggleButton_Unchecked(object sender, RoutedEventArgs e)
         {
-            subtitleSwitch = false;
+            SubtitleConfig.EnableSubtitles = false;
         }
 
         private void toggleButton_Checked(object sender, RoutedEventArgs e)
         {
-            subtitleSwitch = true;
+            SubtitleConfig.EnableSubtitles = true;
         }
 
         internal static void PlayRandomCartoons()
