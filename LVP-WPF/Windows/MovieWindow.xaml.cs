@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
 using LVP_WPF.Services;
+using LVP_WPF.Util;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -170,21 +171,8 @@ namespace LVP_WPF.Windows
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             scrollViewerOffset = e.VerticalOffset;
-            if (e.VerticalOffset == 0)
-            {
-                closeButton.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                closeButton.Visibility = Visibility.Hidden;
-            }
-
-            if (MainWindow.gui.scrollViewerAdjust)
-            {
-                MainWindow.gui.scrollViewerAdjust = false;
-                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
-                langScrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
-            }
+            closeButton.Visibility = e.VerticalOffset == 0 ? Visibility.Visible : Visibility.Hidden;
+            ScrollHelper.ApplyAdjust(langScrollViewer, e);
         }
 
         private void SubTrackComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -236,35 +236,12 @@ namespace LVP_WPF
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             scrollViewerOffset = e.VerticalOffset;
-            if (e.VerticalOffset == 0)
-            {
-                closeButton.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                closeButton.Visibility = Visibility.Hidden;
-            }
-
-            if (gui.scrollViewerAdjust)
-            {
-                gui.scrollViewerAdjust = false;
-                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
-                scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
-            }
+            closeButton.Visibility = e.VerticalOffset == 0 ? Visibility.Visible : Visibility.Hidden;
+            ScrollHelper.ApplyAdjust(scrollViewer, e);
         }
 
         private void MainWindow_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-        {
-            if (e.Delta > 0)
-            {
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset - 300);
-            }
-            else
-            {
-
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
-            }
-        }
+            => ScrollHelper.StepFromWheel(scrollViewer, scrollViewerOffset, e);
 
         private async void InactivityDetected(object sender, EventArgs e)
         {

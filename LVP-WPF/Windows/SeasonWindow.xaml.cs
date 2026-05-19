@@ -76,26 +76,11 @@ namespace LVP_WPF.Windows
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             scrollViewerOffset = e.VerticalOffset;
-            if (MainWindow.gui.scrollViewerAdjust)
-            {
-                MainWindow.gui.scrollViewerAdjust = false;
-                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
-                scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
-            }
+            ScrollHelper.ApplyAdjust(scrollViewer, e);
         }
 
         private void Window_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-        {
-            if (e.Delta > 0)
-            {
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset - 300);
-            }
-            else
-            {
-
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
-            }
-        }
+            => ScrollHelper.StepFromWheel(scrollViewer, scrollViewerOffset, e);
 
         private void SeasonListView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
