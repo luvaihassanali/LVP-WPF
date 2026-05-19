@@ -76,14 +76,7 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
-            if (!TcpSerialListener.layoutPoint.incomingSerialMsg)
-            {
-                TcpSerialListener.layoutPoint.CloseCurrWindow(false);
-            }
-            else
-            {
-                TcpSerialListener.layoutPoint.incomingSerialMsg = false;
-            }
+            TcpSerialListener.layoutPoint.NotifyWindowClosedFromUI();
         }
 
         private void MovieWindow_Loaded(object sender, RoutedEventArgs e)

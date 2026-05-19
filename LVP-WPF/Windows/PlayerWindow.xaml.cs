@@ -355,14 +355,7 @@ namespace LVP_WPF.Windows
         {
             closeButton.MouseLeave -= Control_MouseLeave;
             this.Close();
-            if (!TcpSerialListener.layoutPoint.incomingSerialMsg)
-            {
-                TcpSerialListener.layoutPoint.CloseCurrWindow(false);
-            }
-            else
-            {
-                TcpSerialListener.layoutPoint.incomingSerialMsg = false;
-            }
+            TcpSerialListener.layoutPoint.NotifyWindowClosedFromUI();
         }
 
         private void PlayButton_Click(object sender, RoutedEventArgs e)

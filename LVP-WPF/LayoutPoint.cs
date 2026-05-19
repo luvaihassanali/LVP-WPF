@@ -67,6 +67,26 @@ namespace LVP_WPF.Windows
         }
 
         public bool incomingSerialMsg = false;
+
+        /// <summary>
+        /// Called by a Window's close-button click handler AFTER the window
+        /// closed itself. If the close was initiated by the user clicking the
+        /// button (incomingSerialMsg == false), we still need to walk
+        /// LayoutPoint's state machine back one level. If instead the close
+        /// originated from a serial "return" command (which already called
+        /// CloseCurrWindow and set incomingSerialMsg), we just clear the flag.
+        /// </summary>
+        public void NotifyWindowClosedFromUI()
+        {
+            if (!incomingSerialMsg)
+            {
+                CloseCurrWindow(false);
+            }
+            else
+            {
+                incomingSerialMsg = false;
+            }
+        }
         public (int x, int y) currPoint = (0, 0);
         public (int x, int y) returnPointA = (0, 0);
         public (int x, int y) returnPointB = (0, 0);
