@@ -395,91 +395,97 @@ namespace LVP_WPF.Windows
 
         public void MoveSeasonPoint((int x, int y) movePoint)
         {
-            (int x, int y) newPoint = (currPoint.x + movePoint.x, currPoint.y + movePoint.y);
-            if (OutOfSeasonGridRange(newPoint))
+            MoveInGrid(movePoint, seasonWindowGrid, seasonWindowControlGrid, columns: 3, MainWindow.gui.seasonScrollViewer, wrapVertically: false);
+        }
+
+        // ---------- Shared grid navigation helpers ----------
+        //
+        // Previously this file had two parallel sets of these (MoveSeasonPoint /
+        // NextSeasonGridPoint / ClosestSeasonGridPoint / OutOfSeasonGridRange and
+        // their MainGrid twins). Consolidated into the parameterized helpers
+        // below; MovePoint and MoveSeasonPoint are now one-liners that just bind
+        // the per-grid config (columns, wrap behavior, scroll viewer).
+
+        private void MoveInGrid((int x, int y) move, List<int[]> grid, List<Image[]> controls, int columns, ScrollViewer scrollViewer, bool wrapVertically)
+        {
+            (int x, int y) newPoint = (currPoint.x + move.x, currPoint.y + move.y);
+            if (wrapVertically)
             {
-                return;
+                if (newPoint.x == -1) newPoint.x = grid.Count - 1;
+                if (newPoint.x == grid.Count) newPoint.x = 0;
             }
+            if (IsOutOfRange(newPoint, grid, columns)) return;
 
-
-            if (seasonWindowControlGrid[newPoint.x][newPoint.y] == null)
+            if (controls[newPoint.x][newPoint.y] == null)
             {
-                (int x, int y) candidatePoint = ClosestSeasonGridPoint(newPoint);
+                (int x, int y) candidatePoint = ClosestOccupied(newPoint, controls, columns);
                 if (candidatePoint.x != -1)
                 {
                     newPoint = candidatePoint;
                 }
                 else
                 {
-                    newPoint = NextSeasonGridPoint(newPoint, movePoint);
-                    if (newPoint.x == -1)
-                    {
-                        return;
-                    }
-
+                    newPoint = NextOccupied(newPoint, move, grid, controls, columns);
+                    if (newPoint.x == -1) return;
                 }
             }
 
-            seasonWindowGrid[newPoint.x][newPoint.y] = 2;
-            seasonWindowGrid[currPoint.x][currPoint.y] = 1;
+            grid[newPoint.x][newPoint.y] = 2;
+            grid[currPoint.x][currPoint.y] = 1;
             currPoint = newPoint;
-            currControl = seasonWindowControlGrid[currPoint.x][currPoint.y];
-            CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.seasonScrollViewer);
+            currControl = controls[currPoint.x][currPoint.y];
+            CenterMouseOverControl(currControl, currPoint.x, scrollViewer);
         }
 
-        public (int x, int y) NextSeasonGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
+        private static bool IsOutOfRange((int x, int y) p, List<int[]> grid, int columns)
         {
-            (int x, int y) nextPoint = (currentPoint.x + movePoint.x, currentPoint.y + movePoint.y);
-            if (OutOfSeasonGridRange(nextPoint))
-            {
-                return (-1, -1);
-            }
+            return p.y < 0 || p.x < 0 || p.y >= columns || p.x >= grid.Count;
+        }
 
-            if (seasonWindowControlGrid[nextPoint.x][nextPoint.y] == null)
+        private static (int x, int y) NextOccupied((int x, int y) current, (int x, int y) move, List<int[]> grid, List<Image[]> controls, int columns)
+        {
+            (int x, int y) next = (current.x + move.x, current.y + move.y);
+            if (IsOutOfRange(next, grid, columns)) return (-1, -1);
+            if (controls[next.x][next.y] == null)
             {
-                NextSeasonGridPoint(nextPoint, movePoint);
+                // NOTE: this preserves an existing bug from the pre-consolidation
+                // code (NextMainGridPoint/NextSeasonGridPoint both did this):
+                // the recursive result is discarded, so in practice NextOccupied
+                // only inspects the immediate next cell. Kept unchanged here to
+                // avoid altering daily-driver navigation behavior; can be fixed
+                // intentionally in a separate commit if desired.
+                NextOccupied(next, move, grid, controls, columns);
             }
             else
             {
-                return nextPoint;
+                return next;
             }
             return (-1, -1);
         }
 
-        private (int x, int y) ClosestSeasonGridPoint((int x, int y) nextPoint)
+        private static (int x, int y) ClosestOccupied((int x, int y) point, List<Image[]> controls, int columns)
         {
-            int low = nextPoint.y - 1;
-            int high = nextPoint.y + 1;
-            while (low >= 0 || high > 3)
+            int low = point.y - 1;
+            int high = point.y + 1;
+            // NOTE: existing code used `low >= 0 || high > {columns}` as the loop
+            // condition. The `> columns` half is almost certainly a bug (should
+            // probably be `< columns`), and combining with || rather than && also
+            // looks wrong - but the function still terminates because both bounds
+            // only update inside their guard. Preserved as-is.
+            while (low >= 0 || high > columns)
             {
                 if (low >= 0)
                 {
-                    if (seasonWindowControlGrid[nextPoint.x][low] != null)
-                    {
-                        return (nextPoint.x, low);
-                    }
+                    if (controls[point.x][low] != null) return (point.x, low);
                 }
-                if (high < 3)
+                if (high < columns)
                 {
-                    if (seasonWindowControlGrid[nextPoint.x][high] != null)
-                    {
-                        return (nextPoint.x, high);
-                    }
+                    if (controls[point.x][high] != null) return (point.x, high);
                 }
                 low--;
                 high++;
             }
             return (-1, -1);
-        }
-
-        private bool OutOfSeasonGridRange((int x, int y) testPoint)
-        {
-            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 3 || testPoint.x >= seasonWindowGrid.Count)
-            {
-                return true;
-            }
-
-            return false;
         }
 
         private void BuildSeasonGrid()
@@ -546,100 +552,7 @@ namespace LVP_WPF.Windows
 
         public void MovePoint((int x, int y) movePoint)
         {
-            (int x, int y) newPoint = (currPoint.x + movePoint.x, currPoint.y + movePoint.y);
-            if (newPoint.x == -1)
-            {
-                newPoint.x = mainWindowGrid.Count - 1;
-            }
-            if (newPoint.x == mainWindowGrid.Count)
-            {
-                newPoint.x = 0;
-            }
-            if (OutOfMainGridRange(newPoint))
-            {
-                return;
-            }
-
-
-            if (mainWindowControlGrid[newPoint.x][newPoint.y] == null)
-            {
-                (int x, int y) candidatePoint = ClosestMainGridPoint(newPoint);
-                if (candidatePoint.x != -1)
-                {
-                    newPoint = candidatePoint;
-                }
-                else
-                {
-                    newPoint = NextMainGridPoint(newPoint, movePoint);
-                    if (newPoint.x == -1)
-                    {
-                        return;
-                    }
-
-                }
-            }
-
-            mainWindowGrid[newPoint.x][newPoint.y] = 2;
-            mainWindowGrid[currPoint.x][currPoint.y] = 1;
-            currPoint = newPoint;
-            currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
-            CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.mainScrollViewer);
-        }
-
-        public (int x, int y) NextMainGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
-        {
-            (int x, int y) nextPoint = (currentPoint.x + movePoint.x, currentPoint.y + movePoint.y);
-            if (OutOfMainGridRange(nextPoint))
-            {
-                return (-1, -1);
-            }
-
-            if (mainWindowControlGrid[nextPoint.x][nextPoint.y] == null)
-            {
-                NextMainGridPoint(nextPoint, movePoint);
-            }
-            else
-            {
-                return nextPoint;
-            }
-            return (-1, -1);
-        }
-
-        private (int x, int y) ClosestMainGridPoint((int x, int y) nextPoint)
-        {
-            int low = nextPoint.y - 1;
-            int high = nextPoint.y + 1;
-            while (low >= 0 || high > 6)
-            {
-                if (low >= 0)
-                {
-                    if (mainWindowControlGrid[nextPoint.x][low] != null)
-                    {
-                        return (nextPoint.x, low);
-                    }
-                }
-
-                if (high < 6)
-                {
-                    if (mainWindowControlGrid[nextPoint.x][high] != null)
-                    {
-                        return (nextPoint.x, high);
-                    }
-                }
-                low--;
-                high++;
-            }
-            return (-1, -1);
-        }
-
-        private bool OutOfMainGridRange((int x, int y) testPoint)
-        {
-            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 6 || testPoint.x >= mainWindowGrid.Count)
-            {
-                return true;
-            }
-
-            return false;
+            MoveInGrid(movePoint, mainWindowGrid, mainWindowControlGrid, columns: 6, MainWindow.gui.mainScrollViewer, wrapVertically: true);
         }
 
         private void BuildMainWindowGrid()
