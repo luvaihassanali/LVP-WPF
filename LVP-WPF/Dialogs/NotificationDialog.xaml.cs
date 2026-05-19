@@ -40,7 +40,7 @@ namespace LVP_WPF
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            MediaLibrary.SaveData();
+            MainWindow.library?.SaveData();
         }
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)

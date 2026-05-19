@@ -18,6 +18,7 @@ namespace LVP_WPF
         static public MainModel model;
         static public GuiModel gui;
         static public TcpSerialListener tcpWorker;
+        static internal MediaLibrary library;
         static private bool mouseHubKilled;
         private InactivityTimer inactivityTimer;
         private double scrollViewerOffset = 0;
@@ -42,7 +43,8 @@ namespace LVP_WPF
 #endif
             });
 
-            await MediaLibrary.Initialize(progressBar, coffeeGif, logTxtBox);
+            library = new MediaLibrary(new MediaRepository("media.json"));
+            await library.Initialize(progressBar, coffeeGif, logTxtBox);
             if (model == null)
             {
                 return;
@@ -101,7 +103,7 @@ namespace LVP_WPF
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             inactivityTimer?.Dispose();
-            MediaLibrary.SaveData();
+            library?.SaveData();
             CursorManager.RestoreSystemCursor();
             tcpWorker?.StopThread();
             PlayerWindow.libVLC.Dispose();

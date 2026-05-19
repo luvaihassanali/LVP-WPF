@@ -22,13 +22,17 @@ namespace LVP_WPF
     /// translation, image loading, and string fixes have all been pulled
     /// out into separate services under Services/ and Util/.
     /// </summary>
-    internal static class MediaLibrary
+    internal sealed class MediaLibrary
     {
-        private static readonly MediaRepository _repository = new MediaRepository("media.json");
+        private readonly MediaRepository _repository;
+        private TextBox logTxtBox;
 
-        private static TextBox logTxtBox;
+        public MediaLibrary(MediaRepository repository)
+        {
+            _repository = repository;
+        }
 
-        internal static async Task Initialize(ProgressBar pb, MediaElement cf, TextBox tf)
+        internal async Task Initialize(ProgressBar pb, MediaElement cf, TextBox tf)
         {
             logTxtBox = tf;
             await Task.Run(async () =>
@@ -114,7 +118,7 @@ namespace LVP_WPF
             });
         }
 
-        internal static async Task BuildCache()
+        internal async Task BuildCache()
         {
             IHttpClientFactory factory = new ServiceCollection().AddHttpClient().BuildServiceProvider().GetRequiredService<IHttpClientFactory>();
             using HttpClient client = factory.CreateClient();
@@ -152,7 +156,7 @@ namespace LVP_WPF
             SaveData();
         }
 
-        internal static bool CheckForUpdates()
+        internal bool CheckForUpdates()
         {
             Log("Check for updates start...");
             MainModel? prevMedia = _repository.Load();
@@ -175,12 +179,12 @@ namespace LVP_WPF
             return result;
         }
 
-        internal static void SaveData()
+        internal void SaveData()
         {
             _repository.Save(MainWindow.model);
         }
 
-        private static void Log(string msg)
+        private void Log(string msg)
         {
 #if DEBUG
             Debug.WriteLine(msg);
