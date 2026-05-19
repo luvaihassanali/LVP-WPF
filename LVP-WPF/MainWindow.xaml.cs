@@ -113,13 +113,13 @@ namespace LVP_WPF
             {
                 string path = AppDomain.CurrentDomain.BaseDirectory;
 #if DEBUG
-                path = path.Replace("bin\\Debug\\net6.0-windows\\", "Utilities\\MouseHub\\MouseHub\\bin\\Debug\\MouseHub.exe");
+                // Dev build: walk over to the sibling MouseHub project's bin folder.
+                // The old substitution string had stale "net6.0-windows" (we're now
+                // on net10) and referenced a "Utilities\" folder that was renamed
+                // to "Hubs\" long ago - both fixed here.
+                path = path.Replace("bin\\Debug\\net10.0-windows\\", "Hubs\\MouseHub\\MouseHub\\bin\\Debug\\net10.0-windows\\MouseHub.exe");
 #else
-                path = $"{AppConfig.MouseHubPath}MouseHub.exe";
-                if (path.Contains("%USERPROFILE%"))
-                {
-                    path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
-                }
+                path = Environment.ExpandEnvironmentVariables($"{AppConfig.MouseHubPath}MouseHub.exe");
 #endif
                 Process.Start(path);
             }
