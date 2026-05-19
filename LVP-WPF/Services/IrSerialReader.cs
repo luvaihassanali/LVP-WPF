@@ -125,7 +125,7 @@ namespace LVP_WPF.Services
                 case "enter":
                     if (layoutPoint.playerWindowActive)
                     {
-                        _gui.playerWindow.TcpSerialListener_PlayPause();
+                        _gui.playerWindow.TogglePlayPause();
                     }
                     else if (layoutPoint.mainWindowActive)
                     {
@@ -146,19 +146,19 @@ namespace LVP_WPF.Services
                 case "play":
                 case "pause":
                 case "stop":
-                    _gui.playerWindow.TcpSerialListener_PlayPause();
+                    _gui.playerWindow.TogglePlayPause();
                     break;
                 case "fastforward":
-                    _gui.playerWindow.TcpSerialListener_Seek(false);
+                    _gui.playerWindow.SeekRelative(false);
                     break;
                 case "rewind":
-                    _gui.playerWindow.TcpSerialListener_Seek(true);
+                    _gui.playerWindow.SeekRelative(true);
                     break;
                 case "forward":
-                    _gui.playerWindow.TcpSerialListerner_BeginEnd(false);
+                    _gui.playerWindow.JumpToEdge(false);
                     break;
                 case "backward":
-                    _gui.playerWindow.TcpSerialListerner_BeginEnd(true);
+                    _gui.playerWindow.JumpToEdge(true);
                     break;
                 case "cartoons":
                     TcpSerialListener.StaThreadWrapper(() =>

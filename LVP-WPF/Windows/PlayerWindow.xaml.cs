@@ -440,7 +440,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        internal void TcpSerialListener_PlayPause()
+        internal void TogglePlayPause()
         {
             if (mediaPlayer != null)
             {
@@ -469,19 +469,11 @@ namespace LVP_WPF.Windows
             }
         }
 
-        internal void TcpSerialListener_Stop()
+        internal void JumpToEdge(bool toStart)
         {
             if (mediaPlayer != null)
             {
-                this.Dispatcher.Invoke(() => { this.Close(); });
-            }
-        }
-
-        internal void TcpSerialListerner_BeginEnd(bool begin)
-        {
-            if (mediaPlayer != null)
-            {
-                if (begin)
+                if (toStart)
                 {
                     mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(0));
                 }
@@ -492,7 +484,7 @@ namespace LVP_WPF.Windows
             }
         }
 
-        internal void TcpSerialListener_Seek(bool rewind)
+        internal void SeekRelative(bool rewind)
         {
             if (mediaPlayer != null)
             {
