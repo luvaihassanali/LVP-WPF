@@ -1,9 +1,7 @@
 ﻿using LVP_WPF.Services;
 using LVP_WPF.Windows;
-using Serilog;
 using System;
 using System.Configuration;
-using System.IO.Ports;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
@@ -32,11 +30,9 @@ namespace LVP_WPF
         private static Thread dispatcherThread;
         private static Dispatcher featureDispatcher;
 
-        private SerialPort serialPort;
-        public bool serialPortEnabled;
-        private int serialPortExCount = 20;
         private TcpClient tcpClient;
         private Thread workerThread;
+        private IrSerialReader serialReader;
 
         public TcpSerialListener(GuiModel g)
         {
@@ -48,7 +44,7 @@ namespace LVP_WPF
             esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
             esp8266ServerPort = Int32.Parse(ConfigurationManager.AppSettings["Esp8266Port"]);
             esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
-            serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
+            serialReader = new IrSerialReader(g);
             layoutPoint = new LayoutPoint(g);
             if (CursorConfig.HideCursor)
             {
@@ -58,9 +54,9 @@ namespace LVP_WPF
 
         public void StartThread()
         {
-            if (serialPortEnabled)
+            if (serialReader.Enabled)
             {
-                InitializeSerialPort();
+                serialReader.Initialize();
             }
             try
             {
@@ -106,7 +102,7 @@ namespace LVP_WPF
 
         private void StartListener()
         {
-            while (workerThreadRunning && (esp8266Enabled || serialPortEnabled))
+            while (workerThreadRunning && (esp8266Enabled || serialReader.Enabled))
             {
                 PollConnections();
             }
@@ -149,7 +145,7 @@ namespace LVP_WPF
                     }
                 }
                 ComInterop.CloseTeamViewerDialog();
-                CheckSerialConnection();
+                serialReader.CheckConnection();
             }
 
             pingSender.Dispose();
@@ -340,120 +336,6 @@ namespace LVP_WPF
             ComInterop.mouse_event(ComInterop.MOUSEEVENTF_RIGHTDOWN | ComInterop.MOUSEEVENTF_RIGHTUP, X, Y, 0, 0);
         }
 
-        public void InitializeSerialPort()
-        {
-            string portNumber = ConfigurationManager.AppSettings["SerialPort"];
-            serialPort = new SerialPort
-            {
-                PortName = $"COM{portNumber}",
-                BaudRate = 9600,
-                DataBits = 8,
-                Parity = Parity.None,
-                StopBits = StopBits.One,
-                Handshake = Handshake.None
-            };
-            serialPort.DataReceived += SerialPort_DataReceived;
-            if (serialPortEnabled)
-            {
-                try
-                {
-                    serialPort.Open();
-                    Log.Information("Serial port connected");
-                }
-                catch
-                {
-                    serialPortExCount--;
-                    if (serialPortExCount < 0)
-                    {
-                        serialPortEnabled = false;
-                    }
-                    Log.Warning("No device connected to serial port");
-                }
-            }
-        }
-
-        private void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
-        {
-            SerialPort serialPort = (SerialPort)sender;
-            if (e.EventType == SerialData.Chars)
-            {
-                string msg = serialPort.ReadLine();
-                msg = msg.Replace("\r", "");
-                Log.Information(msg);
-                if (CursorConfig.HideCursor)
-                {
-                    Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
-                }
-                switch (msg)
-                {
-                    case "left":
-                        layoutPoint.Move(layoutPoint.left);
-                        break;
-                    case "right":
-                        layoutPoint.Move(layoutPoint.right);
-                        break;
-                    case "up":
-                        layoutPoint.Move(layoutPoint.up);
-                        break;
-                    case "down":
-                        layoutPoint.Move(layoutPoint.down);
-                        break;
-                    case "enter":
-                        if (layoutPoint.playerWindowActive)
-                        {
-                            gui.playerWindow.TcpSerialListener_PlayPause();
-                        }
-                        else if (layoutPoint.mainWindowActive)
-                        {
-                            DoMouseClick();
-                        }
-                        else
-                        {
-                            DoMouseClick();
-                            if (!layoutPoint.seasonWindowActive)
-                            {
-                                layoutPoint.Select(String.Empty);
-                            }
-                        }
-                        break;
-                    case "return":
-                        layoutPoint.CloseCurrWindow();
-                        break;
-                    case "play":
-                    case "pause":
-                        gui.playerWindow.TcpSerialListener_PlayPause();
-                        break;
-                    case "stop":
-                        gui.playerWindow.TcpSerialListener_PlayPause();
-                        break;
-                    case "fastforward":
-                        gui.playerWindow.TcpSerialListener_Seek(false);
-                        break;
-                    case "rewind":
-                        gui.playerWindow.TcpSerialListener_Seek(true);
-                        break;
-                    case "forward":
-                        gui.playerWindow.TcpSerialListerner_BeginEnd(false);
-                        break;
-                    case "backward":
-                        gui.playerWindow.TcpSerialListerner_BeginEnd(true);
-                        break;
-                    case "cartoons":
-                        StaThreadWrapper(() =>
-                        {
-                            TvShowWindow.PlayRandomCartoons();
-                        });
-                        break;
-                    case "history-play":
-                        StaThreadWrapper(() =>
-                        {
-                            TvShowWindow.PlayHistoryList();
-                        });
-                        break;
-                }
-            }
-        }
-
         /// <summary>
         /// Spins up an STA thread that runs <paramref name="action"/> and then
         /// pumps a WPF Dispatcher (so the action can own modal windows like
@@ -491,33 +373,6 @@ namespace LVP_WPF
             dispatcherThread.Join();
             dispatcherThread = null;
             featureDispatcher = null;
-        }
-
-        private void CheckSerialConnection()
-        {
-            if (serialPortEnabled)
-            {
-                if (serialPort != null)
-                {
-                    if (!serialPort.IsOpen)
-                    {
-                        try
-                        {
-                            serialPort.Open();
-                            Log.Information("Serial port connected");
-                        }
-                        catch
-                        {
-                            serialPortExCount--;
-                            if (serialPortExCount < 0)
-                            {
-                                serialPortEnabled = false;
-                            }
-                            //Log.Information("No device connected");
-                        }
-                    }
-                }
-            }
         }
 
         private void StartTimer()
