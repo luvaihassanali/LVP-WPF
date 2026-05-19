@@ -565,25 +565,7 @@ namespace LVP_WPF.Windows
             }
 
             Log.Information("Switching language for {TvShowName} to {Lang}", tvShow.Name, lang);
-            string currName = tvShow.Name;
-            tvShow.Name = tvShow.MultiLangName[index];
-            tvShow.MultiLangName[index] = currName;
-
-            string currOverview = tvShow.Overview;
-            tvShow.Overview = tvShow.MultiLangOverview[index];
-            tvShow.MultiLangOverview[index] = currOverview;
-
-            int currSeasonIdx = tvShow.CurrSeason;
-            tvShow.CurrSeason = tvShow.MultiLangCurrSeason[index];
-            tvShow.MultiLangCurrSeason[index] = currSeasonIdx;
-
-            Episode currLastWatched = tvShow.LastEpisode;
-            tvShow.LastEpisode = tvShow.MultiLangLastWatched[index];
-            tvShow.MultiLangLastWatched[index] = currLastWatched;
-
-            Season[] currSeason = tvShow.Seasons;
-            tvShow.Seasons = tvShow.MultiLangSeasons[index];
-            tvShow.MultiLangSeasons[index] = currSeason;
+            tvShow.SwapWithLanguageIndex(index);
         }
 
         private async void LangComboBox_MouseDown(object sender, MouseButtonEventArgs e)

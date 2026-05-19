@@ -324,6 +324,22 @@ namespace LVP_WPF
         }
 
         /// <summary>
+        /// Swap the top-level language-dependent fields (Name/Overview/CurrSeason/
+        /// LastEpisode/Seasons) with the entries at MultiLang*[<paramref name="index"/>].
+        /// Used by TvShowWindow when the user switches the language dropdown:
+        /// what was "current" goes into the multilang slot, what was in that
+        /// slot becomes "current."
+        /// </summary>
+        internal void SwapWithLanguageIndex(int index)
+        {
+            (Name, MultiLangName[index]) = (MultiLangName[index], Name);
+            (Overview, MultiLangOverview[index]) = (MultiLangOverview[index], Overview);
+            (CurrSeason, MultiLangCurrSeason[index]) = (MultiLangCurrSeason[index], CurrSeason);
+            (LastEpisode, MultiLangLastWatched[index]) = (MultiLangLastWatched[index], LastEpisode);
+            (Seasons, MultiLangSeasons[index]) = (MultiLangSeasons[index], Seasons);
+        }
+
+        /// <summary>
         /// Copy the multi-language metadata lists (names, overviews, last-watched
         /// pointers per language). MultiLangSeasons themselves are handled
         /// separately via IngestSeasonsByIndex per language.
