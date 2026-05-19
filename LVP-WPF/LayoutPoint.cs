@@ -701,46 +701,49 @@ namespace LVP_WPF.Windows
             }
         }
 
+        /// <summary>
+        /// Move the cursor to the center of <paramref name="control"/>.
+        /// Three flavors:
+        ///   - ComboBoxItem: scrolls the combo dropdown into view, with an
+        ///     async delay because the popup needs a tick to lay out.
+        ///   - Image: scrolls the main/season/tv grid into view if a scrollViewer
+        ///     is supplied, then centers.
+        ///   - Anything else (Button, Label, ToggleButton, ComboBox, ...):
+        ///     plain center-on-screen via CenterMouseOverElement.
+        /// </summary>
         private void CenterMouseOverControl(object control, int row = -1, ScrollViewer scrollViewer = null)
         {
             try
             {
-                if (control as ComboBoxItem != null)
+                switch (control)
                 {
-                    ComboBoxItem comboBoxItem = (ComboBoxItem)control;
-                    CenterMouseOverComboBoxItem(comboBoxItem, row, scrollViewer);
-                }
-                if (control as ComboBox != null)
-                {
-                    ComboBox comboBox = (ComboBox)control;
-                    CenterMouseOverComboBox(comboBox);
-                }
-                if (control as Button != null)
-                {
-                    Button button = (Button)control;
-                    CenterMouseOverButton(button);
-                }
-                if (control as Image != null)
-                {
-                    Image image = (Image)control;
-                    CenterMouseOverImage(image, row, scrollViewer);
-                }
-                if (control as ToggleButton != null)
-                {
-                    ToggleButton tb = (ToggleButton)control;
-                    CenterMouseOverToggleButton(tb);
-                }
-
-                if (control as Label != null)
-                {
-                    Label l = (Label)control;
-                    CenterMouseOverLabel(l);
+                    case ComboBoxItem cbi:
+                        CenterMouseOverComboBoxItem(cbi, row, scrollViewer);
+                        break;
+                    case Image img:
+                        CenterMouseOverImage(img, row, scrollViewer);
+                        break;
+                    case FrameworkElement fe:
+                        CenterMouseOverElement(fe);
+                        break;
                 }
             }
             catch (Exception ex)
             {
                 Log.Error(ex.Message);
             }
+        }
+
+        /// <summary>Plain "warp cursor to the visual center of this element."</summary>
+        private static void CenterMouseOverElement(FrameworkElement element)
+        {
+            element.Dispatcher.Invoke(() =>
+            {
+                Point target = element.PointToScreen(new Point(0, 0));
+                target.X += element.ActualWidth / 2;
+                target.Y += element.ActualHeight / 2;
+                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
+            });
         }
 
         private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null)
@@ -770,52 +773,6 @@ namespace LVP_WPF.Windows
                 Point target = image.PointToScreen(new Point(0, 0));
                 target.X += image.ActualWidth / 2;
                 target.Y += image.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
-        }
-
-        private static void CenterMouseOverButton(Button button)
-        {
-            button.Dispatcher.Invoke(() =>
-            {
-                Point target = button.PointToScreen(new Point(0, 0));
-                target.X += button.ActualWidth / 2;
-                target.Y += button.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
-        }
-
-
-        private static void CenterMouseOverLabel(Label l)
-        {
-            l.Dispatcher.Invoke(() =>
-            {
-                Point target = l.PointToScreen(new Point(0, 0));
-                target.X += l.ActualWidth / 2;
-                target.Y += l.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
-        }
-
-
-        private static void CenterMouseOverToggleButton(ToggleButton tb)
-        {
-            tb.Dispatcher.Invoke(() =>
-            {
-                Point target = tb.PointToScreen(new Point(0, 0));
-                target.X += tb.ActualWidth / 2;
-                target.Y += tb.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
-        }
-
-        private static void CenterMouseOverComboBox(ComboBox comboBox)
-        {
-            comboBox.Dispatcher.Invoke(() =>
-            {
-                Point target = comboBox.PointToScreen(new Point(0, 0));
-                target.X += comboBox.ActualWidth / 2;
-                target.Y += comboBox.ActualHeight / 2;
                 ComInterop.SetCursorPos((int)target.X, (int)target.Y);
             });
         }
