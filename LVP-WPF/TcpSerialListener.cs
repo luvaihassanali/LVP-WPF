@@ -19,8 +19,6 @@ namespace LVP_WPF
         private string esp8266ServerIp;
         private int esp8266ServerPort;
         private bool esp8266Enabled;
-        private int joystickX;
-        private int joystickY;
         private bool workerThreadRunning;
 
         internal GuiModel gui;
@@ -256,65 +254,55 @@ namespace LVP_WPF
                 Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
             }
 
-            string[] dataSplit = data.Split(',');
-            if (dataSplit.Length > 6)
+            JoystickReading? reading = JoystickReading.TryParse(data);
+            if (reading == null)
             {
                 DebugLog($"Error. Message incorrect format: {data}");
                 return;
             }
+            JoystickReading r = reading.Value;
 
-            joystickX = Int32.Parse(dataSplit[0]);
-            joystickY = Int32.Parse(dataSplit[1]);
-            int joystickBtnState = Int32.Parse(dataSplit[2]);
-            int scrollBtnState = Int32.Parse(dataSplit[4].Replace("\r\n", ""));
-            int clickBtnState = Int32.Parse(dataSplit[3].Replace("\r\n", ""));
-
-            if (scrollBtnState == 0 && clickBtnState == 0)
+            // Easter egg: holding scroll + click at the same time pops Task Manager.
+            if (r.ScrollButton && r.ClickButton)
             {
                 System.Diagnostics.Process.Start("taskmgr.exe");
             }
 
-            if (joystickBtnState == 0 || clickBtnState == 0)
+            if (r.JoystickButton || r.ClickButton)
             {
                 DoMouseClick();
                 return;
             }
 
-            if (scrollBtnState == 0)
+            if (r.ScrollButton)
             {
-                joystickY = joystickY * 4;
-                ComInterop.mouse_event(ComInterop.MOUSEEVENTF_WHEEL, 0, 0, (uint)joystickY, 0);
+                // Mouse-wheel mode: send vertical scroll, magnitude scaled up 4x.
+                ComInterop.mouse_event(ComInterop.MOUSEEVENTF_WHEEL, 0, 0, (uint)(r.Y * 4), 0);
             }
             else
             {
-                DoMouseMove();
+                DoMouseMove(r.X, r.Y);
             }
         }
 
-        async void DoMouseMove()
+        // The joystick reports magnitude as an analog value; we divide it
+        // down to a per-tick pixel delta. Larger divisor = slower cursor:
+        // tiny deflections (|x| < 150) get the slowest, mid deflections
+        // get medium, and full-deflection runs at the highest speed.
+        async void DoMouseMove(int x, int y)
         {
-            //joystickX = -joystickX;
-            joystickY = -joystickY;
-            int divisor = 20;
-            if ((joystickX > 0 && joystickX < 150) || (joystickX < 0 && joystickX > -150))
-            {
-                divisor = 60;
-            }
-            else if ((joystickX > 150 && joystickX < 400) || (joystickX < -150 && joystickX > -400))
-            {
-                divisor = 40;
-            }
+            y = -y;
+            int absX = Math.Abs(x);
+            int divisor = absX < 150 ? 60
+                        : absX < 400 ? 40
+                        : 20;
 
             for (int i = 0; i < 15; i++)
             {
-                ComInterop.POINT currPos;
-                ComInterop.GetCursorPos(out currPos);
-                uint X = (uint)currPos.X;
-                uint Y = (uint)currPos.Y;
-                ComInterop.SetCursorPos((int)currPos.X + joystickX / divisor, (int)currPos.Y + joystickY / divisor);
+                ComInterop.GetCursorPos(out ComInterop.POINT currPos);
+                ComInterop.SetCursorPos(currPos.X + x / divisor, currPos.Y + y / divisor);
                 await Task.Delay(1);
             }
-
         }
 
         static public void DoMouseClick()
