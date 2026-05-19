@@ -4,7 +4,6 @@ using LVP_WPF.Util;
 using LVP_WPF.Windows;
 using Serilog;
 using System;
-using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -27,7 +26,7 @@ namespace LVP_WPF
         public MainWindow()
         {
             InitializeComponent();
-            CursorConfig.Initialize();
+            AppConfig.Initialize();
             gui = new GuiModel();
             DataContext = gui;
 #if DEBUG
@@ -82,7 +81,7 @@ namespace LVP_WPF
             PlayerWindow.InitiaizeLibVlcCore();
             MainWindow_Fade(1.0);
             loadGrid.Visibility = Visibility.Hidden;
-            if (bool.Parse(ConfigurationManager.AppSettings["Snow"]))
+            if (AppConfig.ShowSnow)
             {
                 snow.Visibility = Visibility.Visible;
             }
@@ -116,7 +115,7 @@ namespace LVP_WPF
 #if DEBUG
                 path = path.Replace("bin\\Debug\\net6.0-windows\\", "Utilities\\MouseHub\\MouseHub\\bin\\Debug\\MouseHub.exe");
 #else
-                path = $"{ConfigurationManager.AppSettings["MouseHubPath"]}MouseHub.exe";
+                path = $"{AppConfig.MouseHubPath}MouseHub.exe";
                 if (path.Contains("%USERPROFILE%"))
                 {
                     path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
@@ -128,13 +127,11 @@ namespace LVP_WPF
 
         internal async Task AssignControlContext()
         {
-            string cartoonExceptionStr = ConfigurationManager.AppSettings["CartoonExceptions"];
-            string[] cartoonExceptions = cartoonExceptionStr.Split(";");
             TimeSpan delay = new TimeSpan(1);
 
             for (int i = 0; i < model.TvShows.Length; i++)
             {
-                if (model.TvShows[i].Cartoon && cartoonExceptions.Contains(model.TvShows[i].Name))
+                if (model.TvShows[i].Cartoon && AppConfig.CartoonExceptions.Contains(model.TvShows[i].Name))
                 {
                     model.TvShows[i].Cartoon = false;
                 }

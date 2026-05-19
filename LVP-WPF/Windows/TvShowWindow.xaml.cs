@@ -7,7 +7,6 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Configuration;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -603,7 +602,7 @@ namespace LVP_WPF.Windows
             cartoonShuffleList.Clear();
             cartoonShuffle = true;
             TcpSerialListener.layoutPoint.playerWindowActive = true;
-            cartoonLimit = Int32.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
+            cartoonLimit = AppConfig.CartoonLimit;
             for (int i = 0; i < cartoonLimit; i++)
             {
                 Episode e = GetRandomEpisode();

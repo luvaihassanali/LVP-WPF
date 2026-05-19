@@ -1,7 +1,6 @@
 using LVP_WPF.Windows;
 using Serilog;
 using System;
-using System.Configuration;
 using System.IO.Ports;
 using System.Windows;
 using System.Windows.Input;
@@ -30,7 +29,7 @@ namespace LVP_WPF.Services
         public IrSerialReader(GuiModel gui)
         {
             _gui = gui;
-            Enabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
+            Enabled = AppConfig.SerialPortEnabled;
         }
 
         /// <summary>
@@ -40,10 +39,9 @@ namespace LVP_WPF.Services
         /// </summary>
         public void Initialize()
         {
-            string portNumber = ConfigurationManager.AppSettings["SerialPort"];
             _serialPort = new SerialPort
             {
-                PortName = $"COM{portNumber}",
+                PortName = $"COM{AppConfig.SerialPort}",
                 BaudRate = 9600,
                 DataBits = 8,
                 Parity = Parity.None,

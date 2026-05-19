@@ -1,7 +1,6 @@
 ﻿using LVP_WPF.Services;
 using LVP_WPF.Windows;
 using System;
-using System.Configuration;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
@@ -41,9 +40,9 @@ namespace LVP_WPF
             gui = g;
             connectionEstablished = false;
             workerThreadRunning = false;
-            esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
-            esp8266ServerPort = Int32.Parse(ConfigurationManager.AppSettings["Esp8266Port"]);
-            esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
+            esp8266ServerIp = AppConfig.Esp8266Ip;
+            esp8266ServerPort = AppConfig.Esp8266Port;
+            esp8266Enabled = AppConfig.Esp8266Enabled;
             serialReader = new IrSerialReader(g);
             layoutPoint = new LayoutPoint(g);
             if (CursorConfig.HideCursor)

@@ -1,7 +1,6 @@
 ﻿using LVP_WPF.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
@@ -36,10 +35,7 @@ namespace LVP_WPF
             _progress = progress;
             await Task.Run(async () =>
             {
-                string[] drives = ConfigurationManager.AppSettings["Drives"].Split(';');
-                string[] langKeys = ConfigurationManager.AppSettings["Languages"].Split(";");
-
-                LibraryRoot[] roots = drives.Select(d =>
+                LibraryRoot[] roots = AppConfig.Drives.Select(d =>
                 {
 #if DEBUG
                     return new LibraryRoot($"{d}\\media\\tv", $"{d}\\media\\movie");
@@ -48,7 +44,7 @@ namespace LVP_WPF
 #endif
                 }).ToArray();
 
-                LibraryScanner scanner = new LibraryScanner(langKeys);
+                LibraryScanner scanner = new LibraryScanner(AppConfig.Languages);
                 ScanResult scanResult = scanner.Scan(roots);
 
                 foreach (string warning in scanResult.Warnings)
@@ -118,13 +114,12 @@ namespace LVP_WPF
             using HttpClient client = factory.CreateClient();
             client.Timeout = TimeSpan.FromMinutes(1);
 
-            string apiKey = ConfigurationManager.AppSettings["TmdbApiKey"];
             string cacheRoot = $"{AppDomain.CurrentDomain.BaseDirectory}cache";
-            TmdbClient tmdb = new TmdbClient(apiKey, client, cacheRoot, Log);
+            TmdbClient tmdb = new TmdbClient(AppConfig.TmdbApiKey, client, cacheRoot, Log);
 
             IUserPrompts prompts = new WpfUserPrompts();
 
-            string translatorPath = $"{ConfigurationManager.AppSettings["LibreTranslatePath"]}libretranslate.exe";
+            string translatorPath = $"{AppConfig.LibreTranslatePath}libretranslate.exe";
             using Translator translator = new Translator(translatorPath, client, prompts);
 
             MediaEnricher enricher = new MediaEnricher(

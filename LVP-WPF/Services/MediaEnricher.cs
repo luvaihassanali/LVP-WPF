@@ -1,7 +1,6 @@
 using LVP_WPF.Util;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -176,11 +175,9 @@ namespace LVP_WPF.Services
             tvShow.RunningTime = runtime.Length != 0 ? runtime[0] : -1;
 
             JToken? genres = tvObject["genres"];
-            string cartoonExceptionStr = ConfigurationManager.AppSettings["CartoonExceptions"];
-            string[] cartoonExceptions = cartoonExceptionStr.Split(";");
             foreach (JToken? genre in genres)
             {
-                if ((int)genre["id"] == 16 && !cartoonExceptions.Contains(tvShow.Name))
+                if ((int)genre["id"] == 16 && !AppConfig.CartoonExceptions.Contains(tvShow.Name))
                 {
                     tvShow.Cartoon = true;
                 }
