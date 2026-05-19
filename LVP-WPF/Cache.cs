@@ -177,20 +177,4 @@ namespace LVP_WPF
             });
         }
     }
-
-    public static class StringExtension
-    {
-        private const string targetSingleQuoteSymbol = "'";
-        private const string genericSingleQuoteSymbol = "â€™";
-        private const string openSingleQuoteSymbol = "â€˜";
-        private const string closeSingleQuoteSymbol = "â€™";
-        private const string frenchAccentAigu = "Ã©";
-        private const string frenchAccentGrave = "Ã";
-
-        public static string FixBrokenQuotes(this string str)
-        {
-            return str.Replace(genericSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(openSingleQuoteSymbol, targetSingleQuoteSymbol)
-                .Replace(closeSingleQuoteSymbol, targetSingleQuoteSymbol).Replace(frenchAccentAigu, "e").Replace(frenchAccentGrave, "a").Replace("%", "percent").Replace("  ", " ");
-        }
-    }
 }
