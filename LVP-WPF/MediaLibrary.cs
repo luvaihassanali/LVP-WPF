@@ -7,7 +7,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace LVP_WPF
 {
@@ -25,16 +24,16 @@ namespace LVP_WPF
     internal sealed class MediaLibrary
     {
         private readonly MediaRepository _repository;
-        private TextBox logTxtBox;
+        private ILoadProgress _progress;
 
         public MediaLibrary(MediaRepository repository)
         {
             _repository = repository;
         }
 
-        internal async Task Initialize(ProgressBar pb, MediaElement cf, TextBox tf)
+        internal async Task Initialize(ILoadProgress progress)
         {
-            logTxtBox = tf;
+            _progress = progress;
             await Task.Run(async () =>
             {
                 string[] drives = ConfigurationManager.AppSettings["Drives"].Split(';');
@@ -76,12 +75,7 @@ namespace LVP_WPF
                 if (needsRebuild)
                 {
                     //To-do MultiLang: Detect file extension changes and episode deletions
-                    Application.Current.Dispatcher.Invoke(delegate
-                    {
-                        pb.Visibility = Visibility.Visible;
-                        cf.Visibility = Visibility.Visible;
-                        tf.Visibility = Visibility.Visible;
-                    });
+                    _progress.ShowRebuildIndicators();
                     MainWindow.gui.ProgressBarMax = scanResult.MediaCount;
                     await BuildCache();
                 }
@@ -189,13 +183,7 @@ namespace LVP_WPF
 #if DEBUG
             Debug.WriteLine(msg);
 #endif
-            logTxtBox.Dispatcher.Invoke(delegate
-            {
-                logTxtBox.Text += MainWindow.gui.ProgressBarValue != 1 ?  $"[{MainWindow.gui.ProgressBarValue}/{MainWindow.gui.ProgressBarMax}] {msg}\n" : $"{msg}\n";
-                logTxtBox.Focus();
-                logTxtBox.CaretIndex = logTxtBox.Text.Length;
-                logTxtBox.ScrollToEnd();
-            });
+            _progress.AppendLog(msg);
         }
     }
 }

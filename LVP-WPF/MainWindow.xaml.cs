@@ -45,7 +45,7 @@ namespace LVP_WPF
             });
 
             library = new MediaLibrary(new MediaRepository("media.json"));
-            await library.Initialize(progressBar, coffeeGif, logTxtBox);
+            await library.Initialize(new WpfLoadProgress(progressBar, coffeeGif, logTxtBox));
             if (model == null)
             {
                 return;
