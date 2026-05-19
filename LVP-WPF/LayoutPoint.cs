@@ -18,7 +18,7 @@ namespace LVP_WPF.Windows
         public bool tvShowWindowActive = false;
         public bool seasonWindowActive = false;
         public bool playerWindowActive = false;
-        public bool lanuageDropdownActive = false;
+        public bool languageDropdownActive = false;
         public bool incomingSerialMsg = false;
         public (int x, int y) currPoint = (0, 0);
         public (int x, int y) returnPointA = (0, 0);
@@ -63,7 +63,7 @@ namespace LVP_WPF.Windows
                 return;
             }
 
-            if (lanuageDropdownActive)
+            if (languageDropdownActive)
             {
                 MoveLangPoint(pos.x);
             }
@@ -149,10 +149,10 @@ namespace LVP_WPF.Windows
         private void SelectLangDropdown()
         {
             Task.Delay(200).Wait();
-            if (!lanuageDropdownActive)
+            if (!languageDropdownActive)
             {
                 returnPointB = currPoint;
-                lanuageDropdownActive = true;
+                languageDropdownActive = true;
                 currPoint = (langIndex, -1);
                 currControl = langComboBoxItems[currPoint.x];
                 CenterMouseOverComboBoxItem(langComboBoxItemPts[currPoint.x], (ComboBoxItem)currControl);
@@ -160,7 +160,7 @@ namespace LVP_WPF.Windows
             else
             {
                 langIndex = currPoint.x;
-                lanuageDropdownActive = false;
+                languageDropdownActive = false;
                 currPoint = returnPointB;
                 if (tvShowWindowActive)
                 {
@@ -205,7 +205,7 @@ namespace LVP_WPF.Windows
 
         internal void CloseCurrWindow(bool click = true)
         {
-            if (seasonWindowActive || lanuageDropdownActive)
+            if (seasonWindowActive || languageDropdownActive)
             {
                 return;
             }
