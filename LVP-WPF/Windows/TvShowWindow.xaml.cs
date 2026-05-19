@@ -299,23 +299,7 @@ namespace LVP_WPF.Windows
         }
 
         private void TvShowWindow_Fade(double direction)
-        {
-            DoubleAnimation da = new DoubleAnimation();
-            if (direction == 0.1)
-            {
-                da.From = 1.0;
-                da.To = 0.1;
-            }
-            else
-            {
-                da.From = 0.1;
-                da.To = 1.0;
-            }
-            da.Duration = new Duration(TimeSpan.FromMilliseconds(250));
-            da.AutoReverse = false;
-            da.RepeatBehavior = new RepeatBehavior(1);
-            mainGrid.BeginAnimation(OpacityProperty, da);
-        }
+            => FadeHelper.Fade(mainGrid, fadeOut: direction == 0.1);
 
         internal void UpdateTvWindowSeasonChange(int seasonIndex)
         {
