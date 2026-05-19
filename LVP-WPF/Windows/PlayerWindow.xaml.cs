@@ -148,25 +148,7 @@ namespace LVP_WPF.Windows
                 {
                     Episode episode = (Episode)currMedia;
                     TvShow tvShow = TvShowWindow.tvShow;
-                    int seasonIndex = 0;
-                    bool found = false;
-                    for (int i = 0; i < tvShow.Seasons.Length; i++)
-                    {
-                        Season season = tvShow.Seasons[i];
-                        for (int j = 0; j < season.Episodes.Length; j++)
-                        {
-                            if (episode.Name.Equals(season.Episodes[j].Name))
-                            {
-                                seasonIndex = season.Id;
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (found)
-                        {
-                            break;
-                        }
-                    }
+                    int? seasonId = tvShow.FindSeasonIdOf(episode);
 
                     long endTime = mediaPlayer.Time;
                     if (endTime > episode.Length)
@@ -174,16 +156,12 @@ namespace LVP_WPF.Windows
                         endTime = episode.Length;
                     }
 
-                    if (endTime > 0)
+                    if (endTime > 0 && seasonId.HasValue)
                     {
-                        if (seasonIndex == -1)
+                        episode.SavedTime = endTime;
+                        if (seasonId.Value != -1)  // -1 means the Extras pseudo-season; don't promote that to LastEpisode
                         {
-                            episode.SavedTime = endTime;
-                        }
-                        else
-                        {
-                            episode.SavedTime = endTime;
-                            tvShow.CurrSeason = seasonIndex;
+                            tvShow.CurrSeason = seasonId.Value;
                             tvShow.LastEpisode = episode;
                         }
                     }
@@ -262,7 +240,6 @@ namespace LVP_WPF.Windows
 
             if (currMedia as Episode != null)
             {
-
                 Episode episode = (Episode)currMedia;
                 if (episode.Id < 0)
                 {
@@ -275,50 +252,30 @@ namespace LVP_WPF.Windows
                 UpdateProgressBar(episode);
 
                 TvShow tvShow = TvShowWindow.tvShow;
-                for (int i = 0; i < tvShow.Seasons.Length; i++)
+                Episode? nextEpisode = tvShow.GetNextEpisode(episode, out bool seasonChanged);
+                if (nextEpisode == null)
                 {
-                    Season season = tvShow.Seasons[i];
-                    for (int j = 0; j < season.Episodes.Length; j++)
-                    {
-                        if (episode.Name.Equals(season.Episodes[j].Name))
-                        {
-                            if (j == season.Episodes.Length - 1)
-                            {
-                                // if last season (check for extras)
-                                if (i == tvShow.Seasons.Length - 2 && tvShow.Seasons[tvShow.Seasons.Length - 1].Id == -1 || i == tvShow.Seasons.Length - 1)
-                                {
-                                    skipClosing = true;
-                                    TcpSerialListener.layoutPoint.CloseCurrWindow();
-                                    return;
-                                }
-                                else
-                                {
-                                    Log.Information("{TvShowName} season change from {Count1} to {Count2}", tvShow.Name, i, i + 1);
-                                    season = tvShow.Seasons[i + 1];
-                                    tvShow.CurrSeason = season.Id;
-                                    currMedia = season.Episodes[0];
-                                    LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                    Log.Information("Play: {Media}", currMedia.Path);
-                                    ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                    tvShowWindow.Dispatcher.BeginInvoke(() =>
-                                    {
-                                        tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
-                                    });
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                currMedia = season.Episodes[j + 1];
-                                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                Log.Information("Play: {Media}", currMedia.Path);
-                                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                return;
-                            }
-                        }
-                    }
+                    // End of show (current was last episode of last non-Extras season).
+                    skipClosing = true;
+                    TcpSerialListener.layoutPoint.CloseCurrWindow();
+                    return;
                 }
 
+                if (seasonChanged)
+                {
+                    int newSeasonId = tvShow.FindSeasonIdOf(nextEpisode) ?? tvShow.CurrSeason;
+                    Log.Information("{TvShowName} season change to {NewSeason}", tvShow.Name, newSeasonId);
+                    tvShow.CurrSeason = newSeasonId;
+                    tvShowWindow.Dispatcher.BeginInvoke(() =>
+                    {
+                        tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
+                    });
+                }
+
+                currMedia = nextEpisode;
+                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
+                Log.Information("Play: {Media}", currMedia.Path);
+                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
             }
             else //if Movie
             {

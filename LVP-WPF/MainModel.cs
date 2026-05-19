@@ -248,6 +248,64 @@ namespace LVP_WPF
         public List<Episode>? MultiLangLastWatched { get; set; }
 
         /// <summary>
+        /// Locate the episode within this show's seasons. Returns the Id of
+        /// the containing season (1..N for regular seasons, -1 for the
+        /// Extras pseudo-season), or null if the episode isn't found.
+        /// Matches episodes by Name.
+        /// </summary>
+        internal int? FindSeasonIdOf(Episode episode)
+        {
+            for (int i = 0; i < Seasons.Length; i++)
+            {
+                Season season = Seasons[i];
+                for (int j = 0; j < season.Episodes.Length; j++)
+                {
+                    if (episode.Name.Equals(season.Episodes[j].Name))
+                    {
+                        return season.Id;
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Pick the next episode to play after <paramref name="current"/>.
+        /// Walks forward within the current season; if at the end of the
+        /// season, advances to the first episode of the next season.
+        /// Returns null when there's nothing left (already on the last
+        /// regular season, or only Extras remain).
+        /// </summary>
+        internal Episode? GetNextEpisode(Episode current, out bool seasonChanged)
+        {
+            seasonChanged = false;
+            for (int i = 0; i < Seasons.Length; i++)
+            {
+                Season season = Seasons[i];
+                for (int j = 0; j < season.Episodes.Length; j++)
+                {
+                    if (!current.Name.Equals(season.Episodes[j].Name)) continue;
+
+                    if (j < season.Episodes.Length - 1)
+                    {
+                        // Still within this season - just step forward.
+                        return season.Episodes[j + 1];
+                    }
+
+                    // End of this season. Bail if we're already on the
+                    // last regular season (or only Extras would follow).
+                    int nextSeasonIdx = i + 1;
+                    if (nextSeasonIdx >= Seasons.Length) return null;
+                    if (Seasons[nextSeasonIdx].Id == -1) return null;
+
+                    seasonChanged = true;
+                    return Seasons[nextSeasonIdx].Episodes[0];
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
         /// Copy the top-level TvShow fields (not the Seasons array - that's
         /// done index-by-index by IngestSeasonsByIndex) from <paramref name="other"/>.
         /// </summary>
