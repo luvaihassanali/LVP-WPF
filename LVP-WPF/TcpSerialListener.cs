@@ -28,7 +28,8 @@ namespace LVP_WPF
         internal GuiModel gui;
         public static LayoutPoint layoutPoint;
         private static System.Timers.Timer pollingTimer;
-        private static Thread dispatcher;
+        private static Thread dispatcherThread;
+        private static Dispatcher featureDispatcher;
 
         private SerialPort serialPort;
         public bool serialPortEnabled;
@@ -38,7 +39,8 @@ namespace LVP_WPF
 
         public TcpSerialListener(GuiModel g)
         {
-            dispatcher = null;
+            dispatcherThread = null;
+            featureDispatcher = null;
             gui = g;
             connectionEstablished = false;
             workerThreadRunning = false;
@@ -164,9 +166,9 @@ namespace LVP_WPF
                 result = tcpClient.BeginConnect(esp8266ServerIp, esp8266ServerPort, null, null);
                 success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(2));
 
-                while (!success)
+                if (!success)
                 {
-                    DebugLog("Cannot connect to server. Trying again");
+                    DebugLog("Cannot connect to server");
                     return;
                 }
 
@@ -450,36 +452,43 @@ namespace LVP_WPF
             }
         }
 
+        /// <summary>
+        /// Spins up an STA thread that runs <paramref name="action"/> and then
+        /// pumps a WPF Dispatcher (so the action can own modal windows like
+        /// PlayerWindow from outside the main UI thread). Use EndFeature to
+        /// shut it down cleanly.
+        /// </summary>
         internal static void StaThreadWrapper(Action action)
         {
-            dispatcher = new Thread(o =>
+            ManualResetEventSlim ready = new ManualResetEventSlim(false);
+            dispatcherThread = new Thread(() =>
             {
+                // Capture the Dispatcher for *this* thread so EndFeature can
+                // call InvokeShutdown from elsewhere to break the pump cleanly.
+                featureDispatcher = Dispatcher.CurrentDispatcher;
+                ready.Set();
                 action();
                 Dispatcher.Run();
             });
-            dispatcher.SetApartmentState(ApartmentState.STA);
-            dispatcher.IsBackground = true;
-            dispatcher.Start();
+            dispatcherThread.SetApartmentState(ApartmentState.STA);
+            dispatcherThread.IsBackground = true;
+            dispatcherThread.Start();
+            ready.Wait();
         }
 
+        /// <summary>
+        /// Stops the feature thread started by StaThreadWrapper. Uses
+        /// Dispatcher.InvokeShutdown - the .NET-6+ replacement for the
+        /// Thread.Abort pattern this code used to use (which throws
+        /// PlatformNotSupportedException at runtime).
+        /// </summary>
         internal static void EndFeature()
         {
-            if (dispatcher != null)
-            {
-                try
-                {
-#pragma warning disable SYSLIB0006 // Type or member is obsolete
-                    dispatcher.Abort();
-                }
-                catch (ThreadAbortException)
-                {
-                    Thread.ResetAbort();
-#pragma warning restore SYSLIB0006 // Type or member is obsolete
-                }
-
-                dispatcher.Join();
-                dispatcher = null;
-            }
+            if (dispatcherThread == null) return;
+            featureDispatcher?.InvokeShutdown();
+            dispatcherThread.Join();
+            dispatcherThread = null;
+            featureDispatcher = null;
         }
 
         private void CheckSerialConnection()
