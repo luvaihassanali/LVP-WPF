@@ -10,15 +10,61 @@ using System.Windows.Controls.Primitives;
 
 namespace LVP_WPF.Windows
 {
+    public enum PrimaryWindow { Main, Movie, TvShow }
+    public enum WindowOverlay { None, Season, Player, LanguageDropdown }
+
     public class LayoutPoint
     {
         public GuiModel gui;
-        public bool mainWindowActive = true;
-        public bool movieWindowActive = false;
-        public bool tvShowWindowActive = false;
-        public bool seasonWindowActive = false;
-        public bool playerWindowActive = false;
-        public bool languageDropdownActive = false;
+
+        // Window state is two orthogonal axes:
+        //   _primary: which underlying screen is open (Main/Movie/TvShow)
+        //   _overlay: optional modal on top (Season picker, Player, lang dropdown)
+        // Previously expressed as 6 separate bool fields; the bool properties
+        // below remain for backward compatibility with the ~50 existing read
+        // sites (LayoutPoint internal + TcpSerialListener + TvShowWindow).
+        private PrimaryWindow _primary = PrimaryWindow.Main;
+        private WindowOverlay _overlay = WindowOverlay.None;
+
+        // Primary setters: only `true` is meaningful. Setting `false` is a
+        // no-op (the next assignment of a different primary establishes the
+        // new state). Original code did `mainWindowActive = false;` right
+        // before `movieWindowActive = true;`, and the no-op semantic
+        // preserves that pattern without ever leaving primary undefined.
+        public bool mainWindowActive
+        {
+            get => _primary == PrimaryWindow.Main;
+            set { if (value) _primary = PrimaryWindow.Main; }
+        }
+        public bool movieWindowActive
+        {
+            get => _primary == PrimaryWindow.Movie;
+            set { if (value) _primary = PrimaryWindow.Movie; }
+        }
+        public bool tvShowWindowActive
+        {
+            get => _primary == PrimaryWindow.TvShow;
+            set { if (value) _primary = PrimaryWindow.TvShow; }
+        }
+
+        // Overlay setters: both directions are meaningful. Setting `true`
+        // enters the overlay, setting `false` clears any overlay to None.
+        public bool seasonWindowActive
+        {
+            get => _overlay == WindowOverlay.Season;
+            set => _overlay = value ? WindowOverlay.Season : WindowOverlay.None;
+        }
+        public bool playerWindowActive
+        {
+            get => _overlay == WindowOverlay.Player;
+            set => _overlay = value ? WindowOverlay.Player : WindowOverlay.None;
+        }
+        public bool languageDropdownActive
+        {
+            get => _overlay == WindowOverlay.LanguageDropdown;
+            set => _overlay = value ? WindowOverlay.LanguageDropdown : WindowOverlay.None;
+        }
+
         public bool incomingSerialMsg = false;
         public (int x, int y) currPoint = (0, 0);
         public (int x, int y) returnPointA = (0, 0);
