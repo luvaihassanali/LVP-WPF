@@ -138,10 +138,9 @@ namespace LVP_WPF
 
                 if (!model.TvShows[i].Cartoon)
                 {
-                    string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
                     await TvShowListView.Dispatcher.BeginInvoke(() =>
                     {
-                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = ImageLoader.Load(img, 300), Flags = ImageLoader.LoadFlags(model.TvShows[i].Path) });
+                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = ImageLoader.LoadPoster(model.TvShows[i].Poster), Flags = ImageLoader.LoadFlags(model.TvShows[i].Path) });
                     });
                     await Task.Delay(1);
                 }
@@ -151,10 +150,9 @@ namespace LVP_WPF
             {
                 if (model.TvShows[i].Cartoon)
                 {
-                    string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
                     await CartoonsListView.Dispatcher.BeginInvoke(() =>
                     {
-                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = ImageLoader.Load(img, 300) });
+                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = ImageLoader.LoadPoster(model.TvShows[i].Poster) });
                     });
                     await Task.Delay(1);
                     TvShowWindow.cartoons.Add(model.TvShows[i]);
@@ -163,10 +161,9 @@ namespace LVP_WPF
 
             for (int i = 0; i < model.Movies.Length; i++)
             {
-                string img = model.Movies[i].Poster == null ? "Resources\\noPrev.png" : model.Movies[i].Poster;
                 await MovieListView.Dispatcher.BeginInvoke(() =>
                 {
-                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = ImageLoader.Load(img, 300) });
+                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = ImageLoader.LoadPoster(model.Movies[i].Poster) });
                 });
                 await Task.Delay(1);
             }

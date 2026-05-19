@@ -25,14 +25,12 @@ namespace LVP_WPF.Windows
 
             TimeSpan temp = TimeSpan.FromMinutes(movie.RunningTime);
             string hour = temp.Hours > 1 ? "hours " : "hour ";
-            string img = movie.Backdrop == null ? "Resources\\noPrevWide.png" : movie.Backdrop;
-
             MovieWindow window = new MovieWindow
             {
                 MovieName = $"{movie.Name} ({movie.Date.GetValueOrDefault().Year})",
                 RunningTime = $"Running time: {temp.Hours} {hour} {temp.Minutes} minutes",
                 Description = movie.Overview, //.Length > 1011 ? $"{movie.Overview.Substring(0, 1011)}..." : movie.Overview;
-                Backdrop = ImageLoader.Load(img, 960),
+                Backdrop = ImageLoader.LoadBackdrop(movie.Backdrop),
                 Overlay = ImageLoader.Load("Resources\\play.png", 960)
             };
             window.ShowDialog();

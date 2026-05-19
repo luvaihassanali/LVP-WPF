@@ -34,8 +34,7 @@ namespace LVP_WPF.Windows
             window.ShowName = tvShow.Name.Contains("(") ? tvShow.Name.Split(" (")[0] : tvShow.Name;
             window.ShowName += $" ({tvShow.Date.GetValueOrDefault().Year})";
             window.Description = tvShow.Overview.Length > OverviewMaxLen ? $"{tvShow.Overview.Substring(0, OverviewMaxLen)}..." : tvShow.Overview;
-            string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
-            window.Backdrop = ImageLoader.Load(img, 960);
+            window.Backdrop = ImageLoader.LoadBackdrop(tvShow.Backdrop);
             window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : $"Season {tvShow.CurrSeason}";
             int index = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
             Episode[] episodes = tvShow.Seasons[index].Episodes;
@@ -183,7 +182,6 @@ namespace LVP_WPF.Windows
             EpisodeWindowBox[] episodeBoxes = new EpisodeWindowBox[episodes.Length];
             for (int i = 0; i < episodes.Length; i++)
             {
-                string img = episodes[i].Backdrop == null ? "Resources\\noPrevWide.png" : episodes[i].Backdrop;
                 string description;
                 if (episodes[i].Overview != null)
                 {
@@ -205,7 +203,7 @@ namespace LVP_WPF.Windows
                     Id = episodes[i].Id,
                     Name = episodes[i].Name,
                     Description = description,
-                    Image = ImageLoader.Load(img, 300),
+                    Image = ImageLoader.LoadBackdrop(episodes[i].Backdrop, 300),
                     Progress = (int)episodes[i].SavedTime,
                     Total = (int)total,
                     Overlay = ImageLoader.Load("Resources\\play.png", 960),
