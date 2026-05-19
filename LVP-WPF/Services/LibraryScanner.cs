@@ -81,25 +81,23 @@ namespace LVP_WPF.Services
         {
             Log.Debug("Process movies dir {Dir}", targetDir);
             string[] movieEntry = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
-            string[] path = movieEntry[0].Split('\\');
-            string[] movieName = path[path.Length - 1].Split('.');
-            Movie movie = new Movie(movieName[0].Trim(), movieEntry[0]);
-            return movie;
+            string movieName = Path.GetFileNameWithoutExtension(movieEntry[0]);
+            return new Movie(movieName.Trim(), movieEntry[0]);
         }
 
         private TvShow ProcessTvDirectory(string targetDir)
         {
             Log.Debug("Process tv show dir {Dir}", targetDir);
-            string[] path = targetDir.Split('\\');
-            string name = path[path.Length - 1].Split('%')[0];
+            // Show directory naming convention: "Show Name%suffix-with-cache-key".
+            // Strip the % suffix to get the display name.
+            string name = Path.GetFileName(targetDir).Split('%')[0];
             TvShow show = new TvShow(name.Trim(), targetDir)
             {
                 Path = targetDir
             };
 
             string[] seasonEntries = Directory.GetDirectories(targetDir);
-            string[] seasonParts = seasonEntries[0].Split('\\');
-            string folderName = seasonParts[seasonParts.Length - 1];
+            string folderName = Path.GetFileName(seasonEntries[0]);
 
             if (folderName.Length == 2)
             {
@@ -135,8 +133,7 @@ namespace LVP_WPF.Services
             for (int i = 1; i < langFolders.Length; i++)
             {
                 string langFolder = langFolders[i];
-                string[] langParts = langFolder.Split('\\');
-                string langKey = langParts[langParts.Length - 1];
+                string langKey = Path.GetFileName(langFolder);
                 string language = GetLangCode(langKey);
                 tvShow.MultiLangName.Add($"{tvShow.Name} ({language})");
                 tvShow.MultiLangCurrSeason.Add(1);
@@ -201,12 +198,12 @@ namespace LVP_WPF.Services
                     }
                     try
                     {
-                        string[] namePath = episodeEntries[j].Split('\\');
-                        string[] episodeNameNumber = namePath[namePath.Length - 1].Split(new[] { '%' }, 2);
-                        int fileSuffixIndex = episodeNameNumber[1].LastIndexOf('.');
-                        string episodeName = episodeNameNumber[1].Substring(0, fileSuffixIndex).Trim();
-                        Episode episode = new Episode(0, episodeName, episodeEntries[j]);
-                        season.Episodes[j] = episode;
+                        // Episode filename convention: "N%Episode Name.ext"
+                        // Take the filename, split on the first '%', drop the
+                        // extension off the second part.
+                        string[] episodeNameNumber = Path.GetFileName(episodeEntries[j]).Split(new[] { '%' }, 2);
+                        string episodeName = Path.GetFileNameWithoutExtension(episodeNameNumber[1]).Trim();
+                        season.Episodes[j] = new Episode(0, episodeName, episodeEntries[j]);
                     }
                     catch
                     {
@@ -224,24 +221,14 @@ namespace LVP_WPF.Services
             string[] rootEntries = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
             foreach (string entry in rootEntries)
             {
-                string[] namePath = entry.Split('\\');
-                string[] episodeNameNumber = namePath[namePath.Length - 1].Split('%');
-                int fileSuffixIndex;
-                string episodeName;
-
-                if (episodeNameNumber.Length == 1)
-                {
-                    fileSuffixIndex = episodeNameNumber[0].LastIndexOf('.');
-                    episodeName = episodeNameNumber[0].Substring(0, fileSuffixIndex).Trim();
-                }
-                else
-                {
-                    fileSuffixIndex = episodeNameNumber[1].LastIndexOf('.');
-                    episodeName = episodeNameNumber[1].Substring(0, fileSuffixIndex).Trim();
-                }
-
-                Episode ep = new Episode(_extrasIdx--, episodeName, entry);
-                extras.Add(ep);
+                // Extras don't always follow the "N%name.ext" convention - some are
+                // just "name.ext" with no number prefix. Either way, the displayable
+                // name is the bit after the '%' (or the whole filename if none),
+                // minus the extension.
+                string[] episodeNameNumber = Path.GetFileName(entry).Split('%');
+                string raw = episodeNameNumber.Length == 1 ? episodeNameNumber[0] : episodeNameNumber[1];
+                string episodeName = Path.GetFileNameWithoutExtension(raw).Trim();
+                extras.Add(new Episode(_extrasIdx--, episodeName, entry));
             }
 
             string[] subDirs = Directory.GetDirectories(targetDir);
@@ -252,11 +239,7 @@ namespace LVP_WPF.Services
         }
 
         private bool IsMultiLangSeasonFolder(string folder)
-        {
-            string[] folderParts = folder.Split("\\");
-            string langKey = folderParts[folderParts.Length - 1];
-            return _multiLangKeys.Contains(langKey);
-        }
+            => _multiLangKeys.Contains(Path.GetFileName(folder));
 
         private static int CompareIndex(string s1, string s2)
         {
