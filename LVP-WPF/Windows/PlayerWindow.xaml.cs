@@ -99,7 +99,7 @@ namespace LVP_WPF.Windows
             {
                 Episode episode = (Episode)currMedia;
 
-                if (TvShowWindow.historyWatch)
+                if (PlaybackSession.IsHistoryWatch)
                 {
                     ShowHistoryWatchBanner(episode);
                 }
@@ -129,7 +129,7 @@ namespace LVP_WPF.Windows
                 pollingTimer = null;
             }
 
-            if (TvShowWindow.historyWatch)
+            if (PlaybackSession.IsHistoryWatch)
             {
                 if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
                 {
@@ -137,7 +137,7 @@ namespace LVP_WPF.Windows
                     MainWindow.model.HistoryEpisode = null;
                 }
             }
-            else if (!TvShowWindow.cartoonShuffle && !skipClosing)
+            else if (!PlaybackSession.IsCartoonShuffle && !skipClosing)
             {
                 if (currMedia as Episode != null)
                 {
@@ -209,7 +209,7 @@ namespace LVP_WPF.Windows
 
         private void MediaPlayer_EndReached(object? sender, EventArgs e)
         {
-            if (TvShowWindow.historyWatch)
+            if (PlaybackSession.IsHistoryWatch)
             {
                 MainWindow.model.HistoryIndex++;
                 if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
@@ -227,16 +227,16 @@ namespace LVP_WPF.Windows
                 return;
             }
 
-            if (TvShowWindow.cartoonShuffle)
+            if (PlaybackSession.IsCartoonShuffle)
             {
-                TvShowWindow.cartoonIndex++;
-                if (TvShowWindow.cartoonIndex == TvShowWindow.cartoonLimit)
+                PlaybackSession.CartoonShuffleIndex++;
+                if (PlaybackSession.CartoonShuffleIndex == PlaybackSession.CartoonShuffleLimit)
                 {
                     skipClosing = true;
                     TcpSerialListener.layoutPoint.CloseCurrWindow();
                 }
 
-                currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
+                currMedia = PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex];
                 LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
                 Log.Information("Playing {Media}", currMedia.Path);
                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));

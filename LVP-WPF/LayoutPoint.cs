@@ -1,4 +1,5 @@
-﻿using LVP_WPF.Util;
+﻿using LVP_WPF.Services;
+using LVP_WPF.Util;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -133,7 +134,7 @@ namespace LVP_WPF.Windows
 
         public void Select(string controlName, bool isMovie = false)
         {
-            if (TvShowWindow.cartoonShuffle || TvShowWindow.historyWatch)
+            if (PlaybackSession.IsCartoonShuffle || PlaybackSession.IsHistoryWatch)
             {
                 returnPointA = currPoint;
                 return;
@@ -350,13 +351,12 @@ namespace LVP_WPF.Windows
                 currControl = tvControlList[currPoint.x];
                 CenterMouseOverControl(currControl);
             }
-            else if (TvShowWindow.cartoonShuffle || TvShowWindow.historyWatch)
+            else if (PlaybackSession.IsCartoonShuffle || PlaybackSession.IsHistoryWatch)
             {
                 currPoint = returnPointA;
                 currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
                 CenterMouseOverControl(currControl);
-                TvShowWindow.historyWatch = false;
-                TvShowWindow.cartoonShuffle = false;
+                PlaybackSession.End();
                 playerWindowActive = false;
             }
         }

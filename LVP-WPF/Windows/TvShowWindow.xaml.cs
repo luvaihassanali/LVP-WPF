@@ -25,12 +25,7 @@ namespace LVP_WPF.Windows
 
         static internal TvShow tvShow;
         static internal EpisodeWindowBox[] episodes;
-        static internal bool historyWatch = false;
-        static internal bool cartoonShuffle = false;
-        static internal int cartoonIndex = 0;
-        static internal int cartoonLimit = 20;
         static internal List<TvShow> cartoons = new List<TvShow>();
-        static internal List<Episode> cartoonShuffleList = new List<Episode>();
         static internal bool subtitleSwitch = true;
 
         public static void Show(TvShow t)
@@ -598,18 +593,13 @@ namespace LVP_WPF.Windows
 
         internal static void PlayRandomCartoons()
         {
-            cartoonIndex = 0;
-            cartoonShuffleList.Clear();
-            cartoonShuffle = true;
+            PlaybackSession.StartCartoonShuffle(AppConfig.CartoonLimit);
             TcpSerialListener.layoutPoint.playerWindowActive = true;
-            cartoonLimit = AppConfig.CartoonLimit;
-            for (int i = 0; i < cartoonLimit; i++)
+            for (int i = 0; i < PlaybackSession.CartoonShuffleLimit; i++)
             {
-                Episode e = GetRandomEpisode();
-                cartoonShuffleList.Add(e);
+                PlaybackSession.CartoonShuffleQueue.Add(GetRandomEpisode());
             }
-            Episode rndEpisode = cartoonShuffleList[cartoonIndex];
-            PlayerWindow.Show(rndEpisode);
+            PlayerWindow.Show(PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex]);
         }
 
         internal static Random rnd = new Random();
@@ -627,7 +617,7 @@ namespace LVP_WPF.Windows
 
         internal static void PlayHistoryList()
         {
-            historyWatch = true;
+            PlaybackSession.StartHistoryWatch();
             TcpSerialListener.layoutPoint.playerWindowActive = true;
             Episode currEpisode;
             if (MainWindow.model.HistoryEpisode == null)
