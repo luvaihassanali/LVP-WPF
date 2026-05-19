@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 namespace LVP_WPF
 {
     public class MainModel
@@ -75,126 +76,91 @@ namespace LVP_WPF
             return true;
         }
 
+        // ----- Ingest -----
+        //
+        // After a fresh scan, copy over the TMDB-enrichment data (Ids, posters,
+        // overviews, saved playback positions, etc.) from the persisted model
+        // to the freshly scanned one, matching by file path.
+        //
+        // This used to be one big O(n^2) method with copy-paste property
+        // assignments triplicated across Movie/TvShow/Season/Episode and a
+        // separate MultiLang variant. The per-class field lists now live on
+        // each class as CopyFrom helpers; this method just wires the matches.
+
         internal void Ingest(MainModel prevMedia)
         {
-            for (int i = 0; i < prevMedia.Movies.Length; i++)
+            Dictionary<string, Movie> prevMoviesByPath = prevMedia.movies.ToDictionary(m => m.Path);
+            foreach (Movie curr in this.movies)
             {
-                for (int j = 0; j < this.movies.Length; j++)
+                if (prevMoviesByPath.TryGetValue(curr.Path, out Movie? prev))
                 {
-                    if (this.movies[j].Path.Equals(prevMedia.movies[i].Path))
-                    {
-                        this.movies[j].Name = prevMedia.movies[i].Name;
-                        this.movies[j].Overview = prevMedia.movies[i].Overview;
-                        this.movies[j].Path = prevMedia.movies[i].Path;
-                        this.movies[j].Poster = prevMedia.movies[i].Poster;
-                        this.movies[j].Id = prevMedia.movies[i].Id;
-                        this.movies[j].Date = prevMedia.movies[i].Date;
-                        this.movies[j].Backdrop = prevMedia.movies[i].Backdrop;
-                        this.movies[j].RunningTime = prevMedia.movies[i].RunningTime;
-                    }
-                    else
-                    {
-                        continue;
-                    }
+                    curr.CopyFrom(prev);
                 }
             }
 
-            for (int i = 0; i < prevMedia.TvShows.Length; i++)
+            Dictionary<string, TvShow> prevShowsByPath = prevMedia.tvShows.ToDictionary(t => t.Path);
+            foreach (TvShow curr in this.tvShows)
             {
-                for (int l = 0; l < this.tvShows.Length; l++)
+                if (!prevShowsByPath.TryGetValue(curr.Path, out TvShow? prev))
                 {
-                    if (this.tvShows[l].Path.Equals(prevMedia.tvShows[i].Path))
+                    continue;
+                }
+
+                curr.CopyFrom(prev);
+                IngestSeasonsByIndex(curr.Seasons, prev.Seasons, includeTranslated: false);
+
+                if (curr.MultiLang)
+                {
+                    curr.CopyMultiLangFrom(prev);
+                    for (int a = 0; a < prev.MultiLangSeasons.Count; a++)
                     {
-                        this.tvShows[l].Name = prevMedia.tvShows[i].Name;
-                        this.tvShows[l].Cartoon = prevMedia.tvShows[i].Cartoon;
-                        this.tvShows[l].Id = prevMedia.tvShows[i].Id;
-                        this.tvShows[l].Overview = prevMedia.tvShows[i].Overview;
-                        this.tvShows[l].Poster = prevMedia.tvShows[i].Poster;
-                        this.tvShows[l].Date = prevMedia.tvShows[i].Date;
-                        this.tvShows[l].Backdrop = prevMedia.tvShows[i].Backdrop;
-                        this.tvShows[l].CurrSeason = prevMedia.tvShows[i].CurrSeason;
-                        this.tvShows[l].LastEpisode = prevMedia.tvShows[i].LastEpisode;
-                        this.tvShows[l].RunningTime = prevMedia.tvShows[i].RunningTime;
-                        IngestSeason(prevMedia, i, l);
+                        IngestSeasonsByIndex(curr.MultiLangSeasons[a], prev.MultiLangSeasons[a], includeTranslated: true);
+                    }
+                }
+            }
+        }
 
-                        if (this.tvShows[l].MultiLang)
+        // Position-indexed season/episode ingest. Episodes must line up by
+        // index (the scanner and the saved JSON both sort by the %N% prefix),
+        // and a safety check skips mismatches if an episode was added/removed
+        // in the middle - that's the original behavior, preserved here.
+        // The matching key differs for multi-lang (file name) vs single-lang
+        // (episode name); both are still index-based.
+        private static void IngestSeasonsByIndex(Season[] currSeasons, Season[] prevSeasons, bool includeTranslated)
+        {
+            int seasonCount = Math.Min(currSeasons.Length, prevSeasons.Length);
+            for (int j = 0; j < seasonCount; j++)
+            {
+                currSeasons[j].CopyFrom(prevSeasons[j]);
+
+                Episode[] currEps = currSeasons[j].Episodes;
+                Episode[] prevEps = prevSeasons[j].Episodes;
+                int epCount = Math.Min(currEps.Length, prevEps.Length);
+                for (int k = 0; k < epCount; k++)
+                {
+                    if (includeTranslated)
+                    {
+                        if (EpisodeFileNamesMatch(currEps[k].Path, prevEps[k].Path))
                         {
-                            this.tvShows[l].MultiLangCurrSeason = prevMedia.tvShows[i].MultiLangCurrSeason;
-                            this.tvShows[l].MultiLangOverview = prevMedia.tvShows[i].MultiLangOverview;
-                            this.tvShows[l].MultiLangName = prevMedia.tvShows[i].MultiLangName;
-                            this.tvShows[l].MultiLangLastWatched = prevMedia.tvShows[i].MultiLangLastWatched;
-
-                            for (int a = 0; a < prevMedia.tvShows[i].MultiLangSeasons.Count; a++)
-                            {
-                                IngestSeasonMultiLang(prevMedia, i, l, a);
-                            }
+                            currEps[k].CopyFrom(prevEps[k], includeTranslated: true);
                         }
                     }
                     else
                     {
-                        continue;
+                        if (currEps[k].Name.Equals(prevEps[k].Name))
+                        {
+                            currEps[k].CopyFrom(prevEps[k], includeTranslated: false);
+                        }
                     }
                 }
             }
         }
 
-        internal void IngestSeasonMultiLang(MainModel prevMedia, int i, int l, int a)
+        private static bool EpisodeFileNamesMatch(string currPath, string prevPath)
         {
-            for (int j = 0; j < prevMedia.TvShows[i].MultiLangSeasons[a].Length; j++)
-            {
-                this.tvShows[l].MultiLangSeasons[a][j].Id = prevMedia.TvShows[i].MultiLangSeasons[a][j].Id;
-                this.tvShows[l].MultiLangSeasons[a][j].Poster = prevMedia.TvShows[i].MultiLangSeasons[a][j].Poster;
-                this.tvShows[l].MultiLangSeasons[a][j].Date = prevMedia.TvShows[i].MultiLangSeasons[a][j].Date;
-
-                for (int k = 0; k < prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes.Length; k++)
-                {
-                    string currFilePath = this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Path;
-                    string prevFilePath = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Path;
-                    int currIdx = currFilePath.LastIndexOf("\\");
-                    int prevIdx = prevFilePath.LastIndexOf("\\");
-                    string currFileName = currFilePath.Substring(currIdx);
-                    string prevFileName = prevFilePath.Substring(prevIdx);
-
-                    if (currFileName.Equals(prevFileName))
-                    {
-                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Id = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Id;
-                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Name = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Name;
-                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Backdrop = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Backdrop;
-                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Date = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Date;
-                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Overview = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Overview;
-                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Path = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Path;
-                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].SavedTime = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].SavedTime;
-                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Length = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Length;
-                        this.tvShows[l].MultiLangSeasons[a][j].Episodes[k].Translated = prevMedia.TvShows[i].MultiLangSeasons[a][j].Episodes[k].Translated;
-                    }
-                }
-            }
-        }
-
-        internal void IngestSeason(MainModel prevMedia, int i, int l)
-        {
-            for (int j = 0; j < prevMedia.TvShows[i].Seasons.Length; j++)
-            {
-                this.tvShows[l].Seasons[j].Id = prevMedia.TvShows[i].Seasons[j].Id;
-                this.tvShows[l].Seasons[j].Poster = prevMedia.TvShows[i].Seasons[j].Poster;
-                this.tvShows[l].Seasons[j].Date = prevMedia.TvShows[i].Seasons[j].Date;
-                this.tvShows[l].CurrSeason = prevMedia.TvShows[i].CurrSeason;
-
-                for (int k = 0; k < prevMedia.TvShows[i].Seasons[j].Episodes.Length; k++)
-                {
-                    if (this.tvShows[l].Seasons[j].Episodes[k].Name.Equals(prevMedia.TvShows[i].Seasons[j].Episodes[k].Name))
-                    {
-                        this.tvShows[l].Seasons[j].Episodes[k].Id = prevMedia.TvShows[i].Seasons[j].Episodes[k].Id;
-                        this.tvShows[l].Seasons[j].Episodes[k].Name = prevMedia.TvShows[i].Seasons[j].Episodes[k].Name;
-                        this.tvShows[l].Seasons[j].Episodes[k].Backdrop = prevMedia.TvShows[i].Seasons[j].Episodes[k].Backdrop;
-                        this.tvShows[l].Seasons[j].Episodes[k].Date = prevMedia.TvShows[i].Seasons[j].Episodes[k].Date;
-                        this.tvShows[l].Seasons[j].Episodes[k].Overview = prevMedia.TvShows[i].Seasons[j].Episodes[k].Overview;
-                        this.tvShows[l].Seasons[j].Episodes[k].Path = prevMedia.TvShows[i].Seasons[j].Episodes[k].Path;
-                        this.tvShows[l].Seasons[j].Episodes[k].SavedTime = prevMedia.TvShows[i].Seasons[j].Episodes[k].SavedTime;
-                        this.tvShows[l].Seasons[j].Episodes[k].Length = prevMedia.TvShows[i].Seasons[j].Episodes[k].Length;
-                    }
-                }
-            }
+            string currFile = currPath.Substring(currPath.LastIndexOf("\\"));
+            string prevFile = prevPath.Substring(prevPath.LastIndexOf("\\"));
+            return currFile.Equals(prevFile);
         }
     }
 
@@ -222,6 +188,19 @@ namespace LVP_WPF
         internal bool Compare(Movie localMovie)
         {
             return this.Path.Equals(localMovie.Path);
+        }
+
+        /// <summary>Copy the TMDB-enrichment fields from <paramref name="other"/> onto this Movie.</summary>
+        internal void CopyFrom(Movie other)
+        {
+            Name = other.Name;
+            Overview = other.Overview;
+            Path = other.Path;
+            Poster = other.Poster;
+            Id = other.Id;
+            Date = other.Date;
+            Backdrop = other.Backdrop;
+            RunningTime = other.RunningTime;
         }
 
         public static IComparer SortMoviesAlphabetically()
@@ -267,6 +246,37 @@ namespace LVP_WPF
         public List<Season[]>? MultiLangSeasons { get; set; }
         public List<int>? MultiLangCurrSeason { get; set; }
         public List<Episode>? MultiLangLastWatched { get; set; }
+
+        /// <summary>
+        /// Copy the top-level TvShow fields (not the Seasons array - that's
+        /// done index-by-index by IngestSeasonsByIndex) from <paramref name="other"/>.
+        /// </summary>
+        internal void CopyFrom(TvShow other)
+        {
+            Name = other.Name;
+            Cartoon = other.Cartoon;
+            Id = other.Id;
+            Overview = other.Overview;
+            Poster = other.Poster;
+            Date = other.Date;
+            Backdrop = other.Backdrop;
+            CurrSeason = other.CurrSeason;
+            LastEpisode = other.LastEpisode;
+            RunningTime = other.RunningTime;
+        }
+
+        /// <summary>
+        /// Copy the multi-language metadata lists (names, overviews, last-watched
+        /// pointers per language). MultiLangSeasons themselves are handled
+        /// separately via IngestSeasonsByIndex per language.
+        /// </summary>
+        internal void CopyMultiLangFrom(TvShow other)
+        {
+            MultiLangCurrSeason = other.MultiLangCurrSeason;
+            MultiLangOverview = other.MultiLangOverview;
+            MultiLangName = other.MultiLangName;
+            MultiLangLastWatched = other.MultiLangLastWatched;
+        }
 
         internal bool Compare(TvShow localShow)
         {
@@ -377,6 +387,14 @@ namespace LVP_WPF
         public DateTime Date { get; set; }
         public Episode[] Episodes { get; set; }
 
+        /// <summary>Copy season metadata (Id/Poster/Date). Episodes handled separately.</summary>
+        internal void CopyFrom(Season other)
+        {
+            Id = other.Id;
+            Poster = other.Poster;
+            Date = other.Date;
+        }
+
         internal bool Compare(Season localSeason)
         {
             if (this.Episodes.Length != localSeason.Episodes.Length)
@@ -418,6 +436,26 @@ namespace LVP_WPF
         internal bool Compare(Episode otherEpisode)
         {
             return this.Path.Equals(otherEpisode.Path);
+        }
+
+        /// <summary>
+        /// Copy episode metadata + playback state. Translated is opt-in
+        /// because it only applies to the multi-lang ingest path.
+        /// </summary>
+        internal void CopyFrom(Episode other, bool includeTranslated)
+        {
+            Id = other.Id;
+            Name = other.Name;
+            Backdrop = other.Backdrop;
+            Date = other.Date;
+            Overview = other.Overview;
+            Path = other.Path;
+            SavedTime = other.SavedTime;
+            Length = other.Length;
+            if (includeTranslated)
+            {
+                Translated = other.Translated;
+            }
         }
     }
 }
