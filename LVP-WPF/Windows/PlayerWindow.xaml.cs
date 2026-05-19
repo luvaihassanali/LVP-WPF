@@ -101,12 +101,7 @@ namespace LVP_WPF.Windows
 
                 if (TvShowWindow.historyWatch)
                 {
-                    hwTxtBlock.Text = $"{episode.Date:MMMM dd, yyyy}\n{episode.Name}";
-                    hwGrid.Visibility = Visibility.Visible;
-                    Task.Delay(5000).ContinueWith(t =>
-                    {
-                        hwGrid.Dispatcher.BeginInvoke(() => { hwGrid.Visibility = Visibility.Hidden; });
-                    });
+                    ShowHistoryWatchBanner(episode);
                 }
 
                 if (episode.SavedTime != 0 && episode.SavedTime < episode.Length)
@@ -194,6 +189,24 @@ namespace LVP_WPF.Windows
             });
         }
 
+        /// <summary>
+        /// Show the "what's playing next during history watch" overlay text
+        /// for 5 seconds, then fade it out. Used both at initial playback start
+        /// and when MediaPlayer_EndReached advances to the next history entry.
+        /// </summary>
+        private void ShowHistoryWatchBanner(Episode episode)
+        {
+            hwGrid.Dispatcher.BeginInvoke(() =>
+            {
+                hwTxtBlock.Text = $"{episode.Date:MMMM dd, yyyy}\n{episode.Name}";
+                hwGrid.Visibility = Visibility.Visible;
+            });
+            Task.Delay(5000).ContinueWith(t =>
+            {
+                hwGrid.Dispatcher.BeginInvoke(() => { hwGrid.Visibility = Visibility.Hidden; });
+            });
+        }
+
         private void MediaPlayer_EndReached(object? sender, EventArgs e)
         {
             if (TvShowWindow.historyWatch)
@@ -210,15 +223,7 @@ namespace LVP_WPF.Windows
                 Log.Information("Playing {Media}", currMedia.Path);
                 ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
 
-                hwGrid.Dispatcher.BeginInvoke(() =>
-                {
-                    hwTxtBlock.Text = $"{MainWindow.model.HistoryEpisode.Date:MMMM dd, yyyy}\n{MainWindow.model.HistoryEpisode.Name}";
-                    hwGrid.Visibility = Visibility.Visible;
-                });
-                Task.Delay(5000).ContinueWith(t =>
-                {
-                    hwGrid.Dispatcher.BeginInvoke(() => { hwGrid.Visibility = Visibility.Hidden; });
-                });
+                ShowHistoryWatchBanner(MainWindow.model.HistoryEpisode);
                 return;
             }
 
