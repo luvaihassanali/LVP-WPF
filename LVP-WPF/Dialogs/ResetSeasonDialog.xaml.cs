@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LVP_WPF.Util;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -110,7 +111,7 @@ namespace LVP_WPF.Dialogs
             OptionWindowBox item = (OptionWindowBox)seasonListView.SelectedItem;
             ItemContainerGenerator generator = seasonListView.ItemContainerGenerator;
             ListViewItem container = (ListViewItem)generator.ContainerFromItem(item);
-            CheckBox c = GuiModel.GetChildrenByType(container, typeof(CheckBox), "checkbox") as CheckBox;
+            CheckBox c = WpfTreeHelpers.GetChildrenByType(container, typeof(CheckBox), "checkbox") as CheckBox;
             if (c != null)
             {
                 c.IsChecked = (bool)c.IsChecked ? false : true;

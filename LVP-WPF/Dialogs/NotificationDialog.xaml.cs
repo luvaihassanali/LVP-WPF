@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LVP_WPF.Services;
 using System;
 using System.Windows;
 
@@ -44,7 +45,7 @@ namespace LVP_WPF
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
-            GuiModel.RestoreSystemCursor();
+            CursorManager.RestoreSystemCursor();
             Environment.Exit(0);
         }
     }

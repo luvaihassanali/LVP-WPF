@@ -1,4 +1,5 @@
 ﻿using LVP_WPF.Services;
+using LVP_WPF.Util;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -61,10 +62,10 @@ namespace LVP_WPF.Windows
             for (int j = 0; j < seasons.Length; j++)
             {
                 ListViewItem container = (ListViewItem)generator.ContainerFromItem(seasons[j]);
-                Image img = GuiModel.GetChildrenByType(container, typeof(Image), "seasonImage") as Image;
+                Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "seasonImage") as Image;
                 TcpSerialListener.layoutPoint.seasonControlList.Add(img);
             }
-            scrollViewer = (ScrollViewer)GuiModel.GetScrollViewer(SeasonListView);
+            scrollViewer = (ScrollViewer)WpfTreeHelpers.GetScrollViewer(SeasonListView);
             scrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
             MainWindow.gui.seasonScrollViewer = scrollViewer;
             TcpSerialListener.layoutPoint.seasonIndex = seasonIndex;

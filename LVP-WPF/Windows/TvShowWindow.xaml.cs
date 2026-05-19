@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LVP_WPF.Dialogs;
 using LVP_WPF.Services;
+using LVP_WPF.Util;
 using Serilog;
 using System;
 using System.Collections.Generic;
@@ -121,7 +122,7 @@ namespace LVP_WPF.Windows
             for (int j = 0; j < episodes.Length; j++)
             {
                 ListViewItem container = (ListViewItem)generator.ContainerFromItem(episodes[j]);
-                Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
+                Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
                 TcpSerialListener.layoutPoint.tvControlList.Add(img);
             }
         }

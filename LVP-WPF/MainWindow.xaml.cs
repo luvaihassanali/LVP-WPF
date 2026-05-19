@@ -1,4 +1,5 @@
 ﻿using LVP_WPF.Services;
+using LVP_WPF.Util;
 using LVP_WPF.Windows;
 using Serilog;
 using System;
@@ -37,7 +38,7 @@ namespace LVP_WPF
             await Task.Run(() =>
             {
 #if RELEASE
-                GuiModel.InitializeCustomCursor();
+                CursorManager.InitializeCustomCursor();
 #endif
             });
 
@@ -101,7 +102,7 @@ namespace LVP_WPF
         {
             inactivityTimer?.Dispose();
             MediaLibrary.SaveData();
-            GuiModel.RestoreSystemCursor();
+            CursorManager.RestoreSystemCursor();
             tcpWorker?.StopThread();
             PlayerWindow.libVLC.Dispose();
 

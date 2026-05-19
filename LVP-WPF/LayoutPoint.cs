@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using LVP_WPF.Util;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -268,7 +269,7 @@ namespace LVP_WPF.Windows
             if (click)
             {
                 gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
-                GuiModel.DoEvents();
+                WpfTreeHelpers.DoEvents();
                 CenterMouseOverControl(gui.tvMovieCloseButton);
                 await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
@@ -286,7 +287,7 @@ namespace LVP_WPF.Windows
             if (click)
             {
                 CenterMouseOverControl(gui.playerCloseButton);
-                GuiModel.DoEvents();
+                WpfTreeHelpers.DoEvents();
                 await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
                 await Task.Delay(200);
@@ -317,7 +318,7 @@ namespace LVP_WPF.Windows
         private async void CloseMainWindow()
         {
             gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToHome(); });
-            GuiModel.DoEvents();
+            WpfTreeHelpers.DoEvents();
             CenterMouseOverControl(gui.mainCloseButton);
             await Task.Delay(200);
             TcpSerialListener.DoMouseClick();
@@ -615,7 +616,7 @@ namespace LVP_WPF.Windows
                         for (int j = 0; j < gui.Movies.Count; j++)
                         {
                             ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.Movies[j]);
-                            Image img = GuiModel.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
+                            Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
                             mainWindowControlList.Add(img);
                         }
                         break;
@@ -623,7 +624,7 @@ namespace LVP_WPF.Windows
                         for (int j = 0; j < gui.TvShows.Count; j++)
                         {
                             ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.TvShows[j]);
-                            Image img = GuiModel.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
+                            Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
                             mainWindowControlList.Add(img);
                         }
                         break;
@@ -631,7 +632,7 @@ namespace LVP_WPF.Windows
                         for (int j = 0; j < gui.Cartoons.Count; j++)
                         {
                             ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.Cartoons[j]);
-                            Image img = GuiModel.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
+                            Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
                             mainWindowControlList.Add(img);
                         }
                         break;
@@ -763,7 +764,7 @@ namespace LVP_WPF.Windows
                         gui.scrollViewerAdjust = true;
                         image.BringIntoView();
                     }
-                    GuiModel.DoEvents();
+                    WpfTreeHelpers.DoEvents();
                 }
 
                 Point target = image.PointToScreen(new Point(0, 0));
@@ -846,7 +847,7 @@ namespace LVP_WPF.Windows
                         comboBoxItem.BringIntoView();
                     });
                 }
-                GuiModel.DoEvents();
+                WpfTreeHelpers.DoEvents();
             }
 
             comboBoxItem.Dispatcher.Invoke(() =>
