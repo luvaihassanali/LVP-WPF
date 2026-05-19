@@ -39,7 +39,7 @@ namespace LVP_WPF
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            Cache.SaveData();
+            MediaLibrary.SaveData();
         }
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)

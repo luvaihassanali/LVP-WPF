@@ -294,8 +294,8 @@ namespace LVP_WPF.Services
             return seasonValueA < seasonValueB ? 1 : -1;
         }
 
-        // Mirrors Cache.GetLangCode(). Kept here for the language-folder -> display-name
-        // lookup; Cache.cs still has its own copy used by the translator path.
+        // Maps a TMDB-style two-letter language code to the human-readable
+        // name used in the UI ("en" -> "English", "it" -> "Italian").
         private static string GetLangCode(string key)
         {
             return key switch

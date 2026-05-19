@@ -95,8 +95,8 @@ namespace LVP_WPF.Services
 
         /// <summary>
         /// If we ever used the translator, kill any running libretranslate process.
-        /// Mirrors the original Cache.BuildCache cleanup: it kills regardless of
-        /// whether we were the one that started it.
+        /// Matches the original cleanup behavior: kill any running libretranslate
+        /// process, regardless of whether we were the one that started it.
         /// </summary>
         public void Dispose()
         {

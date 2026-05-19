@@ -41,7 +41,7 @@ namespace LVP_WPF.Services
         ///
         /// Items with Id == 0 (failed TMDB matches) are dropped from BOTH the
         /// in-memory model and the file, so they get re-scanned next launch.
-        /// This mirrors the original Cache.SaveData() behavior.
+        /// This mirrors the original SaveData() behavior pre-extraction.
         /// </summary>
         public void Save(MainModel model)
         {

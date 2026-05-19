@@ -41,7 +41,7 @@ namespace LVP_WPF
 #endif
             });
 
-            await Cache.Initialize(progressBar, coffeeGif, logTxtBox);
+            await MediaLibrary.Initialize(progressBar, coffeeGif, logTxtBox);
             if (model == null)
             {
                 return;
@@ -100,7 +100,7 @@ namespace LVP_WPF
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             inactivityTimer?.Dispose();
-            Cache.SaveData();
+            MediaLibrary.SaveData();
             GuiModel.RestoreSystemCursor();
             tcpWorker?.StopThread();
             PlayerWindow.libVLC.Dispose();

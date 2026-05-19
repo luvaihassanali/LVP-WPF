@@ -11,7 +11,18 @@ using System.Windows.Controls;
 
 namespace LVP_WPF
 {
-    internal static class Cache
+    /// <summary>
+    /// Orchestrates loading the media library: scan disk -> compare to the
+    /// persisted state -> rebuild from TMDB if needed -> populate the GUI
+    /// model. Also exposes the persistence entry points used by other places
+    /// in the app (MainWindow on close, NotificationDialog's Save button).
+    ///
+    /// What used to be called "Cache" - the class kept growing until it was
+    /// 1200 lines of mixed concerns. Persistence, scanning, TMDB calls,
+    /// translation, image loading, and string fixes have all been pulled
+    /// out into separate services under Services/ and Util/.
+    /// </summary>
+    internal static class MediaLibrary
     {
         private static readonly MediaRepository _repository = new MediaRepository("media.json");
 
