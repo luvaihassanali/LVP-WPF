@@ -381,11 +381,10 @@ namespace LVP_WPF.Services
                 string message = $"Local movie name does not match retrieved data. Renaming file '{movie.Name.Replace(":", "")}' to '{((string)movieObject["title"]).Replace(":", "")}'.";
                 _prompts.ShowNotice("Warning", message);
                 string oldPath = movie.Path;
-                string[] fileNamePath = oldPath.Split('\\');
-                string fileName = fileNamePath[fileNamePath.Length - 1];
-                string extension = fileName.Split('.')[1];
+                string dir = Path.GetDirectoryName(oldPath) ?? "";
+                string extension = Path.GetExtension(oldPath); // includes leading "."
                 string newFileName = ((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes();
-                string newPath = oldPath.Replace(fileName, $"{newFileName}.{extension}");
+                string newPath = Path.Combine(dir, $"{newFileName}{extension}");
                 string invalid = new string(Path.GetInvalidPathChars()) + '?';
                 foreach (char c in invalid)
                 {
@@ -427,8 +426,7 @@ namespace LVP_WPF.Services
                     continue;
                 }
 
-                string[] langParts = lang[i].Split('\\');
-                string langKey = langParts[langParts.Length - 1];
+                string langKey = Path.GetFileName(lang[i]);
 
                 for (int j = 0; j < tvShow.MultiLangSeasons.Count; j++)
                 {
