@@ -248,6 +248,22 @@ namespace LVP_WPF
         public List<Episode>? MultiLangLastWatched { get; set; }
 
         /// <summary>
+        /// Flip this show into multi-language mode and allocate the parallel
+        /// per-language lists. The scanner calls this once when it detects a
+        /// show directory whose immediate children are 2-letter language codes
+        /// instead of season folders.
+        /// </summary>
+        internal void EnableMultiLang()
+        {
+            MultiLang = true;
+            MultiLangName = new List<string>();
+            MultiLangOverview = new List<string>();
+            MultiLangSeasons = new List<Season[]>();
+            MultiLangCurrSeason = new List<int>();
+            MultiLangLastWatched = new List<Episode>();
+        }
+
+        /// <summary>
         /// Locate the episode within this show's seasons. Returns the Id of
         /// the containing season (1..N for regular seasons, -1 for the
         /// Extras pseudo-season), or null if the episode isn't found.

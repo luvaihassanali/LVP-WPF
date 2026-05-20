@@ -120,12 +120,7 @@ namespace LVP_WPF.Services
         private TvShow ProcessMultiLangTvDirectory(string folder, TvShow tvShow)
         {
             Log.Debug("Process multi lang tv show dir {Dir}", folder);
-            tvShow.MultiLang = true;
-            tvShow.MultiLangLastWatched = new List<Episode>();
-            tvShow.MultiLangCurrSeason = new List<int>();
-            tvShow.MultiLangSeasons = new List<Season[]>();
-            tvShow.MultiLangOverview = new List<string>();
-            tvShow.MultiLangName = new List<string>();
+            tvShow.EnableMultiLang();
 
             string[] langFolders = Directory.GetDirectories(folder);
             Array.Sort(langFolders);
