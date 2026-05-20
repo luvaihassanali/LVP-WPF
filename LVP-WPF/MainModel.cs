@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 namespace LVP_WPF
@@ -157,11 +156,7 @@ namespace LVP_WPF
         }
 
         private static bool EpisodeFileNamesMatch(string currPath, string prevPath)
-        {
-            string currFile = currPath.Substring(currPath.LastIndexOf("\\"));
-            string prevFile = prevPath.Substring(prevPath.LastIndexOf("\\"));
-            return currFile.Equals(prevFile);
-        }
+            => System.IO.Path.GetFileName(currPath).Equals(System.IO.Path.GetFileName(prevPath));
     }
 
     public class Media
@@ -203,20 +198,8 @@ namespace LVP_WPF
             RunningTime = other.RunningTime;
         }
 
-        public static IComparer SortMoviesAlphabetically()
-        {
-            return new SortMoviesAlphabeticallyHelper();
-        }
-
-        private class SortMoviesAlphabeticallyHelper : IComparer
-        {
-            int IComparer.Compare(object? a, object? b)
-            {
-                Movie m1 = (Movie)a;
-                Movie m2 = (Movie)b;
-                return String.Compare(m1.Name, m2.Name);
-            }
-        }
+        public static IComparer<Movie> SortMoviesAlphabetically()
+            => Comparer<Movie>.Create((a, b) => string.Compare(a.Name, b.Name));
     }
 
 
@@ -445,24 +428,8 @@ namespace LVP_WPF
             return true;
         }
 
-        public static IComparer SortTvShowsAlphabetically()
-        {
-            return new SortTvShowsAlphabeticallyHelper();
-        }
-
-        private class SortTvShowsAlphabeticallyHelper : IComparer
-        {
-            int IComparer.Compare(object? a, object? b)
-            {
-                TvShow? t1 = (TvShow?)a;
-                TvShow? t2 = (TvShow?)b;
-                if (t1 != null && t2 != null)
-                {
-                    return String.Compare(t1.Name, t2.Name);
-                }
-                else throw new ArgumentNullException(nameof(a));
-            }
-        }
+        public static IComparer<TvShow> SortTvShowsAlphabetically()
+            => Comparer<TvShow>.Create((a, b) => string.Compare(a.Name, b.Name));
     }
 
     public class Season
