@@ -102,9 +102,16 @@ namespace LVP_WPF.Services
         {
             if (!_started) return;
             Process[] procs = Process.GetProcessesByName("libretranslate");
-            if (procs.Length != 0)
+            if (procs.Length == 0) return;
+            try
             {
                 procs[0].Kill();
+            }
+            catch
+            {
+                // Process can exit between GetProcessesByName and Kill; also
+                // fails with Win32 access-denied if libretranslate was launched
+                // elevated. Either way there's nothing more to clean up.
             }
         }
 
