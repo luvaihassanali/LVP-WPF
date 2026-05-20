@@ -64,24 +64,9 @@ namespace LVP_WPF.Services
             }
             else if (numMovieObjects != 1)
             {
-                int resultCount = ((JArray)movieObject["results"]).Count();
-                string[] names = new string[resultCount];
-                string[] ids = new string[resultCount];
-                string[] overviews = new string[resultCount];
-                DateTime?[] dates = new DateTime?[resultCount];
-
-                for (int j = 0; j < resultCount; j++)
-                {
-                    names[j] = (string)movieObject["results"][j]["title"];
-                    names[j] = names[j].FixBrokenQuotes();
-                    ids[j] = (string)movieObject["results"][j]["id"];
-                    overviews[j] = (string)movieObject["results"][j]["overview"];
-                    overviews[j] = overviews[j].FixBrokenQuotes();
-                    dates[j] = DateTime.TryParse((string)movieObject["results"][j]["release_date"], out DateTime temp) ? temp : DateTime.MinValue.AddHours(9);
-                }
-
-                string[][] info = new string[][] { names, ids, overviews };
-                movie.Id = _prompts.ChooseOption(movie.Name, movie.Path, info, dates);
+                var parsed = ParseSearchResults((JArray)movieObject["results"], titleKey: "title", dateKey: "release_date");
+                string[][] info = new string[][] { parsed.names, parsed.ids, parsed.overviews };
+                movie.Id = _prompts.ChooseOption(movie.Name, movie.Path, info, parsed.dates);
             }
             else
             {
@@ -90,6 +75,39 @@ namespace LVP_WPF.Services
 
             movieObject = await _tmdb.GetMovieAsync(movie.Id);
             await UpdateMovieData(movie, movieObject);
+        }
+
+        // Sentinel used when a TMDB result is missing its date field; we still
+        // need a parseable DateTime for downstream sorting. Picked as
+        // MinValue+9h so all "unknown" dates collate together but slightly
+        // above the absolute floor (the absolute floor sometimes confuses
+        // formatting code that special-cases it).
+        private static readonly DateTime UnknownDateSentinel = DateTime.MinValue.AddHours(9);
+
+        /// <summary>
+        /// Flatten a TMDB search-results JArray into the four parallel arrays
+        /// the OptionDialog prompt expects. EnrichMovieAsync and
+        /// BuildTvShowGeneralData both call this; their only differences are
+        /// the JSON keys for the display title and the date field
+        /// ("title"/"release_date" vs "name"/"first_air_date").
+        /// </summary>
+        private static (string[] names, string[] ids, string[] overviews, DateTime?[] dates) ParseSearchResults(
+            JArray results, string titleKey, string dateKey)
+        {
+            int count = results.Count;
+            string[] names = new string[count];
+            string[] ids = new string[count];
+            string[] overviews = new string[count];
+            DateTime?[] dates = new DateTime?[count];
+
+            for (int j = 0; j < count; j++)
+            {
+                names[j] = ((string)results[j][titleKey]).FixBrokenQuotes();
+                ids[j] = (string)results[j]["id"];
+                overviews[j] = ((string)results[j]["overview"]).FixBrokenQuotes();
+                dates[j] = DateTime.TryParse((string)results[j][dateKey], out DateTime t) ? t : UnknownDateSentinel;
+            }
+            return (names, ids, overviews, dates);
         }
 
         public async Task EnrichTvShowAsync(TvShow tvShow)
@@ -140,24 +158,9 @@ namespace LVP_WPF.Services
             }
             else if (totalResults != 1)
             {
-                int actualResults = (int)((JArray)tvObject["results"]).Count();
-                string[] names = new string[actualResults];
-                string[] ids = new string[actualResults];
-                string[] overviews = new string[actualResults];
-                DateTime?[] dates = new DateTime?[actualResults];
-
-                for (int j = 0; j < actualResults; j++)
-                {
-                    dates[j] = DateTime.TryParse((string)tvObject["results"][j]["first_air_date"], out DateTime temp) ? temp : DateTime.MinValue.AddHours(9);
-                    names[j] = (string)tvObject["results"][j]["name"];
-                    names[j] = names[j].FixBrokenQuotes();
-                    ids[j] = (string)tvObject["results"][j]["id"];
-                    overviews[j] = (string)tvObject["results"][j]["overview"];
-                    overviews[j] = overviews[j].FixBrokenQuotes();
-                }
-
-                string[][] info = new string[][] { names, ids, overviews };
-                tvShow.Id = _prompts.ChooseOption(tvShow.Name, tvShow.Seasons[0].Episodes[0].Path, info, dates);
+                var parsed = ParseSearchResults((JArray)tvObject["results"], titleKey: "name", dateKey: "first_air_date");
+                string[][] info = new string[][] { parsed.names, parsed.ids, parsed.overviews };
+                tvShow.Id = _prompts.ChooseOption(tvShow.Name, tvShow.Seasons[0].Episodes[0].Path, info, parsed.dates);
             }
             else
             {
@@ -166,7 +169,7 @@ namespace LVP_WPF.Services
 
             tvObject = await _tmdb.GetTvShowAsync(tvShow.Id);
 
-            tvShow.Date = DateTime.TryParse((string)tvObject["first_air_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+            tvShow.Date = DateTime.TryParse((string)tvObject["first_air_date"], out DateTime tempDate) ? tempDate : UnknownDateSentinel;
             tvShow.Overview = (string)tvObject["overview"];
             tvShow.Overview = tvShow.Overview.FixBrokenQuotes();
             tvShow.Poster = (string)tvObject["poster_path"];
@@ -230,7 +233,7 @@ namespace LVP_WPF.Services
                 if (season.Poster == null)
                 {
                     season.Poster = (string)seasonObject["poster_path"];
-                    season.Date = DateTime.TryParse((string)seasonObject["air_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+                    season.Date = DateTime.TryParse((string)seasonObject["air_date"], out DateTime tempDate) ? tempDate : UnknownDateSentinel;
 
                     if (season.Poster != null)
                     {
@@ -300,7 +303,7 @@ namespace LVP_WPF.Services
                             multiEpisodeOverview += (jCurrMultiEpisodeOverview + Environment.NewLine + Environment.NewLine);
                         }
 
-                        episode.Date = DateTime.TryParse((string)jEpisodesMulti[numEps - 1]["air_date"], out DateTime mTempDate) ? mTempDate : DateTime.MinValue.AddHours(9);
+                        episode.Date = DateTime.TryParse((string)jEpisodesMulti[numEps - 1]["air_date"], out DateTime mTempDate) ? mTempDate : UnknownDateSentinel;
                         episode.Id = (int)jEpisodesMulti[numEps - 1]["episode_number"];
                         episode.Backdrop = (string)jEpisodesMulti[numEps - 1]["still_path"];
                         episode.Overview = multiEpisodeOverview;
@@ -356,7 +359,7 @@ namespace LVP_WPF.Services
                         episode.Name = jEpisodeName.FixBrokenQuotes();
                     }
 
-                    episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+                    episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out DateTime tempDate) ? tempDate : UnknownDateSentinel;
                     episode.Id = (int)jEpisode["episode_number"];
                     episode.Overview = (string)jEpisode["overview"];
                     episode.Overview = episode.Overview.FixBrokenQuotes();
@@ -394,7 +397,7 @@ namespace LVP_WPF.Services
                 movie.Name = newFileName;
             }
 
-            movie.Date = DateTime.TryParse((string)movieObject["release_date"], out DateTime tempDate) ? tempDate : DateTime.MinValue.AddHours(9);
+            movie.Date = DateTime.TryParse((string)movieObject["release_date"], out DateTime tempDate) ? tempDate : UnknownDateSentinel;
             movie.Backdrop = (string)movieObject["backdrop_path"];
             movie.Poster = (string)movieObject["poster_path"];
             movie.Overview = (string)movieObject["overview"];
