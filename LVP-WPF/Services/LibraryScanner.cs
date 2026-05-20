@@ -241,41 +241,31 @@ namespace LVP_WPF.Services
         private bool IsMultiLangSeasonFolder(string folder)
             => _multiLangKeys.Contains(Path.GetFileName(folder));
 
-        private static int CompareIndex(string s1, string s2)
+        // Episode-file sorter: filenames follow "NN%Title.ext" where NN is the
+        // episode number, optionally suffixed with "#whatever" for two-parters
+        // or alternate cuts (e.g. "12#a%Pilot.mkv"). Sort ascending by NN.
+        private static int CompareIndex(string a, string b)
+            => ExtractEpisodeIndex(a).CompareTo(ExtractEpisodeIndex(b));
+
+        private static int ExtractEpisodeIndex(string path)
         {
-            string[] s1Parts = s1.Split('%');
-            string[] s2Parts = s2.Split('%');
-            string[] s3Parts = s1Parts[s1Parts.Length - 2].Split('\\');
-            string[] s4Parts = s2Parts[s2Parts.Length - 2].Split('\\');
-
-            string s5Part = s3Parts[s3Parts.Length - 1];
-            string s6Part = s4Parts[s4Parts.Length - 1];
-            if (s5Part.Contains('#'))
-            {
-                s5Part = s5Part.Split('#')[0];
-            }
-            if (s6Part.Contains('#'))
-            {
-                s6Part = s6Part.Split('#')[0];
-            }
-
-            int indexA = Int32.Parse(s5Part);
-            int indexB = Int32.Parse(s6Part);
-            if (indexA == indexB) return 0;
-            return indexA > indexB ? 1 : -1;
+            string prefix = Path.GetFileName(path).Split('%')[0];
+            int hash = prefix.IndexOf('#');
+            if (hash >= 0) prefix = prefix.Substring(0, hash);
+            return Int32.Parse(prefix);
         }
 
-        private static int SeasonComparer(string seasonB, string seasonA)
+        // Season-folder sorter: folder names are "Season N"; sort ascending by
+        // N, with the "Extras" folder always pushed to the end.
+        private static int SeasonComparer(string a, string b)
         {
-            if (seasonB.Contains("Extras")) return 1;
-            if (seasonA.Contains("Extras")) return -1;
-            string[] seasonValuePathA = seasonA.Split();
-            string[] seasonValuePathB = seasonB.Split();
-            int seasonValueA = Int32.Parse(seasonValuePathA[seasonValuePathA.Length - 1]);
-            int seasonValueB = Int32.Parse(seasonValuePathB[seasonValuePathB.Length - 1]);
-            if (seasonValueA == seasonValueB) return 0;
-            return seasonValueA < seasonValueB ? 1 : -1;
+            if (a.Contains("Extras")) return 1;
+            if (b.Contains("Extras")) return -1;
+            return ExtractSeasonNumber(a).CompareTo(ExtractSeasonNumber(b));
         }
+
+        private static int ExtractSeasonNumber(string path)
+            => Int32.Parse(Path.GetFileName(path).Split(' ').Last());
 
         // Maps a TMDB-style two-letter language code to the human-readable
         // name used in the UI ("en" -> "English", "it" -> "Italian").
