@@ -236,22 +236,16 @@ namespace LVP_WPF.Windows
                 episodeWindowBox.Opacity = 1.0;
             }
 
-            for (int i = 0; i < EpisodeListView.Items.Count; i++)
+            foreach (EpisodeWindowBox ep in EpisodeListView.Items)
             {
-                EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeListView.Items[i];
-                if (ep == episodeWindowBox)
-                {
-                    continue;
-                }
-                ep.Opacity = 0.0;
+                if (ep != episodeWindowBox) ep.Opacity = 0.0;
             }
         }
 
         private void EpisodeListView_MouseLeave(object sender, MouseEventArgs e)
         {
-            for (int i = 0; i < EpisodeListView.Items.Count; i++)
+            foreach (EpisodeWindowBox ep in EpisodeListView.Items)
             {
-                EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeListView.Items[i];
                 ep.Opacity = 0.0;
             }
         }
@@ -332,22 +326,22 @@ namespace LVP_WPF.Windows
 
         private void Play_Click(object sender, MouseButtonEventArgs e)
         {
-            if (tvShow.LastEpisode == null)
+            // Resume LastEpisode if it lives in the currently selected season;
+            // otherwise fall back to the first episode of that season.
+            Episode[] currentSeason = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
+            Episode toPlay = currentSeason[0];
+            if (tvShow.LastEpisode != null)
             {
-                PlayerWindow.Show(tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0], this);
-            }
-            else
-            {
-                foreach (Episode episode in tvShow.Seasons[tvShow.CurrSeason - 1].Episodes)
+                foreach (Episode ep in currentSeason)
                 {
-                    if (episode.Compare(tvShow.LastEpisode))
+                    if (ep.Compare(tvShow.LastEpisode))
                     {
-                        PlayerWindow.Show(tvShow.LastEpisode, this);
-                        return;
+                        toPlay = tvShow.LastEpisode;
+                        break;
                     }
                 }
-                PlayerWindow.Show(tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0], this);
             }
+            PlayerWindow.Show(toPlay, this);
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
