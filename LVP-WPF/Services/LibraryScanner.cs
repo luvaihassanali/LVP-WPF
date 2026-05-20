@@ -49,8 +49,8 @@ namespace LVP_WPF.Services
             for (int i = 0; i < _moviePaths.Count; i++)
             {
                 model.Movies[i] = ProcessMovieDirectory(_moviePaths[i]);
-                _mediaCount++;
             }
+            _mediaCount += _moviePaths.Count;
 
             for (int i = 0; i < _tvPaths.Count; i++)
             {
@@ -91,10 +91,7 @@ namespace LVP_WPF.Services
             // Show directory naming convention: "Show Name%suffix-with-cache-key".
             // Strip the % suffix to get the display name.
             string name = Path.GetFileName(targetDir).Split('%')[0];
-            TvShow show = new TvShow(name.Trim(), targetDir)
-            {
-                Path = targetDir
-            };
+            TvShow show = new TvShow(name.Trim(), targetDir);
 
             string[] seasonEntries = Directory.GetDirectories(targetDir);
             string folderName = Path.GetFileName(seasonEntries[0]);
