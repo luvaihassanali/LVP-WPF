@@ -170,13 +170,7 @@ namespace LVP_WPF.Windows
             langComboBox.SelectionChanged += LangComboBox_SelectionChanged;
 
             langComboBox.IsDropDownOpen = true;
-            for (int i = 0; i < langComboBox.Items.Count; i++)
-            {
-                ComboBoxItem item = (ComboBoxItem)langComboBox.ItemContainerGenerator.ContainerFromIndex(i);
-                Point pos = item.PointToScreen(new Point(0d, 0d));
-                TcpSerialListener.layoutPoint.langComboBoxItems.Add(item);
-                TcpSerialListener.layoutPoint.langComboBoxItemPts.Add(pos);
-            }
+            TcpSerialListener.layoutPoint.CaptureComboBoxItems(langComboBox, capturePositions: true);
 
             ScrollViewer langScrollViewer = (ScrollViewer)langComboBox.Template.FindName("DropDownSV", langComboBox);
             langScrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;

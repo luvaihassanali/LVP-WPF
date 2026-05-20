@@ -107,6 +107,27 @@ namespace LVP_WPF.Windows
         public int langIndex = 0;
         public List<object> tvControlList = new List<object>();
         public List<Image> seasonControlList = new List<Image>();
+
+        /// <summary>
+        /// Capture each item container in <paramref name="comboBox"/> into
+        /// langComboBoxItems (and optionally their on-screen Points into
+        /// langComboBoxItemPts) so the joystick/IR navigator can later
+        /// position the cursor over individual dropdown entries.
+        /// The caller is responsible for opening/closing the dropdown -
+        /// item containers are only realized while it's open.
+        /// </summary>
+        public void CaptureComboBoxItems(ComboBox comboBox, bool capturePositions)
+        {
+            for (int i = 0; i < comboBox.Items.Count; i++)
+            {
+                ComboBoxItem item = (ComboBoxItem)comboBox.ItemContainerGenerator.ContainerFromIndex(i);
+                langComboBoxItems.Add(item);
+                if (capturePositions)
+                {
+                    langComboBoxItemPts.Add(item.PointToScreen(new Point(0d, 0d)));
+                }
+            }
+        }
         public List<int[]> seasonWindowGrid = new List<int[]>();
         public List<Image[]> seasonWindowControlGrid = new List<Image[]>();
 

@@ -88,13 +88,7 @@ namespace LVP_WPF.Windows
                 TcpSerialListener.layoutPoint.movieLangComboBox = this.subTrackComboBox;
 
                 subTrackComboBox.IsDropDownOpen = true;
-                for (int i = 0; i < subTrackComboBox.Items.Count; i++)
-                {
-                    ComboBoxItem item = (ComboBoxItem)subTrackComboBox.ItemContainerGenerator.ContainerFromIndex(i);
-                    Point pos = item.PointToScreen(new Point(0d, 0d));
-                    TcpSerialListener.layoutPoint.langComboBoxItems.Add(item);
-                    TcpSerialListener.layoutPoint.langComboBoxItemPts.Add(pos);
-                }
+                TcpSerialListener.layoutPoint.CaptureComboBoxItems(subTrackComboBox, capturePositions: true);
                 subTrackComboBox.IsDropDownOpen = false;
             }
             TcpSerialListener.layoutPoint.Select("MovieWindow", true);
@@ -141,11 +135,7 @@ namespace LVP_WPF.Windows
             subTrackComboBox.SelectedIndex = 0;
 
             subTrackComboBox.IsDropDownOpen = true;
-            for (int i = 0; i < subTrackComboBox.Items.Count; i++)
-            {
-                ComboBoxItem item = (ComboBoxItem)subTrackComboBox.ItemContainerGenerator.ContainerFromIndex(i);
-                TcpSerialListener.layoutPoint.langComboBoxItems.Add(item);
-            }
+            TcpSerialListener.layoutPoint.CaptureComboBoxItems(subTrackComboBox, capturePositions: false);
 
             langScrollViewer = (ScrollViewer)subTrackComboBox.Template.FindName("DropDownSV", subTrackComboBox);
             langScrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
