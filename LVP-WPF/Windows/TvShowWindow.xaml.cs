@@ -23,6 +23,13 @@ namespace LVP_WPF.Windows
     {
         private const int OverviewMaxLen = 370;
 
+        /// <summary>
+        /// Trim a TMDB Overview string for display. Anything longer than
+        /// OverviewMaxLen gets cut to that length with an ellipsis appended.
+        /// </summary>
+        private static string TruncateOverview(string overview)
+            => overview.Length > OverviewMaxLen ? $"{overview.Substring(0, OverviewMaxLen)}..." : overview;
+
         static internal TvShow tvShow;
         static internal EpisodeWindowBox[] episodes;
         static internal List<TvShow> cartoons = new List<TvShow>();
@@ -33,7 +40,7 @@ namespace LVP_WPF.Windows
             TvShowWindow window = new TvShowWindow();
             window.ShowName = tvShow.Name.Contains("(") ? tvShow.Name.Split(" (")[0] : tvShow.Name;
             window.ShowName += $" ({tvShow.Date.GetValueOrDefault().Year})";
-            window.Description = tvShow.Overview.Length > OverviewMaxLen ? $"{tvShow.Overview.Substring(0, OverviewMaxLen)}..." : tvShow.Overview;
+            window.Description = TruncateOverview(tvShow.Overview);
             window.Backdrop = ImageLoader.LoadBackdrop(tvShow.Backdrop);
             window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : $"Season {tvShow.CurrSeason}";
             int index = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
@@ -185,7 +192,7 @@ namespace LVP_WPF.Windows
                 string description;
                 if (episodes[i].Overview != null)
                 {
-                    description = episodes[i].Overview.Length > OverviewMaxLen ? $"{episodes[i].Overview.Substring(0, OverviewMaxLen)}..." : episodes[i].Overview;
+                    description = TruncateOverview(episodes[i].Overview);
                 }
                 else
                 {
@@ -474,7 +481,7 @@ namespace LVP_WPF.Windows
             {
                 SwitchMultiLangTvIndex(tvShow, langComboBox.SelectedValue.ToString());
                 this.ShowName = tvShow.Name.Contains('(') ? tvShow.Name : $"{tvShow.Name} ({tvShow.Date.GetValueOrDefault().Year})";
-                this.Description = tvShow.Overview.Length > OverviewMaxLen ? $"{tvShow.Overview.Substring(0, OverviewMaxLen)}..." : tvShow.Overview;
+                this.Description = TruncateOverview(tvShow.Overview);
                 UpdateTvWindowSeasonChange(tvShow.CurrSeason);
                 await GenerateEpisodeItemContainers();
             }
