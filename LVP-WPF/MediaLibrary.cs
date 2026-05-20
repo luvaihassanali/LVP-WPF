@@ -76,34 +76,21 @@ namespace LVP_WPF
                     await BuildCache();
                 }
 
-                for (int i = 0; i < MainWindow.model.Movies.Length; i++)
-                {
-                    MainWindow.gui.mediaDict[MainWindow.model.Movies[i].Id] = MainWindow.model.Movies[i];
-                }
-
-                for (int i = 0; i < MainWindow.model.TvShows.Length; i++)
-                {
-                    MainWindow.gui.mediaDict[MainWindow.model.TvShows[i].Id] = MainWindow.model.TvShows[i];
-                }
+                foreach (Movie m in MainWindow.model.Movies)   MainWindow.gui.mediaDict[m.Id] = m;
+                foreach (TvShow t in MainWindow.model.TvShows) MainWindow.gui.mediaDict[t.Id] = t;
 
                 if (MainWindow.model.HistoryList.Count == 0 || needsRebuild)
                 {
+                    // Flatten all non-cartoon episodes into the history list, sorted
+                    // by air date. Keeps the existing List<Episode> instance (Clear+AddRange
+                    // rather than reassign) in case anything has captured the reference.
                     MainWindow.model.HistoryList.Clear();
-                    foreach (TvShow t in MainWindow.model.TvShows)
-                    {
-                        if (t.Cartoon)
-                        {
-                            continue;
-                        }
-                        foreach (Season s in t.Seasons)
-                        {
-                            foreach (Episode e in s.Episodes)
-                            {
-                                MainWindow.model.HistoryList.Add(e);
-                            }
-                        }
-                    }
-                    MainWindow.model.HistoryList.Sort((x, y) => DateTime.Compare(x.Date, y.Date));
+                    MainWindow.model.HistoryList.AddRange(
+                        MainWindow.model.TvShows
+                            .Where(t => !t.Cartoon)
+                            .SelectMany(t => t.Seasons)
+                            .SelectMany(s => s.Episodes));
+                    MainWindow.model.HistoryList.Sort((a, b) => a.Date.CompareTo(b.Date));
                 }
             });
         }
