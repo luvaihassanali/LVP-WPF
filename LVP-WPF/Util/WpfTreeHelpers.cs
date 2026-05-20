@@ -32,38 +32,26 @@ namespace LVP_WPF.Util
         /// </summary>
         public static Visual? GetChildrenByType(Visual visualElement, Type typeElement, string nameElement)
         {
-            if (visualElement == null)
+            if (visualElement == null) return null;
+
+            if (visualElement.GetType() == typeElement
+                && visualElement is FrameworkElement fe
+                && fe.Name == nameElement)
             {
-                return null;
-            }
-            if (visualElement.GetType() == typeElement)
-            {
-                FrameworkElement? fe = visualElement as FrameworkElement;
-                if (fe != null)
-                {
-                    if (fe.Name == nameElement)
-                    {
-                        return fe;
-                    }
-                }
+                return fe;
             }
 
-            Visual? foundElement = null;
-            if (visualElement is FrameworkElement)
-            {
-                ((FrameworkElement)visualElement).ApplyTemplate();
-            }
+            // Apply the template if we can - some children may not exist yet
+            // otherwise. (ItemsControl items, ContentControl content, etc.)
+            (visualElement as FrameworkElement)?.ApplyTemplate();
 
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(visualElement); i++)
             {
                 Visual visual = (Visual)VisualTreeHelper.GetChild(visualElement, i);
-                foundElement = GetChildrenByType(visual, typeElement, nameElement);
-                if (foundElement != null)
-                {
-                    break;
-                }
+                Visual? found = GetChildrenByType(visual, typeElement, nameElement);
+                if (found != null) return found;
             }
-            return foundElement;
+            return null;
         }
 
         /// <summary>
@@ -72,19 +60,12 @@ namespace LVP_WPF.Util
         /// </summary>
         public static DependencyObject? GetScrollViewer(DependencyObject o)
         {
-            if (o is System.Windows.Controls.ScrollViewer)
-            {
-                return o;
-            }
+            if (o is System.Windows.Controls.ScrollViewer) return o;
+
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(o); i++)
             {
-                DependencyObject? child = VisualTreeHelper.GetChild(o, i);
-                DependencyObject? result = GetScrollViewer(child);
-                if (result == null)
-                {
-                    continue;
-                }
-                else return result;
+                DependencyObject? result = GetScrollViewer(VisualTreeHelper.GetChild(o, i));
+                if (result != null) return result;
             }
             return null;
         }
