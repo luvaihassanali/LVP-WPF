@@ -328,18 +328,7 @@ namespace LVP_WPF.Windows
         {
             movieWindowActive = false;
             mainWindowActive = true;
-
-            if (click)
-            {
-                CenterMouseOverControl(gui.tvMovieCloseButton);
-                await Task.Delay(200);
-                TcpSerialListener.DoMouseClick();
-                await Task.Delay(200);
-            }
-
-            currPoint = returnPointA;
-            currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
-            CenterMouseOverControl(currControl);
+            await PerformCloseToMain(click);
         }
 
         private async void CloseTvWindow(bool click)
@@ -352,8 +341,23 @@ namespace LVP_WPF.Windows
 
             if (click)
             {
+                // Reset the episode list scroll before falling through to the
+                // shared close-to-main routine so the cursor lands on the
+                // close-button at the expected screen Y.
                 gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
                 WpfTreeHelpers.DoEvents();
+            }
+
+            await PerformCloseToMain(click);
+        }
+
+        // Shared tail for movie/tv close handlers: optionally simulate a
+        // click on the close button, then move the cursor back to whichever
+        // main-grid tile the user was on before they opened the sub-window.
+        private async Task PerformCloseToMain(bool click)
+        {
+            if (click)
+            {
                 CenterMouseOverControl(gui.tvMovieCloseButton);
                 await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
