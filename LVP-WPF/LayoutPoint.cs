@@ -1,8 +1,10 @@
-﻿using LVP_WPF.Services;
+﻿using LVP_WPF.Models;
+using LVP_WPF.Services;
 using LVP_WPF.Util;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
@@ -570,42 +572,34 @@ namespace LVP_WPF.Windows
             MoveInGrid(movePoint, mainWindowGrid, mainWindowControlGrid, columns: 6, MainWindow.gui.mainScrollViewer, wrapVertically: true);
         }
 
+        // Lay out the main screen as three independent sections (TV shows,
+        // cartoons, movies), each chunked into rows of 6. Each section
+        // begins on a fresh row even if the previous section's last row
+        // was only partially full.
         private void BuildMainWindowGrid()
         {
-            for (int i = 0; i < 2; i++)
+            int[] sectionSizes = { gui.TvShows.Count, gui.Cartoons.Count, gui.Movies.Count };
+            foreach (int sectionSize in sectionSizes)
             {
-                int count = i == 1 ? gui.Movies.Count : (gui.TvShows.Count + gui.Cartoons.Count);
-                int rowIndex = 0;
-                int[] currGridRow = null;
-                Image[] currControlRow = null;
-                for (int j = 0; j < count; j++)
-                {
-                    if (i == 0 && j == count - gui.Cartoons.Count)
-                    {
-                        rowIndex = 0;
-                    }
-
-                    if (rowIndex == 6)
-                    {
-                        rowIndex = 0;
-                    }
-
-                    if (rowIndex == 0)
-                    {
-                        currGridRow = new int[6];
-                        currControlRow = new Image[6];
-                        mainWindowGrid.Add(currGridRow);
-                        mainWindowControlGrid.Add(currControlRow);
-                        currGridRow[rowIndex] = 1;
-                        currControlRow[rowIndex] = null;
-                    }
-
-                    currGridRow[rowIndex] = 1;
-                    currControlRow[rowIndex] = null;
-                    rowIndex++;
-                }
+                AppendMainGridSection(sectionSize, columnsPerRow: 6);
             }
             BuildMainWindowControlGrid();
+        }
+
+        private void AppendMainGridSection(int itemCount, int columnsPerRow)
+        {
+            int[] currGridRow = null;
+            for (int j = 0; j < itemCount; j++)
+            {
+                int col = j % columnsPerRow;
+                if (col == 0)
+                {
+                    currGridRow = new int[columnsPerRow];
+                    mainWindowGrid.Add(currGridRow);
+                    mainWindowControlGrid.Add(new Image[columnsPerRow]);
+                }
+                currGridRow[col] = 1;
+            }
         }
 
         private void BuildMainWindowControlGrid()
@@ -614,42 +608,27 @@ namespace LVP_WPF.Windows
             int rowIndex = 0;
             int controlIndex = gui.Movies.Count;
             List<Image> mainWindowControlList = new List<Image>();
-            ListView[] mainWindowLists = new ListView[]
+
+            // Three (ListView, collection) pairs to iterate over. The
+            // ListView indexes into mainGrid.Children correspond to:
+            //   [6] -> Movies row, [2] -> TvShows row, [4] -> Cartoons row
+            // and the parallel collections are the bindings on each.
+            ListView[] lists =
             {
                 (ListView)gui.mainGrid.Children[6],
                 (ListView)gui.mainGrid.Children[2],
                 (ListView)gui.mainGrid.Children[4]
             };
+            ObservableCollection<MainWindowBox>[] collections = { gui.Movies, gui.TvShows, gui.Cartoons };
 
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < lists.Length; i++)
             {
-                ItemContainerGenerator generator = mainWindowLists[i].ItemContainerGenerator;
-                switch (i)
+                ItemContainerGenerator generator = lists[i].ItemContainerGenerator;
+                foreach (MainWindowBox box in collections[i])
                 {
-                    case 0:
-                        for (int j = 0; j < gui.Movies.Count; j++)
-                        {
-                            ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.Movies[j]);
-                            Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
-                            mainWindowControlList.Add(img);
-                        }
-                        break;
-                    case 1:
-                        for (int j = 0; j < gui.TvShows.Count; j++)
-                        {
-                            ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.TvShows[j]);
-                            Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
-                            mainWindowControlList.Add(img);
-                        }
-                        break;
-                    case 2:
-                        for (int j = 0; j < gui.Cartoons.Count; j++)
-                        {
-                            ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.Cartoons[j]);
-                            Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
-                            mainWindowControlList.Add(img);
-                        }
-                        break;
+                    ListViewItem container = (ListViewItem)generator.ContainerFromItem(box);
+                    Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
+                    mainWindowControlList.Add(img);
                 }
             }
 
