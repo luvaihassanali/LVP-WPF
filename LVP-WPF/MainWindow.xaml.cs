@@ -78,7 +78,7 @@ namespace LVP_WPF
 
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30));
             inactivityTimer.Inactivity += InactivityDetected;
-            PlayerWindow.InitiaizeLibVlcCore();
+            PlayerWindow.InitializeLibVlcCore();
             MainWindow_Fade(1.0);
             loadGrid.Visibility = Visibility.Hidden;
             if (AppConfig.ShowSnow)

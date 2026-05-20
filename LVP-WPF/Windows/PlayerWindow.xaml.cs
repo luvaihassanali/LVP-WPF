@@ -62,7 +62,7 @@ namespace LVP_WPF.Windows
 
         }
 
-        internal static void InitiaizeLibVlcCore()
+        internal static void InitializeLibVlcCore()
         {
             Core.Initialize();
         }
