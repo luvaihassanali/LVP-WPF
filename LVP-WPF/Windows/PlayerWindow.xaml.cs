@@ -93,10 +93,8 @@ namespace LVP_WPF.Windows
                 NotificationDialog.Show("Error", "Media player failed to start.");
             }
 
-            if (currMedia as Episode != null)
+            if (currMedia is Episode episode)
             {
-                Episode episode = (Episode)currMedia;
-
                 if (PlaybackSession.IsHistoryWatch)
                 {
                     ShowHistoryWatchBanner(episode);
@@ -132,9 +130,8 @@ namespace LVP_WPF.Windows
             }
             else if (!PlaybackSession.IsCartoonShuffle && !skipClosing)
             {
-                if (currMedia as Episode != null)
+                if (currMedia is Episode episode)
                 {
-                    Episode episode = (Episode)currMedia;
                     TvShow tvShow = TvShowWindow.tvShow;
                     int? seasonId = tvShow.FindSeasonIdOf(episode);
 
@@ -169,15 +166,12 @@ namespace LVP_WPF.Windows
         {
             tvShowWindow.Dispatcher.BeginInvoke(() =>
             {
-                for (int i = 0; i < tvShowWindow.EpisodeListView.Items.Count; i++)
+                foreach (EpisodeWindowBox epBox in tvShowWindow.EpisodeListView.Items)
                 {
-                    EpisodeWindowBox epBox = (EpisodeWindowBox)tvShowWindow.EpisodeListView.Items[i];
-                    if (epBox.Id == episode.Id)
-                    {
-                        epBox.Progress = (int)episode.SavedTime;
-                        epBox.Total = (int)episode.Length;
-                        break;
-                    }
+                    if (epBox.Id != episode.Id) continue;
+                    epBox.Progress = (int)episode.SavedTime;
+                    epBox.Total = (int)episode.Length;
+                    break;
                 }
             });
         }
@@ -210,12 +204,7 @@ namespace LVP_WPF.Windows
                     TcpSerialListener.layoutPoint.CloseCurrWindow();
                 }
                 MainWindow.model.HistoryEpisode = MainWindow.model.HistoryList[MainWindow.model.HistoryIndex];
-                currMedia = MainWindow.model.HistoryEpisode;
-
-                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                Log.Information("Playing {Media}", currMedia.Path);
-                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-
+                PlayMediaOnVlcThread(MainWindow.model.HistoryEpisode);
                 ShowHistoryWatchBanner(MainWindow.model.HistoryEpisode);
                 return;
             }
@@ -229,16 +218,12 @@ namespace LVP_WPF.Windows
                     TcpSerialListener.layoutPoint.CloseCurrWindow();
                 }
 
-                currMedia = PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex];
-                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                Log.Information("Playing {Media}", currMedia.Path);
-                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+                PlayMediaOnVlcThread(PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex]);
                 return;
             }
 
-            if (currMedia as Episode != null)
+            if (currMedia is Episode episode)
             {
-                Episode episode = (Episode)currMedia;
                 if (episode.Id < 0)
                 {
                     skipClosing = true;
@@ -270,16 +255,27 @@ namespace LVP_WPF.Windows
                     });
                 }
 
-                currMedia = nextEpisode;
-                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                Log.Information("Play: {Media}", currMedia.Path);
-                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+                PlayMediaOnVlcThread(nextEpisode);
             }
             else //if Movie
             {
                 skipClosing = true;
                 TcpSerialListener.layoutPoint.CloseCurrWindow();
             }
+        }
+
+        /// <summary>
+        /// Hand off the next media item to LibVLC on the threadpool. The pool
+        /// hop is required because Play() blocks for a beat while VLC builds
+        /// the demuxer chain, and we don't want to stall the UI thread during
+        /// auto-advance between episodes.
+        /// </summary>
+        private void PlayMediaOnVlcThread(Media m)
+        {
+            currMedia = m;
+            LibVLCSharp.Shared.Media next = CreateMedia(m);
+            Log.Information("Play: {Media}", m.Path);
+            ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
         }
 
         private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
@@ -290,9 +286,8 @@ namespace LVP_WPF.Windows
         private void MediaPlayer_LengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e)
         {
             SliderMax = mediaPlayer.Length;
-            if (currMedia as Episode != null)
+            if (currMedia is Episode episode)
             {
-                Episode episode = (Episode)currMedia;
                 episode.Length = mediaPlayer.Length;
             }
         }
