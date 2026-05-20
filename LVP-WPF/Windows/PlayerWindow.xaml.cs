@@ -117,15 +117,10 @@ namespace LVP_WPF.Windows
         private void PlayerWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             timelineSlider.ValueChanged -= Slider_ValueChanged;
-            if (pollingTimer != null)
-            {
-                if (pollingTimer.IsEnabled)
-                {
-                    pollingTimer.Stop();
-                }
-                pollingTimer.IsEnabled = false;
-                pollingTimer = null;
-            }
+            // DispatcherTimer.Stop() is a no-op when already stopped, and
+            // setting IsEnabled=false after Stop() is redundant - Stop does both.
+            pollingTimer?.Stop();
+            pollingTimer = null;
 
             if (PlaybackSession.IsHistoryWatch)
             {
