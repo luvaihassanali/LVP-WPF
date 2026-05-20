@@ -55,20 +55,14 @@ namespace LVP_WPF
 
             await this.Dispatcher.BeginInvoke(() =>
             {
-                if (progressBar.Visibility == Visibility.Visible)
-                {
-                    progressBar.Visibility = Visibility.Hidden;
-                }
-                if (coffeeGif.Visibility == Visibility.Visible)
-                {
-                    coffeeGif.Visibility = Visibility.Hidden;
-                }
-                if (logTxtBox.Visibility == Visibility.Visible)
-                {
-                    logTxtBox.Visibility = Visibility.Hidden;
-                }
-
+                // These get switched to Visible by WpfLoadProgress.ShowRebuildIndicators
+                // when a TMDB rebuild was needed; if no rebuild ran they're still Hidden.
+                // Setting to Hidden is a no-op when already Hidden.
+                progressBar.Visibility = Visibility.Hidden;
+                coffeeGif.Visibility = Visibility.Hidden;
+                logTxtBox.Visibility = Visibility.Hidden;
                 coffeeGif.Source = null;
+
                 gui.mainCloseButton = this.closeButton;
                 gui.mainScrollViewer = this.scrollViewer;
                 gui.mainGrid = this.mainGrid;
