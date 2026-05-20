@@ -392,48 +392,26 @@ namespace LVP_WPF.Windows
             TcpSerialListener.DoMouseClick();
         }
 
-        private void MoveTvPoint(int x)
+        private void MoveTvPoint(int x) =>
+            MoveAlong1D(x, tvControlList, MainWindow.gui.episodeScrollViewer);
+
+        private void MoveLangPoint(int x) =>
+            MoveAlong1D(x, langComboBoxItems, MainWindow.gui.langScrollViewer);
+
+        private void MoveMoviePoint(int x) =>
+            MoveAlong1D(x, new object[] { movieBackdrop, movieLangComboBox }, scrollViewer: null);
+
+        // Shared 1-D navigation (used by movie / tv-show / language-dropdown
+        // overlays where the items are a flat indexable list rather than a 2-D
+        // grid). Steps currPoint.x by `delta`, clamps to range, updates currControl,
+        // and centers the cursor (optionally scrolling the supplied viewer).
+        private void MoveAlong1D(int delta, System.Collections.IList controls, ScrollViewer scrollViewer)
         {
-
-            int newIndex = currPoint.x + x;
-            if (newIndex < 0 || newIndex >= tvControlList.Count)
-            {
-                return;
-            }
-
-
+            int newIndex = currPoint.x + delta;
+            if (newIndex < 0 || newIndex >= controls.Count) return;
             currPoint = (newIndex, currPoint.y);
-            currControl = tvControlList[newIndex];
-            CenterMouseOverControl(currControl, newIndex, MainWindow.gui.episodeScrollViewer);
-        }
-
-        private void MoveLangPoint(int x)
-        {
-            int newIndex = currPoint.x + x;
-            if (newIndex < 0 || newIndex >= langComboBoxItems.Count)
-            {
-                return;
-            }
-
-
-            currPoint = (newIndex, currPoint.y);
-            currControl = langComboBoxItems[newIndex];
-            CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.langScrollViewer);
-        }
-
-        private void MoveMoviePoint(int x)
-        {
-
-            int newIndex = currPoint.x + x;
-            if (newIndex < 0 || newIndex > 1)
-            {
-                return;
-            }
-
-
-            currPoint = (newIndex, currPoint.y);
-            currControl = newIndex == 0 ? movieBackdrop : movieLangComboBox;
-            CenterMouseOverControl(currControl, newIndex);
+            currControl = controls[newIndex];
+            CenterMouseOverControl(currControl, newIndex, scrollViewer);
         }
 
         private (int x, int y) GetCurrSeasonPoint(int seasonFormIndex)
