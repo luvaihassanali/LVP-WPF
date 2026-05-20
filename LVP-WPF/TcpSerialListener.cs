@@ -305,22 +305,16 @@ namespace LVP_WPF
             }
         }
 
-        static public void DoMouseClick()
-        {
-            ComInterop.POINT currPos;
-            ComInterop.GetCursorPos(out currPos);
-            uint X = (uint)currPos.X;
-            uint Y = (uint)currPos.Y;
-            ComInterop.mouse_event(ComInterop.MOUSEEVENTF_LEFTDOWN | ComInterop.MOUSEEVENTF_LEFTUP, X, Y, 0, 0);
-        }
+        public static void DoMouseClick()
+            => SendMouseEventAtCursor(ComInterop.MOUSEEVENTF_LEFTDOWN | ComInterop.MOUSEEVENTF_LEFTUP);
 
-        static public void DoMouseRightClick()
+        public static void DoMouseRightClick()
+            => SendMouseEventAtCursor(ComInterop.MOUSEEVENTF_RIGHTDOWN | ComInterop.MOUSEEVENTF_RIGHTUP);
+
+        private static void SendMouseEventAtCursor(uint flags)
         {
-            ComInterop.POINT currPos;
-            ComInterop.GetCursorPos(out currPos);
-            uint X = (uint)currPos.X;
-            uint Y = (uint)currPos.Y;
-            ComInterop.mouse_event(ComInterop.MOUSEEVENTF_RIGHTDOWN | ComInterop.MOUSEEVENTF_RIGHTUP, X, Y, 0, 0);
+            ComInterop.GetCursorPos(out ComInterop.POINT pos);
+            ComInterop.mouse_event(flags, (uint)pos.X, (uint)pos.Y, 0, 0);
         }
 
         /// <summary>
