@@ -60,8 +60,11 @@ namespace LVP_WPF.Services
         {
             string url = ImageBase + imagePath;
             string subroot = isMovie ? "movies" : "tv";
-            string dirPath = $"{_cacheRoot}\\{subroot}\\{name}";
-            string filePath = dirPath + imagePath.Replace("/", "\\");
+            string dirPath = Path.Combine(_cacheRoot, subroot, name);
+            // imagePath comes in as "/abc123.jpg"; Path.Combine treats a
+            // leading separator as "rooted" and discards dirPath, so we
+            // append the filename portion directly instead.
+            string filePath = Path.Combine(dirPath, imagePath.TrimStart('/'));
 
             if (!Directory.Exists(dirPath))
             {

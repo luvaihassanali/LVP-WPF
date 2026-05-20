@@ -233,7 +233,7 @@ namespace LVP_WPF
                     StartTimer();
                 }
 
-                if (!buffer.Contains("ok") && !buffer.Contains("ka") && !buffer.Contains("initack"))
+                if (!IsControlMessage(buffer))
                 {
                     ParseTcpDataIn(buffer);
                 }
@@ -370,9 +370,15 @@ namespace LVP_WPF
 
         private void StopTimer()
         {
+            if (pollingTimer == null) return;
             pollingTimer.Enabled = false;
             pollingTimer.Stop();
         }
+
+        // ESP8266 protocol messages we shouldn't try to parse as a joystick
+        // reading: "ok" / "ka" (keepalives) / "initack" (handshake response).
+        private static bool IsControlMessage(string buffer)
+            => buffer.Contains("ok") || buffer.Contains("ka") || buffer.Contains("initack");
 
         private void PollingTimer_Tick(Object source, System.Timers.ElapsedEventArgs e)
         {

@@ -24,12 +24,13 @@ namespace LVP_WPF.Windows
             movie = m;
 
             TimeSpan temp = TimeSpan.FromMinutes(movie.RunningTime);
-            string hour = temp.Hours > 1 ? "hours " : "hour ";
+            string hourUnit = temp.Hours == 1 ? "hour" : "hours";
+            string minuteUnit = temp.Minutes == 1 ? "minute" : "minutes";
             MovieWindow window = new MovieWindow
             {
                 MovieName = $"{movie.Name} ({movie.Date.GetValueOrDefault().Year})",
-                RunningTime = $"Running time: {temp.Hours} {hour} {temp.Minutes} minutes",
-                Description = movie.Overview, //.Length > 1011 ? $"{movie.Overview.Substring(0, 1011)}..." : movie.Overview;
+                RunningTime = $"Running time: {temp.Hours} {hourUnit} {temp.Minutes} {minuteUnit}",
+                Description = movie.Overview,
                 Backdrop = ImageLoader.LoadBackdrop(movie.Backdrop),
                 Overlay = ImageLoader.PlayOverlay
             };

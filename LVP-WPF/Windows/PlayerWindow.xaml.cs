@@ -347,37 +347,40 @@ namespace LVP_WPF.Windows
         {
             if (mediaPlayer.IsPlaying)
             {
-                PlayButton_SetSymbol(0);
-                playButton.Background = playHoverBackground;
-                playButton.BorderBrush = playHoverBorderBrush;
+                ApplyPausedVisuals();
                 mediaPlayer.Pause();
                 pollingTimer.Stop();
             }
             else
             {
-                PlayButton_SetSymbol(1);
-                playButton.Background = System.Windows.Media.Brushes.Transparent;
-                playButton.BorderBrush = System.Windows.Media.Brushes.White;
+                ApplyPlayingVisuals();
                 mediaPlayer.Play();
                 pollingTimer.Start();
             }
         }
 
-        private void PlayButton_SetSymbol(int symbol)
+        // Paint the play button + glyph for the "currently paused" state. The
+        // hover-colored background reads as "this is the button you'll click
+        // to resume" and the ❚❚ glyph confirms it.
+        private void ApplyPausedVisuals()
         {
-            switch (symbol)
-            {
-                case 0:
-                    buttonText.Text = "❚❚";
-                    buttonText.Margin = new Thickness(1, -3, 0, 0);
-                    buttonText.FontSize = 28;
-                    break;
-                case 1:
-                    buttonText.Text = "▶️";
-                    buttonText.Margin = new Thickness(6, -4, 0, 0);
-                    buttonText.FontSize = 30;
-                    break;
-            }
+            playButton.Background = playHoverBackground;
+            playButton.BorderBrush = playHoverBorderBrush;
+            buttonText.Text = "❚❚";
+            buttonText.Margin = new Thickness(1, -3, 0, 0);
+            buttonText.FontSize = 28;
+        }
+
+        // Paint the play button + glyph for the "currently playing" state -
+        // transparent background fades the control out of the way during
+        // playback; the ▶️ glyph confirms it.
+        private void ApplyPlayingVisuals()
+        {
+            playButton.Background = System.Windows.Media.Brushes.Transparent;
+            playButton.BorderBrush = System.Windows.Media.Brushes.White;
+            buttonText.Text = "▶️";
+            buttonText.Margin = new Thickness(6, -4, 0, 0);
+            buttonText.FontSize = 30;
         }
 
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -421,10 +424,8 @@ namespace LVP_WPF.Windows
             {
                 playButton.Dispatcher.Invoke(() =>
                 {
-                    playButton.Background = playHoverBackground;
-                    playButton.BorderBrush = playHoverBorderBrush;
+                    ApplyPausedVisuals();
                     overlayGrid.Visibility = Visibility.Visible;
-                    PlayButton_SetSymbol(0);
                 });
                 mediaPlayer.Pause();
                 pollingTimer.Stop();
@@ -435,10 +436,8 @@ namespace LVP_WPF.Windows
             {
                 playButton.Dispatcher.Invoke(() =>
                 {
-                    playButton.Background = System.Windows.Media.Brushes.Transparent;
-                    playButton.BorderBrush = System.Windows.Media.Brushes.White;
+                    ApplyPlayingVisuals();
                     overlayGrid.Visibility = Visibility.Hidden;
-                    PlayButton_SetSymbol(1);
                 });
                 mediaPlayer.Play();
                 pollingTimer.Start();

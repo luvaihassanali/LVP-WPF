@@ -87,10 +87,17 @@ namespace LVP_WPF
             {
                 ComInterop.SetCursorPos(CursorConfig.CenterX, CursorConfig.CenterY);
                 Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
-                if (mouseHubProcess.Length != 0)
+                if (mouseHubProcess.Length == 0) return;
+                try
                 {
                     mouseHubProcess[0].Kill();
                     mouseHubKilled = true;
+                }
+                catch (Exception ex)
+                {
+                    // Process can exit between GetProcessesByName and Kill;
+                    // also fails with Win32 access-denied if MouseHub was started elevated.
+                    Log.Warning("Failed to kill MouseHub: {Message}", ex.Message);
                 }
             });
         }
@@ -105,15 +112,19 @@ namespace LVP_WPF
 
             if (mouseHubKilled)
             {
-                string path = AppDomain.CurrentDomain.BaseDirectory;
 #if DEBUG
-                // Dev build: walk over to the sibling MouseHub project's bin folder.
-                // The old substitution string had stale "net6.0-windows" (we're now
-                // on net10) and referenced a "Utilities\" folder that was renamed
-                // to "Hubs\" long ago - both fixed here.
-                path = path.Replace("bin\\Debug\\net10.0-windows\\", "Hubs\\MouseHub\\MouseHub\\bin\\Debug\\net10.0-windows\\MouseHub.exe");
+                // Dev build: hop over to the sibling MouseHub project's matching
+                // bin folder. BaseDirectory looks like
+                //   ...\LVP-WPF\bin\Debug\<tfm>\
+                // so derive the TFM and the project root from that path instead
+                // of hard-coding "net10.0-windows" - any future TFM bump won't
+                // break this line.
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar);
+                string tfm = System.IO.Path.GetFileName(baseDir);
+                string projectRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, "..", "..", ".."));
+                string path = System.IO.Path.Combine(projectRoot, "Hubs", "MouseHub", "MouseHub", "bin", "Debug", tfm, "MouseHub.exe");
 #else
-                path = Environment.ExpandEnvironmentVariables($"{AppConfig.MouseHubPath}MouseHub.exe");
+                string path = Environment.ExpandEnvironmentVariables($"{AppConfig.MouseHubPath}MouseHub.exe");
 #endif
                 Process.Start(path);
             }
