@@ -414,30 +414,16 @@ namespace LVP_WPF.Windows
             CenterMouseOverControl(currControl, newIndex, scrollViewer);
         }
 
+        // Convert a linear season-form index to (row, col) in the
+        // 3-column season-picker grid, and mark that cell as the
+        // currently-selected one (state value 2).
         private (int x, int y) GetCurrSeasonPoint(int seasonFormIndex)
         {
-            int count = 0;
-            (int x, int y) point = (0, 0);
-            while (seasonFormIndex > 0)
-            {
-                seasonFormIndex--;
-                if (count == 2)
-                {
-                    count = 0;
-                    point = (point.x + 1, 0);
-                    if (seasonFormIndex == 0)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    point = (point.x, point.y + 1);
-                    count++;
-                }
-            }
-            seasonWindowGrid[point.x][point.y] = 2;
-            return point;
+            const int columnsPerRow = 3;
+            int row = seasonFormIndex / columnsPerRow;
+            int col = seasonFormIndex % columnsPerRow;
+            seasonWindowGrid[row][col] = 2;
+            return (row, col);
         }
 
         public void MoveSeasonPoint((int x, int y) movePoint)
