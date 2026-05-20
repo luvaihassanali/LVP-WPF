@@ -779,54 +779,5 @@ namespace LVP_WPF.Windows
             p.Y += c.ActualHeight / 2;
             ComInterop.SetCursorPos((int)p.X, (int)p.Y);
         }
-
-        /*private void PrintGrid()
-        {
-            List<int[]> ctrl = seasonWindowActive ? seasonWindowGrid : mainWindowGrid;
-            foreach (int[] row in ctrl)
-            {
-                Debug.Write("[ ");
-                for (int i = 0; i < row.Length; i++)
-                {
-                    Debug.Write(row[i]);
-                    if (i != row.Length - 1)
-                    {
-                        Debug.Write(", ");
-                    }
-                }
-                Debug.WriteLine(" ]");
-            }
-            Debug.WriteLine(Environment.NewLine);
-        }
-
-        private void PrintControlGrid()
-        {
-            List<Image[]> ctrl = seasonWindowActive ? seasonWindowControlGrid : mainWindowControlGrid;
-            foreach (Image[] row in ctrl)
-            {
-                Debug.Write("[ ");
-                for (int i = 0; i < row.Length; i++)
-                {
-                    string itemName;
-                    if (row[i] == null)
-                    {
-                        itemName = "null";
-                    }
-                    else
-                    {
-                        string[] item = row[i].Source.ToString().Split("/");
-                        itemName = item[item.Length - 2];
-                    }
-                    Debug.Write(itemName);
-
-                    if (i != row.Length - 1)
-                    {
-                        Debug.Write(", ");
-                    }
-                }
-                Debug.WriteLine(" ]");
-            }
-            Debug.WriteLine(Environment.NewLine);
-        }*/
     }
 }
