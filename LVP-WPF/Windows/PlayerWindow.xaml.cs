@@ -469,35 +469,14 @@ namespace LVP_WPF.Windows
 
         internal void SeekRelative(bool rewind)
         {
-            if (mediaPlayer != null)
-            {
-                TimeSpan lengthTime = TimeSpan.FromMilliseconds(mediaPlayer.Length);
-                TimeSpan currTime = TimeSpan.FromMilliseconds(mediaPlayer.Time);
-                TimeSpan thirtySecs = TimeSpan.FromSeconds(30);
+            if (mediaPlayer == null) return;
 
-                if (rewind)
-                {
-                    if (currTime.TotalMilliseconds < thirtySecs.TotalMilliseconds)
-                    {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(0));
-                    }
-                    else
-                    {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Time - thirtySecs.TotalMilliseconds));
-                    }
-                }
-                else
-                {
-                    if ((currTime.TotalMilliseconds + thirtySecs.TotalMilliseconds) > lengthTime.TotalMilliseconds)
-                    {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(lengthTime.TotalMilliseconds));
-                    }
-                    else
-                    {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(currTime.TotalMilliseconds + thirtySecs.TotalMilliseconds));
-                    }
-                }
-            }
+            const int seekStepMs = 30 * 1000;
+            long current = mediaPlayer.Time;
+            long length = mediaPlayer.Length;
+            long target = rewind ? current - seekStepMs : current + seekStepMs;
+            target = Math.Clamp(target, 0, length);
+            mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(target));
         }
 
         private void VideoView_MouseMove(object sender, MouseEventArgs e)
