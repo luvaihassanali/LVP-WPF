@@ -522,29 +522,17 @@ namespace LVP_WPF.Windows
 
         private async void InactivityDetected(object sender, EventArgs e)
         {
-            if (mediaPlayer.IsPlaying)
-            {
-                return;
-            }
+            if (mediaPlayer.IsPlaying) return;
 
-            else
-            {
-                // Double check after 10s to make sure media player was not in process of changing to new video
-                await Task.Delay(10000);
-                if (mediaPlayer.IsPlaying)
-                {
-                    return;
-                }
-
-            }
+            // Double check after 10s in case the player is mid-transition
+            // to the next episode/cartoon and wasn't strictly playing for a moment.
+            await Task.Delay(10000);
+            if (mediaPlayer.IsPlaying) return;
 
             this.Dispatcher.Invoke(() => { this.Close(); });
             foreach (Window w in Application.Current.Windows)
             {
-                if (w as TvShowWindow != null)
-                {
-                    w.Close();
-                }
+                if (w as TvShowWindow != null) w.Close();
             }
 
             await Task.Delay(1000);
