@@ -280,11 +280,7 @@ namespace LVP_WPF.Services
 
                                 string oldPath = episode.Path;
                                 string newPath = oldPath.Replace(currMultiEpisodeName, jCurrMultiEpisodeName.FixBrokenQuotes());
-                                string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
-                                foreach (char c in invalid)
-                                {
-                                    newPath = newPath.Replace(c.ToString(), "");
-                                }
+                                newPath = StripInvalidPathChars(newPath, "?:*");
 
                                 try
                                 {
@@ -336,11 +332,7 @@ namespace LVP_WPF.Services
                         string oldPath = episode.Path;
                         jEpisodeName = (string)jEpisode["name"];
                         string newPath = ReplaceLastOccurrence(oldPath, episode.Name, jEpisodeName.FixBrokenQuotes());
-                        string invalid = new string(Path.GetInvalidPathChars()) + '?' + ':' + '*';
-                        foreach (char c in invalid)
-                        {
-                            newPath = newPath.Replace(c.ToString(), "");
-                        }
+                        newPath = StripInvalidPathChars(newPath, "?:*");
 
                         try
                         {
@@ -387,11 +379,7 @@ namespace LVP_WPF.Services
                 string extension = Path.GetExtension(oldPath); // includes leading "."
                 string newFileName = ((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes();
                 string newPath = Path.Combine(dir, $"{newFileName}{extension}");
-                string invalid = new string(Path.GetInvalidPathChars()) + '?';
-                foreach (char c in invalid)
-                {
-                    newPath = newPath.Replace(c.ToString(), "");
-                }
+                newPath = StripInvalidPathChars(newPath, "?");
                 File.Move(oldPath, newPath);
                 movie.Path = newPath;
                 movie.Name = newFileName;
@@ -479,6 +467,24 @@ namespace LVP_WPF.Services
             {
                 _prompts.ShowError("Error", $"No subtitle file found {oldSrtPath} (Season {season.Id}).");
             }
+        }
+
+        /// <summary>
+        /// Drop characters from <paramref name="path"/> that File.Move would
+        /// reject. Path.GetInvalidPathChars() doesn't include '?', ':', '*'
+        /// on Windows because they're legal in path *strings* (':' is the
+        /// drive separator), so callers pass the extras they want stripped.
+        /// Episode renames strip '?', ':', '*' and reconstruct the drive
+        /// colon afterward; movie renames keep ':' intact and only strip '?'.
+        /// </summary>
+        private static string StripInvalidPathChars(string path, string extraChars)
+        {
+            string toStrip = new string(Path.GetInvalidPathChars()) + extraChars;
+            foreach (char c in toStrip)
+            {
+                path = path.Replace(c.ToString(), "");
+            }
+            return path;
         }
 
         private static string ReplaceFirst(string text, string search, string replace)
