@@ -270,8 +270,7 @@ namespace LVP_WPF.Services
                             string jCurrMultiEpisodeName = (string)jEpisodesMulti[l]["name"];
                             string jCurrMultiEpisodeOverview = (string)jEpisodesMulti[l]["overview"];
                             string currMultiEpisodeName = multiEpNames[l];
-                            if (String.Compare(currMultiEpisodeName, jCurrMultiEpisodeName.FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture,
-                                System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
+                            if (!currMultiEpisodeName.MatchesLoosely(jCurrMultiEpisodeName.FixBrokenQuotes()))
                             {
                                 string message = $"Multi episode name does not match retrieved data: Renaming file: '{currMultiEpisodeName}', to: '{jCurrMultiEpisodeName.FixBrokenQuotes()}' (Season {season.Id}).";
                                 _prompts.ShowNotice($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
@@ -326,7 +325,7 @@ namespace LVP_WPF.Services
                     }
 
                     string jEpisodeName = (string)jEpisode["name"];
-                    if (!(String.Compare(episode.Name, jEpisodeName.FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
+                    if (!episode.Name.MatchesLoosely(jEpisodeName.FixBrokenQuotes()))
                     {
                         string message = $"Local episode name does not match retrieved data. Renaming file '{episode.Name}' to '{jEpisodeName.FixBrokenQuotes()}' (Season {season.Id}).";
                         _prompts.ShowNotice($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
@@ -376,7 +375,7 @@ namespace LVP_WPF.Services
 
         private async Task UpdateMovieData(Movie movie, JObject movieObject)
         {
-            if (!(String.Compare(movie.Name.Replace(":", ""), ((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes(), System.Globalization.CultureInfo.CurrentCulture, System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) == 0))
+            if (!movie.Name.Replace(":", "").MatchesLoosely(((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes()))
             {
                 string message = $"Local movie name does not match retrieved data. Renaming file '{movie.Name.Replace(":", "")}' to '{((string)movieObject["title"]).Replace(":", "")}'.";
                 _prompts.ShowNotice("Warning", message);

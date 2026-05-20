@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace LVP_WPF.Util
 {
     /// <summary>
@@ -27,5 +29,16 @@ namespace LVP_WPF.Util
                 .Replace("%", "percent")
                 .Replace("  ", " ");
         }
+
+        /// <summary>
+        /// Case- and symbol-insensitive equality used by the MediaEnricher
+        /// and CustomCache when matching local filenames to TMDB titles.
+        /// Wraps the verbose
+        /// <c>String.Compare(a, b, CultureInfo.CurrentCulture, CompareOptions.IgnoreCase | CompareOptions.IgnoreSymbols) == 0</c>
+        /// boilerplate that used to appear inline.
+        /// </summary>
+        public static bool MatchesLoosely(this string a, string b)
+            => string.Compare(a, b, CultureInfo.CurrentCulture,
+                CompareOptions.IgnoreCase | CompareOptions.IgnoreSymbols) == 0;
     }
 }

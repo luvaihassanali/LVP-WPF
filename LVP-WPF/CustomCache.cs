@@ -1,3 +1,4 @@
+using LVP_WPF.Util;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -87,8 +88,7 @@ namespace LVP_WPF
                 {
                     MainWindow.gui.ProgressBarValue++;
 
-                    if (String.Compare(episode.Name, titles[index], System.Globalization.CultureInfo.CurrentCulture,
-                            System.Globalization.CompareOptions.IgnoreCase | System.Globalization.CompareOptions.IgnoreSymbols) != 0)
+                    if (!episode.Name.MatchesLoosely(titles[index]))
                     {
 #if !DEBUG
                         throw new Exception($"Episode name does not match, season {season.Id} episode: {episode.Name}. Should be {titles[index]}");
