@@ -146,68 +146,70 @@ namespace LVP_WPF.Services
             Season[] seasons = new Season[seasonEntries.Length];
             for (int i = 0; i < seasonEntries.Length; i++)
             {
-                if (!seasonEntries[i].Contains("Extras") && !seasonEntries[i].Contains("Season") && !IsMultiLangSeasonFolder(seasonEntries[i]))
+                string entry = seasonEntries[i];
+                bool isExtras = entry.Contains("Extras");
+                bool isSeason = entry.Contains("Season");
+
+                if (!isExtras && !isSeason && !IsMultiLangSeasonFolder(entry))
                 {
                     _warnings.Add($"{tvShow.Name} contains unknown season folder, index: {i + 1}");
                 }
 
-                if (seasonEntries[i].Contains("Extras"))
+                if (isExtras)
                 {
-                    Season extras = new Season(-1);
                     List<Episode> extraEpisodes = new List<Episode>();
-                    ProcessExtrasDirectory(extraEpisodes, seasonEntries[i]);
-                    extras.Episodes = new Episode[extraEpisodes.Count];
-                    for (int j = 0; j < extraEpisodes.Count; j++)
-                    {
-                        _mediaCount++;
-                        extras.Episodes[j] = extraEpisodes[j];
-                    }
-                    seasons[seasonEntries.Length - 1] = extras;
+                    ProcessExtrasDirectory(extraEpisodes, entry);
+                    _mediaCount += extraEpisodes.Count;
+                    seasons[seasonEntries.Length - 1] = new Season(-1) { Episodes = extraEpisodes.ToArray() };
                     continue;
                 }
 
-                if (!seasonEntries[i].Contains("Season"))
-                {
-                    continue;
-                }
+                if (!isSeason) continue;
 
-                Log.Debug("Process tv show season dir {Dir}", seasonEntries[i]);
-                Season season = new Season(i + 1);
-                string[] episodeEntries = Directory.GetFiles(seasonEntries[i]).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
+                seasons[i] = BuildSeason(entry, i + 1, tvShow);
+            }
+            return seasons;
+        }
+
+        private Season BuildSeason(string seasonDir, int seasonNumber, TvShow tvShow)
+        {
+            Log.Debug("Process tv show season dir {Dir}", seasonDir);
+            Season season = new Season(seasonNumber);
+            string[] episodeEntries = Directory.GetFiles(seasonDir)
+                .Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            try
+            {
+                Array.Sort(episodeEntries, CompareIndex);
+            }
+            catch
+            {
+                _warnings.Add($"Episode is missing separator in {tvShow.Name}, Season {seasonNumber}");
+            }
+            season.Episodes = new Episode[episodeEntries.Length];
+
+            // Multi-lang shows count each episode twice (once per language) for
+            // the progress bar; everyone else counts once.
+            int countPerEpisode = tvShow.MultiLang ? 2 : 1;
+            _mediaCount += episodeEntries.Length * countPerEpisode;
+
+            for (int j = 0; j < episodeEntries.Length; j++)
+            {
                 try
                 {
-                    Array.Sort(episodeEntries, CompareIndex);
+                    // Episode filename convention: "N%Episode Name.ext".
+                    // Split the filename once on '%', drop the extension off
+                    // the second part.
+                    string[] parts = Path.GetFileName(episodeEntries[j]).Split(new[] { '%' }, 2);
+                    string episodeName = Path.GetFileNameWithoutExtension(parts[1]).Trim();
+                    season.Episodes[j] = new Episode(0, episodeName, episodeEntries[j]);
                 }
                 catch
                 {
-                    _warnings.Add($"Episode is missing separator in {tvShow.Name}, Season {i + 1}");
+                    _warnings.Add($"Episode is missing separator in {tvShow.Name}, Season {seasonNumber}");
                 }
-                season.Episodes = new Episode[episodeEntries.Length];
-
-                for (int j = 0; j < episodeEntries.Length; j++)
-                {
-                    _mediaCount++;
-                    if (tvShow.MultiLang)
-                    {
-                        _mediaCount++;
-                    }
-                    try
-                    {
-                        // Episode filename convention: "N%Episode Name.ext"
-                        // Take the filename, split on the first '%', drop the
-                        // extension off the second part.
-                        string[] episodeNameNumber = Path.GetFileName(episodeEntries[j]).Split(new[] { '%' }, 2);
-                        string episodeName = Path.GetFileNameWithoutExtension(episodeNameNumber[1]).Trim();
-                        season.Episodes[j] = new Episode(0, episodeName, episodeEntries[j]);
-                    }
-                    catch
-                    {
-                        _warnings.Add($"Episode is missing separator in {tvShow.Name}, Season {i + 1}");
-                    }
-                }
-                seasons[i] = season;
             }
-            return seasons;
+            return season;
         }
 
         private void ProcessExtrasDirectory(List<Episode> extras, string targetDir)
