@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace LVP_WPF.Services
@@ -31,12 +32,31 @@ namespace LVP_WPF.Services
         /// <summary>How many episodes the current shuffle session was sized to play.</summary>
         public static int CartoonShuffleLimit { get; private set; }
 
-        public static void StartCartoonShuffle(int limit)
+        private static readonly Random _random = new Random();
+
+        public static void StartCartoonShuffle(int limit, IReadOnlyList<TvShow> availableShows)
         {
             Mode = PlaybackMode.CartoonShuffle;
             CartoonShuffleQueue.Clear();
             CartoonShuffleLimit = limit;
             CartoonShuffleIndex = 0;
+            for (int i = 0; i < limit; i++)
+            {
+                CartoonShuffleQueue.Add(PickRandomEpisode(availableShows));
+            }
+        }
+
+        /// <summary>
+        /// Walks down show -> season -> episode picking uniformly at random
+        /// at each level. Note: not actually uniform over all episodes;
+        /// shows with fewer episodes get over-represented relative to ones
+        /// with more. Preserved from the original behavior.
+        /// </summary>
+        private static Episode PickRandomEpisode(IReadOnlyList<TvShow> shows)
+        {
+            TvShow show = shows[_random.Next(shows.Count)];
+            Season season = show.Seasons[_random.Next(show.Seasons.Length)];
+            return season.Episodes[_random.Next(season.Episodes.Length)];
         }
 
         public static void StartHistoryWatch()

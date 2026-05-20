@@ -544,26 +544,9 @@ namespace LVP_WPF.Windows
 
         internal static void PlayRandomCartoons()
         {
-            PlaybackSession.StartCartoonShuffle(AppConfig.CartoonLimit);
+            PlaybackSession.StartCartoonShuffle(AppConfig.CartoonLimit, cartoons);
             TcpSerialListener.layoutPoint.playerWindowActive = true;
-            for (int i = 0; i < PlaybackSession.CartoonShuffleLimit; i++)
-            {
-                PlaybackSession.CartoonShuffleQueue.Add(GetRandomEpisode());
-            }
             PlayerWindow.Show(PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex]);
-        }
-
-        internal static Random rnd = new Random();
-        internal static Episode GetRandomEpisode()
-        {
-            Episode rndEpisode;
-            int rndVal = rnd.Next(cartoons.Count);
-            TvShow rndShow = cartoons[rndVal];
-            rndVal = rnd.Next(rndShow.Seasons.Length);
-            Season rndSeason = rndShow.Seasons[rndVal];
-            rndVal = rnd.Next(rndSeason.Episodes.Length);
-            rndEpisode = rndSeason.Episodes[rndVal];
-            return rndEpisode;
         }
 
         internal static void PlayHistoryList()
