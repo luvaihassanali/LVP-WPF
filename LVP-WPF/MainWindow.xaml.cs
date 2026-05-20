@@ -121,46 +121,57 @@ namespace LVP_WPF
 
         internal async Task AssignControlContext()
         {
-            TimeSpan delay = new TimeSpan(1);
-
-            for (int i = 0; i < model.TvShows.Length; i++)
+            // Apply runtime cartoon-exception overrides before partitioning.
+            foreach (TvShow show in model.TvShows)
             {
-                if (model.TvShows[i].Cartoon && AppConfig.CartoonExceptions.Contains(model.TvShows[i].Name))
+                if (show.Cartoon && AppConfig.CartoonExceptions.Contains(show.Name))
                 {
-                    model.TvShows[i].Cartoon = false;
-                }
-
-                if (!model.TvShows[i].Cartoon)
-                {
-                    await TvShowListView.Dispatcher.BeginInvoke(() =>
-                    {
-                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = ImageLoader.LoadPoster(model.TvShows[i].Poster), Flags = ImageLoader.LoadFlags(model.TvShows[i].Path) });
-                    });
-                    await Task.Delay(1);
+                    show.Cartoon = false;
                 }
             }
 
-            for (int i = 0; i < model.TvShows.Length; i++)
+            foreach (TvShow show in model.TvShows)
             {
-                if (model.TvShows[i].Cartoon)
+                if (show.Cartoon) continue;
+                await AddTileAsync(gui.TvShows, new MainWindowBox
                 {
-                    await CartoonsListView.Dispatcher.BeginInvoke(() =>
-                    {
-                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = ImageLoader.LoadPoster(model.TvShows[i].Poster) });
-                    });
-                    await Task.Delay(1);
-                    TvShowWindow.cartoons.Add(model.TvShows[i]);
-                }
-            }
-
-            for (int i = 0; i < model.Movies.Length; i++)
-            {
-                await MovieListView.Dispatcher.BeginInvoke(() =>
-                {
-                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = ImageLoader.LoadPoster(model.Movies[i].Poster) });
+                    Id = show.Id,
+                    Title = show.Name,
+                    Image = ImageLoader.LoadPoster(show.Poster),
+                    Flags = ImageLoader.LoadFlags(show.Path)
                 });
-                await Task.Delay(1);
             }
+
+            foreach (TvShow show in model.TvShows)
+            {
+                if (!show.Cartoon) continue;
+                await AddTileAsync(gui.Cartoons, new MainWindowBox
+                {
+                    Id = show.Id,
+                    Title = show.Name,
+                    Image = ImageLoader.LoadPoster(show.Poster)
+                });
+                TvShowWindow.cartoons.Add(show);
+            }
+
+            foreach (Movie movie in model.Movies)
+            {
+                await AddTileAsync(gui.Movies, new MainWindowBox
+                {
+                    Id = movie.Id,
+                    Title = movie.Name,
+                    Image = ImageLoader.LoadPoster(movie.Poster)
+                });
+            }
+        }
+
+        // Hand off ObservableCollection mutation to the UI thread (the bound
+        // ListView lives there) and yield briefly so layout can catch up
+        // before the next tile starts loading.
+        private async Task AddTileAsync(System.Collections.ObjectModel.ObservableCollection<MainWindowBox> collection, MainWindowBox box)
+        {
+            await this.Dispatcher.BeginInvoke(() => collection.Add(box));
+            await Task.Delay(1);
         }
 
         private void CartoonsHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
