@@ -542,65 +542,26 @@ namespace LVP_WPF.Windows
             return (-1, -1);
         }
 
+        // Lay out the season-picker tiles as rows of 3. Builds both the
+        // occupancy grid (1 = filled, 0 = empty trailing slot in last row)
+        // and the parallel control-reference grid in one pass.
         private void BuildSeasonGrid()
         {
-            int seasonCount = seasonControlList.Count;
-            int count = 0;
+            const int columnsPerRow = 3;
             int[] currRow = null;
             Image[] currControlRow = null;
-            for (int i = 0; i < seasonCount; i++)
+            for (int i = 0; i < seasonControlList.Count; i++)
             {
-                if (count == 3)
+                int col = i % columnsPerRow;
+                if (col == 0)
                 {
-                    count = 0;
-                }
-
-                if (count == 0)
-                {
-                    currRow = new int[3];
-                    currControlRow = new Image[3];
+                    currRow = new int[columnsPerRow];
+                    currControlRow = new Image[columnsPerRow];
                     seasonWindowGrid.Add(currRow);
                     seasonWindowControlGrid.Add(currControlRow);
-                    currRow[count] = 1;
-                    currControlRow[count] = null;
                 }
-                currRow[count] = 1; ;
-                currControlRow[count] = null;
-                count++;
-            }
-            BuildSeasonControlGrid();
-        }
-
-
-        private void BuildSeasonControlGrid()
-        {
-            int seasonCount = seasonControlList.Count;
-            int count = 0;
-            int rowIndex = 0;
-            int controlIndex = 0;
-
-            for (int i = 0; i < seasonCount; i++)
-            {
-                if (count == 3)
-                {
-                    rowIndex++;
-                    if (rowIndex >= seasonWindowGrid.Count)
-                    {
-                        break;
-                    }
-                    count = 0;
-                }
-
-                if (seasonWindowGrid[rowIndex][count] == 0)
-                {
-                    seasonWindowControlGrid[rowIndex][count] = null;
-                }
-                else
-                {
-                    seasonWindowControlGrid[rowIndex][count] = seasonControlList[controlIndex];
-                    controlIndex++;
-                }
-                count++;
+                currRow[col] = 1;
+                currControlRow[col] = seasonControlList[i];
             }
         }
 
