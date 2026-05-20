@@ -256,59 +256,15 @@ namespace LVP_WPF.Services
                     }
                     if (k > jEpisodes.Count - 1)
                     {
-                        string message = $"Episode index out of TMDB episodes range S{seasonIndex}E{jEpIndex}";
-                        _prompts.ShowError($"Error: {tvShow.Name}", message);
+                        _prompts.ShowError($"Error: {tvShow.Name}",
+                            $"Episode index out of TMDB episodes range S{seasonIndex}E{jEpIndex}");
                     }
                     Episode episode = episodes[k];
 
                     if (episode.Name.Contains('#'))
                     {
-                        string[] multiEpNames = episode.Name.Split('#');
-                        JObject[] jEpisodesMulti = new JObject[multiEpNames.Length];
-                        int numEps = multiEpNames.Length;
-                        String multiEpisodeOverview = "";
-                        for (int l = 0; l < numEps; l++)
-                        {
-                            jEpisodesMulti[l] = (JObject)jEpisodes[jEpIndex + l];
-                            string jCurrMultiEpisodeName = (string)jEpisodesMulti[l]["name"];
-                            string jCurrMultiEpisodeOverview = (string)jEpisodesMulti[l]["overview"];
-                            string currMultiEpisodeName = multiEpNames[l];
-                            if (!currMultiEpisodeName.MatchesLoosely(jCurrMultiEpisodeName.FixBrokenQuotes()))
-                            {
-                                string message = $"Multi episode name does not match retrieved data: Renaming file: '{currMultiEpisodeName}', to: '{jCurrMultiEpisodeName.FixBrokenQuotes()}' (Season {season.Id}).";
-                                _prompts.ShowNotice($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
-
-                                string oldPath = episode.Path;
-                                string newPath = oldPath.Replace(currMultiEpisodeName, jCurrMultiEpisodeName.FixBrokenQuotes());
-                                newPath = StripInvalidPathChars(newPath, "?:*");
-
-                                try
-                                {
-                                    char drive = newPath[0];
-                                    string drivePath = $"{drive}:";
-                                    newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
-                                    File.Move(oldPath, newPath);
-                                    episode.Path = newPath;
-                                    CheckSubtitleName(tvShow, season, oldPath, newPath);
-                                }
-                                catch (Exception e)
-                                {
-                                    _prompts.ShowError("Error", e.Message);
-                                }
-                            }
-                            multiEpisodeOverview += (jCurrMultiEpisodeOverview + Environment.NewLine + Environment.NewLine);
-                        }
-
-                        episode.Date = DateTime.TryParse((string)jEpisodesMulti[numEps - 1]["air_date"], out DateTime mTempDate) ? mTempDate : UnknownDateSentinel;
-                        episode.Id = (int)jEpisodesMulti[numEps - 1]["episode_number"];
-                        episode.Backdrop = (string)jEpisodesMulti[numEps - 1]["still_path"];
-                        episode.Overview = multiEpisodeOverview;
-
-                        if (episode.Backdrop != null)
-                        {
-                            episode.Backdrop = await _tmdb.DownloadImageAsync(episode.Backdrop, false, tvShow.Name);
-                        }
-                        jEpIndex += (numEps);
+                        jEpIndex = await EnrichMultiEpisode(tvShow, season, episode, jEpisodes, jEpIndex);
+                        // Original did not tick progress on multi-episode advance; preserve.
                         continue;
                     }
 
@@ -319,52 +275,95 @@ namespace LVP_WPF.Services
                     }
                     catch
                     {
-                        string message = $"Episode index out of TMDB episodes range S{seasonIndex}E{k + 1}";
-                        _prompts.ShowError($"Error: {tvShow.Name}", message);
+                        _prompts.ShowError($"Error: {tvShow.Name}",
+                            $"Episode index out of TMDB episodes range S{seasonIndex}E{k + 1}");
                     }
 
-                    string jEpisodeName = (string)jEpisode["name"];
-                    if (!episode.Name.MatchesLoosely(jEpisodeName.FixBrokenQuotes()))
-                    {
-                        string message = $"Local episode name does not match retrieved data. Renaming file '{episode.Name}' to '{jEpisodeName.FixBrokenQuotes()}' (Season {season.Id}).";
-                        _prompts.ShowNotice($"Warning: {tvShow.Name}", message, tvShow, season.Id + 1);
-
-                        string oldPath = episode.Path;
-                        jEpisodeName = (string)jEpisode["name"];
-                        string newPath = ReplaceLastOccurrence(oldPath, episode.Name, jEpisodeName.FixBrokenQuotes());
-                        newPath = StripInvalidPathChars(newPath, "?:*");
-
-                        try
-                        {
-                            char drive = newPath[0];
-                            string drivePath = drive == '\\' ? $"{drive}" : $"{drive}:";
-                            newPath = ReplaceFirst(newPath, drive.ToString(), drivePath);
-                            File.Move(oldPath, newPath);
-                            CheckSubtitleName(tvShow, season, oldPath, newPath);
-                        }
-                        catch (Exception e)
-                        {
-                            _prompts.ShowError("Error", e.Message);
-                        }
-
-                        episode.Path = newPath;
-                        episode.Name = jEpisodeName.FixBrokenQuotes();
-                    }
-
-                    episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out DateTime tempDate) ? tempDate : UnknownDateSentinel;
-                    episode.Id = (int)jEpisode["episode_number"];
-                    episode.Overview = (string)jEpisode["overview"];
-                    episode.Overview = episode.Overview.FixBrokenQuotes();
-                    episode.Backdrop = (string)jEpisode["still_path"];
-
-                    if (episode.Backdrop != null)
-                    {
-                        episode.Backdrop = await _tmdb.DownloadImageAsync(episode.Backdrop, false, tvShow.Name);
-                    }
+                    await EnrichSingleEpisode(tvShow, season, episode, jEpisode);
                     jEpIndex++;
                     _onItemEnriched?.Invoke();
                 }
                 seasonIndex++;
+            }
+        }
+
+        // Enrich a "two-parter" episode (local name contains '#' joining
+        // multiple TMDB episode names, e.g. "PilotA#PilotB.mkv"). Walks the
+        // TMDB JSON entries jEpIndex..jEpIndex+numEps-1, handles per-part
+        // renames, and stamps the merged Overview onto the local episode.
+        // Returns the new jEpIndex (advanced past the parts consumed).
+        private async Task<int> EnrichMultiEpisode(TvShow tvShow, Season season, Episode episode, JArray jEpisodes, int jEpIndex)
+        {
+            string[] multiEpNames = episode.Name.Split('#');
+            int numEps = multiEpNames.Length;
+            JObject[] jEpisodesMulti = new JObject[numEps];
+            string multiEpisodeOverview = "";
+
+            for (int l = 0; l < numEps; l++)
+            {
+                jEpisodesMulti[l] = (JObject)jEpisodes[jEpIndex + l];
+                string jName = (string)jEpisodesMulti[l]["name"];
+                string jOverview = (string)jEpisodesMulti[l]["overview"];
+                string localName = multiEpNames[l];
+
+                if (!localName.MatchesLoosely(jName.FixBrokenQuotes()))
+                {
+                    _prompts.ShowNotice($"Warning: {tvShow.Name}",
+                        $"Multi episode name does not match retrieved data: Renaming file: '{localName}', to: '{jName.FixBrokenQuotes()}' (Season {season.Id}).",
+                        tvShow, season.Id + 1);
+
+                    string oldPath = episode.Path;
+                    string newPath = oldPath.Replace(localName, jName.FixBrokenQuotes());
+                    newPath = FinalizeRenamedPath(newPath, handleUncPaths: false);
+                    if (TryMoveAndUpdateSubtitle(oldPath, newPath, tvShow, season))
+                    {
+                        episode.Path = newPath;
+                    }
+                }
+                multiEpisodeOverview += jOverview + Environment.NewLine + Environment.NewLine;
+            }
+
+            JObject last = jEpisodesMulti[numEps - 1];
+            episode.Date = DateTime.TryParse((string)last["air_date"], out DateTime mDate) ? mDate : UnknownDateSentinel;
+            episode.Id = (int)last["episode_number"];
+            episode.Backdrop = (string)last["still_path"];
+            episode.Overview = multiEpisodeOverview;
+
+            if (episode.Backdrop != null)
+            {
+                episode.Backdrop = await _tmdb.DownloadImageAsync(episode.Backdrop, false, tvShow.Name);
+            }
+            return jEpIndex + numEps;
+        }
+
+        // Enrich a normal one-to-one episode against its matching TMDB entry.
+        // Handles the name-mismatch rename (which updates episode.Path/Name
+        // unconditionally - see TryMoveAndUpdateSubtitle's caller note).
+        private async Task EnrichSingleEpisode(TvShow tvShow, Season season, Episode episode, JObject jEpisode)
+        {
+            string jName = (string)jEpisode["name"];
+            if (!episode.Name.MatchesLoosely(jName.FixBrokenQuotes()))
+            {
+                _prompts.ShowNotice($"Warning: {tvShow.Name}",
+                    $"Local episode name does not match retrieved data. Renaming file '{episode.Name}' to '{jName.FixBrokenQuotes()}' (Season {season.Id}).",
+                    tvShow, season.Id + 1);
+
+                string oldPath = episode.Path;
+                string newPath = ReplaceLastOccurrence(oldPath, episode.Name, jName.FixBrokenQuotes());
+                newPath = FinalizeRenamedPath(newPath, handleUncPaths: true);
+                TryMoveAndUpdateSubtitle(oldPath, newPath, tvShow, season);
+                episode.Path = newPath;
+                episode.Name = jName.FixBrokenQuotes();
+            }
+
+            episode.Date = DateTime.TryParse((string)jEpisode["air_date"], out DateTime tempDate) ? tempDate : UnknownDateSentinel;
+            episode.Id = (int)jEpisode["episode_number"];
+            episode.Overview = ((string)jEpisode["overview"]).FixBrokenQuotes();
+            episode.Backdrop = (string)jEpisode["still_path"];
+
+            if (episode.Backdrop != null)
+            {
+                episode.Backdrop = await _tmdb.DownloadImageAsync(episode.Backdrop, false, tvShow.Name);
             }
         }
 
@@ -485,6 +484,37 @@ namespace LVP_WPF.Services
                 path = path.Replace(c.ToString(), "");
             }
             return path;
+        }
+
+        // Episode-rename pipeline used by both the single- and multi-episode
+        // mismatch handlers: strip "?:*" out of the new path, then put the
+        // drive colon back. handleUncPaths==true preserves a leading "\\"
+        // (UNC) as a single backslash; the multi-episode path didn't bother
+        // with this and we preserve that.
+        private static string FinalizeRenamedPath(string newPath, bool handleUncPaths)
+        {
+            newPath = StripInvalidPathChars(newPath, "?:*");
+            char drive = newPath[0];
+            string drivePath = handleUncPaths && drive == '\\' ? $"{drive}" : $"{drive}:";
+            return ReplaceFirst(newPath, drive.ToString(), drivePath);
+        }
+
+        // Move oldPath -> newPath; if it works, update any companion .srt
+        // alongside it. Returns true on success, false on failure (after
+        // showing the user the error message).
+        private bool TryMoveAndUpdateSubtitle(string oldPath, string newPath, TvShow tvShow, Season season)
+        {
+            try
+            {
+                File.Move(oldPath, newPath);
+                CheckSubtitleName(tvShow, season, oldPath, newPath);
+                return true;
+            }
+            catch (Exception e)
+            {
+                _prompts.ShowError("Error", e.Message);
+                return false;
+            }
         }
 
         private static string ReplaceFirst(string text, string search, string replace)
