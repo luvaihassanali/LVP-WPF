@@ -537,18 +537,17 @@ namespace LVP_WPF.Windows
         {
             PlaybackSession.StartHistoryWatch();
             TcpSerialListener.layoutPoint.playerWindowActive = true;
-            Episode currEpisode;
+
+            // First time through: pin to the start of the history list. After
+            // that, the saved HistoryIndex is whatever the last MediaPlayer_EndReached
+            // advanced to, so just resume from there.
             if (MainWindow.model.HistoryEpisode == null)
             {
                 MainWindow.model.HistoryEpisode = MainWindow.model.HistoryList[0];
                 MainWindow.model.HistoryIndex = 0;
-                currEpisode = MainWindow.model.HistoryEpisode;
             }
-            else
-            {
-                currEpisode = MainWindow.model.HistoryList[MainWindow.model.HistoryIndex];
-            }
-            PlayerWindow.Show(currEpisode);
+
+            PlayerWindow.Show(MainWindow.model.HistoryList[MainWindow.model.HistoryIndex]);
         }
     }
 }
