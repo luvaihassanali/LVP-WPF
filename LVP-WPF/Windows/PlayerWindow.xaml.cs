@@ -454,17 +454,9 @@ namespace LVP_WPF.Windows
 
         internal void JumpToEdge(bool toStart)
         {
-            if (mediaPlayer != null)
-            {
-                if (toStart)
-                {
-                    mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(0));
-                }
-                else
-                {
-                    mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Length - 1));
-                }
-            }
+            if (mediaPlayer == null) return;
+            long target = toStart ? 0 : mediaPlayer.Length - 1;
+            mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(target));
         }
 
         internal void SeekRelative(bool rewind)
