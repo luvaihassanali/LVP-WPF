@@ -498,7 +498,7 @@ namespace LVP_WPF.Windows
             this.Dispatcher.Invoke(() => { this.Close(); });
             foreach (Window w in Application.Current.Windows)
             {
-                if (w as TvShowWindow != null) w.Close();
+                if (w is TvShowWindow) w.Close();
             }
 
             await Task.Delay(1000);

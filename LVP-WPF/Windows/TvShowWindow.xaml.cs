@@ -103,19 +103,14 @@ namespace LVP_WPF.Windows
             if (tvShow.MultiLang)
             {
                 TcpSerialListener.layoutPoint.tvControlList.Add(this.langComboBox);
-                if (this.langComboBox.SelectedIndex != 0)
+                bool toggleAtIndex1 = TcpSerialListener.layoutPoint.tvControlList[1] is ToggleButton;
+                if (this.langComboBox.SelectedIndex != 0 && !toggleAtIndex1)
                 {
-                    if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton == null)
-                    {
-                        TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
-                    }
+                    TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
                 }
-                else
+                else if (this.langComboBox.SelectedIndex == 0 && toggleAtIndex1)
                 {
-                    if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
-                    {
-                        TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
-                    }
+                    TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
                 }
             }
             TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
@@ -446,23 +441,17 @@ namespace LVP_WPF.Windows
             loadGrid.Visibility = Visibility.Visible;
             TvShowWindow_Fade(0.1);
 
-            if (langComboBox.SelectedIndex == 0)
+            bool english = langComboBox.SelectedIndex == 0;
+            bool toggleAtIndex1 = TcpSerialListener.layoutPoint.tvControlList[1] is ToggleButton;
+            SubtitleConfig.HasSrtFile = !english;
+            toggleButton.Visibility = english ? Visibility.Hidden : Visibility.Visible;
+            if (english && toggleAtIndex1)
             {
-                SubtitleConfig.HasSrtFile = false;
-                toggleButton.Visibility = Visibility.Hidden;
-                if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
-                {
-                    TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
-                }
+                TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
             }
-            else
+            else if (!english && !toggleAtIndex1)
             {
-                SubtitleConfig.HasSrtFile = true;
-                toggleButton.Visibility = Visibility.Visible;
-                if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton == null)
-                {
-                    TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
-                }
+                TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
             }
 
             if (!tvShow.Name.Contains(langComboBox.SelectedValue.ToString()))

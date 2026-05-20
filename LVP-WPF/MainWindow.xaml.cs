@@ -221,10 +221,7 @@ namespace LVP_WPF
 
             foreach (Window w in Application.Current.Windows)
             {
-                if (w as TvShowWindow != null)
-                {
-                    w.Close();
-                }
+                if (w is TvShowWindow) w.Close();
             }
             await Task.Delay(1000);
             Log.Information("Inactivity shutdown");

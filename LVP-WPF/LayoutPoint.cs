@@ -254,14 +254,8 @@ namespace LVP_WPF.Windows
                 currPoint = returnPointB;
                 if (tvShowWindowActive)
                 {
-                    if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
-                    {
-                        currPoint = (2, -1);
-                    }
-                    else
-                    {
-                        currPoint = (1, -1);
-                    }
+                    bool toggleVisible = TcpSerialListener.layoutPoint.tvControlList[1] is ToggleButton;
+                    currPoint = toggleVisible ? (2, -1) : (1, -1);
                     currControl = tvControlList[currPoint.x];
                 }
                 else
