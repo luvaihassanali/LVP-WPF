@@ -320,78 +320,65 @@ namespace LVP_WPF
 
         internal bool Compare(TvShow localShow)
         {
-            if (!this.Path.Equals(localShow.Path))
-            {
-                return false;
-            }
-
+            if (!this.Path.Equals(localShow.Path)) return false;
 
             if (this.MultiLang)
             {
-                if (this.MultiLangName.Count != localShow.MultiLangName.Count)
-                {
-                    return false;
-                }
-
-                for (int i = 0; i < this.MultiLangName.Count; i++)
-                {
-                    if (!this.MultiLangName[i].Split(" (")[0].Equals(localShow.MultiLangName[i].Split(" (")[0]))
-                    {
-                        return false;
-                    }
-
-                }
-
-                if (this.MultiLangSeasons.Count != localShow.MultiLangSeasons.Count)
-                {
-                    return false;
-                }
-
-                for (int i = 0; i < this.MultiLangSeasons.Count; i++)
-                {
-                    Season[] a = this.MultiLangSeasons[i];
-                    Season[] b = localShow.MultiLangSeasons[i];
-                    if (a.Length != b.Length)
-                    {
-                        return false;
-                    }
-
-                    for (int j = 0; j < a.Length; j++)
-                    {
-                        if (a[j].Episodes.Length != b[j].Episodes.Length)
-                        {
-                            return false;
-                        }
-
-                        for (int k = 0; k < a[j].Episodes.Length; k++)
-                        {
-                            Episode c = a[j].Episodes[k];
-                            Episode d = b[j].Episodes[k];
-                            if (!c.Path.Equals(d.Path))
-                            {
-                                return false;
-                            }
-
-                        }
-                    }
-                }
-                return true;
+                return CompareMultiLang(localShow);
             }
 
-            if (this.Seasons.Length != localShow.Seasons.Length)
+            return CompareSeasons(this.Seasons, localShow.Seasons);
+        }
+
+        // Structural equality for the parallel multi-lang fields: same number
+        // of language entries, matching base names (strip " (Italian)" etc.),
+        // and matching season/episode counts + episode paths across all langs.
+        private bool CompareMultiLang(TvShow localShow)
+        {
+            if (this.MultiLangName.Count != localShow.MultiLangName.Count) return false;
+            for (int i = 0; i < this.MultiLangName.Count; i++)
             {
-                return false;
+                string a = this.MultiLangName[i].Split(" (")[0];
+                string b = localShow.MultiLangName[i].Split(" (")[0];
+                if (!a.Equals(b)) return false;
             }
 
-            for (int i = 0; i < this.Seasons.Length; i++)
+            if (this.MultiLangSeasons.Count != localShow.MultiLangSeasons.Count) return false;
+            for (int i = 0; i < this.MultiLangSeasons.Count; i++)
             {
-                if (!this.Seasons[i].Compare(localShow.Seasons[i]))
+                if (!CompareSeasonsByPath(this.MultiLangSeasons[i], localShow.MultiLangSeasons[i]))
                 {
                     return false;
                 }
-
             }
+            return true;
+        }
 
+        // Single-lang season compare: delegates to Season.Compare which
+        // compares episode paths as the structural key.
+        private static bool CompareSeasons(Season[] a, Season[] b)
+        {
+            if (a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (!a[i].Compare(b[i])) return false;
+            }
+            return true;
+        }
+
+        // Lighter version used by the multi-lang compare path: matches
+        // episode count and Path only, no metadata fields.
+        private static bool CompareSeasonsByPath(Season[] a, Season[] b)
+        {
+            if (a.Length != b.Length) return false;
+            for (int j = 0; j < a.Length; j++)
+            {
+                if (a[j].Episodes.Length != b[j].Episodes.Length) return false;
+                for (int k = 0; k < a[j].Episodes.Length; k++)
+                {
+                    if (!a[j].Episodes[k].Path.Equals(b[j].Episodes[k].Path)) return false;
+                }
+            }
             return true;
         }
 

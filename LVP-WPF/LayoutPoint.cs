@@ -585,17 +585,16 @@ namespace LVP_WPF.Windows
             }
         }
 
+        private const int MainGridColumns = 6;
+
         private void BuildMainWindowControlGrid()
         {
-            int count = 0;
-            int rowIndex = 0;
-            int controlIndex = gui.Movies.Count;
-            List<Image> mainWindowControlList = new List<Image>();
-
-            // Three (ListView, collection) pairs to iterate over. The
-            // ListView indexes into mainGrid.Children correspond to:
+            // The ListView indexes into mainGrid.Children correspond to:
             //   [6] -> Movies row, [2] -> TvShows row, [4] -> Cartoons row
             // and the parallel collections are the bindings on each.
+            // So mainWindowControlList ends up as [Movies..., TvShows..., Cartoons...].
+            // The grid consumes them in a different order (TvShows+Cartoons section first,
+            // then Movies), hence the index jumps below.
             ListView[] lists =
             {
                 (ListView)gui.mainGrid.Children[6],
@@ -604,6 +603,7 @@ namespace LVP_WPF.Windows
             };
             ObservableCollection<MainWindowBox>[] collections = { gui.Movies, gui.TvShows, gui.Cartoons };
 
+            List<Image> mainWindowControlList = new List<Image>();
             for (int i = 0; i < lists.Length; i++)
             {
                 ItemContainerGenerator generator = lists[i].ItemContainerGenerator;
@@ -615,65 +615,58 @@ namespace LVP_WPF.Windows
                 }
             }
 
+            int col = 0;
+            int rowIndex = 0;
+            int controlIndex = gui.Movies.Count;
             int totalTvShows = gui.TvShows.Count + gui.Cartoons.Count;
+
+            // Section 1: TvShows + Cartoons. Forcing col to MainGridColumns
+            // at the section boundary makes Cartoons start on a fresh row.
             for (int i = 0; i < totalTvShows; i++)
             {
-                if (i == totalTvShows - gui.Cartoons.Count)
-                {
-                    count = 6;
-                }
-
-                if (count == 6)
+                if (i == totalTvShows - gui.Cartoons.Count) col = MainGridColumns;
+                if (col == MainGridColumns)
                 {
                     rowIndex++;
-                    if (rowIndex >= mainWindowGrid.Count)
-                    {
-                        break;
-                    }
-                    count = 0;
+                    if (rowIndex >= mainWindowGrid.Count) return;
+                    col = 0;
                 }
-
-                if (mainWindowGrid[rowIndex][count] == 0)
-                {
-                    mainWindowControlGrid[rowIndex][count] = null;
-                }
-                else
-                {
-                    mainWindowControlGrid[rowIndex][count] = mainWindowControlList[controlIndex];
-                    controlIndex++;
-                }
-                count++;
+                AssignTileOrSentinel(rowIndex, col, mainWindowControlList, ref controlIndex);
+                col++;
             }
 
-            count = 0;
+            // Section 2: Movies. Reset both source-position and column;
+            // the next row index is right after the last TvShows/Cartoons row.
+            col = 0;
             controlIndex = 0;
-            if (totalTvShows != 0)
-            {
-                rowIndex++;
-            }
+            if (totalTvShows != 0) rowIndex++;
 
             for (int i = 0; i < gui.Movies.Count; i++)
             {
-                if (count == 6)
+                if (col == MainGridColumns)
                 {
                     rowIndex++;
-                    if (rowIndex >= mainWindowGrid.Count)
-                    {
-                        break;
-                    }
-                    count = 0;
+                    if (rowIndex >= mainWindowGrid.Count) return;
+                    col = 0;
                 }
+                AssignTileOrSentinel(rowIndex, col, mainWindowControlList, ref controlIndex);
+                col++;
+            }
+        }
 
-                if (mainWindowGrid[rowIndex][count] == 0)
-                {
-                    mainWindowControlGrid[rowIndex][count] = null;
-                }
-                else
-                {
-                    mainWindowControlGrid[rowIndex][count] = mainWindowControlList[controlIndex];
-                    controlIndex++;
-                }
-                count++;
+        // mainWindowGrid[r][c] encodes whether that cell is filled (1) or a
+        // sentinel for "ragged trailing slot in last row" (0). Mirror the
+        // assignment into mainWindowControlGrid: real control if filled,
+        // null if sentinel. controlIndex only advances on real assignments.
+        private void AssignTileOrSentinel(int row, int col, List<Image> source, ref int controlIndex)
+        {
+            if (mainWindowGrid[row][col] == 0)
+            {
+                mainWindowControlGrid[row][col] = null;
+            }
+            else
+            {
+                mainWindowControlGrid[row][col] = source[controlIndex++];
             }
         }
 
@@ -713,83 +706,23 @@ namespace LVP_WPF.Windows
         /// <summary>Plain "warp cursor to the visual center of this element."</summary>
         private static void CenterMouseOverElement(FrameworkElement element)
         {
-            element.Dispatcher.Invoke(() =>
-            {
-                Point target = element.PointToScreen(new Point(0, 0));
-                target.X += element.ActualWidth / 2;
-                target.Y += element.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
+            element.Dispatcher.Invoke(() => WarpCursorToCenter(element));
         }
 
         private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null)
         {
             image.Dispatcher.Invoke(() =>
             {
-                if (scrollViewer != null)
-                {
-                    if (row == 0)
-                    {
-                        scrollViewer.ScrollToHome();
-                    }
-                    else if ((seasonWindowActive && row == seasonWindowGrid.Count - 1) ||
-                            (tvShowWindowActive && row == tvControlList.Count - 1) ||
-                            (mainWindowActive && row == mainWindowGrid.Count - 1))
-                    {
-                        scrollViewer.ScrollToBottom();
-                    }
-                    else
-                    {
-                        gui.scrollViewerAdjust = true;
-                        image.BringIntoView();
-                    }
-                    WpfTreeHelpers.DoEvents();
-                }
-
-                Point target = image.PointToScreen(new Point(0, 0));
-                target.X += image.ActualWidth / 2;
-                target.Y += image.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
+                ScrollGridRowIntoView(scrollViewer, row, image);
+                WarpCursorToCenter(image);
             });
         }
 
         private async void CenterMouseOverComboBoxItem(ComboBoxItem comboBoxItem, int row = -1, ScrollViewer scrollViewer = null)
         {
             await Task.Delay(100);
-            if (scrollViewer != null)
-            {
-                if (row == 0)
-                {
-                    scrollViewer.Dispatcher.Invoke(() =>
-                    {
-                        scrollViewer.ScrollToHome();
-                    });
-                }
-                else if (row == langComboBoxItems.Count)
-                {
-                    scrollViewer.Dispatcher.Invoke(() =>
-                    {
-                        scrollViewer.ScrollToBottom();
-                    });
-                }
-                else
-                {
-                    gui.scrollViewerAdjust = true;
-                    comboBoxItem.Dispatcher.Invoke(() =>
-                    {
-                        comboBoxItem.BringIntoView();
-                    });
-                }
-                WpfTreeHelpers.DoEvents();
-            }
-
-            comboBoxItem.Dispatcher.Invoke(() =>
-            {
-                Point target = comboBoxItem.PointToScreen(new Point(0d, 0d));
-                target.X += comboBoxItem.ActualWidth / 2;
-                target.Y += comboBoxItem.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
+            ScrollDropdownRowIntoView(scrollViewer, row, comboBoxItem);
+            comboBoxItem.Dispatcher.Invoke(() => WarpCursorToCenter(comboBoxItem));
         }
 
         private static void CenterMouseOverComboBoxItem(Point p, ComboBoxItem c)
@@ -797,6 +730,66 @@ namespace LVP_WPF.Windows
             p.X += c.ActualWidth / 2;
             p.Y += c.ActualHeight / 2;
             ComInterop.SetCursorPos((int)p.X, (int)p.Y);
+        }
+
+        // Cursor-warp tail shared by every "center on control" path: take
+        // the control's top-left in screen coords, add half its rendered
+        // size, SetCursorPos. The caller is responsible for Dispatcher
+        // marshalling because the rules differ per call site.
+        private static void WarpCursorToCenter(FrameworkElement element)
+        {
+            Point target = element.PointToScreen(new Point(0, 0));
+            target.X += element.ActualWidth / 2;
+            target.Y += element.ActualHeight / 2;
+            ComInterop.SetCursorPos((int)target.X, (int)target.Y);
+        }
+
+        // Grid (image-tile) variant of the scroll dispatcher: row==0 goes
+        // home, row==(last) goes to the bottom, anything else brings the
+        // tile itself into view via the BringIntoView event.
+        private void ScrollGridRowIntoView(ScrollViewer scrollViewer, int row, FrameworkElement target)
+        {
+            if (scrollViewer == null) return;
+            if (row == 0)
+            {
+                scrollViewer.ScrollToHome();
+            }
+            else if ((seasonWindowActive && row == seasonWindowGrid.Count - 1) ||
+                     (tvShowWindowActive && row == tvControlList.Count - 1) ||
+                     (mainWindowActive && row == mainWindowGrid.Count - 1))
+            {
+                scrollViewer.ScrollToBottom();
+            }
+            else
+            {
+                gui.scrollViewerAdjust = true;
+                target.BringIntoView();
+            }
+            WpfTreeHelpers.DoEvents();
+        }
+
+        // Dropdown variant of the scroll dispatcher (used for the language
+        // ComboBox popup). Same shape as the grid version but checks
+        // row==langComboBoxItems.Count for the bottom edge and dispatches
+        // the scroll on the ScrollViewer's own dispatcher to be safe across
+        // popup teardown.
+        private void ScrollDropdownRowIntoView(ScrollViewer scrollViewer, int row, ComboBoxItem item)
+        {
+            if (scrollViewer == null) return;
+            if (row == 0)
+            {
+                scrollViewer.Dispatcher.Invoke(() => scrollViewer.ScrollToHome());
+            }
+            else if (row == langComboBoxItems.Count)
+            {
+                scrollViewer.Dispatcher.Invoke(() => scrollViewer.ScrollToBottom());
+            }
+            else
+            {
+                gui.scrollViewerAdjust = true;
+                item.Dispatcher.Invoke(() => item.BringIntoView());
+            }
+            WpfTreeHelpers.DoEvents();
         }
     }
 }
