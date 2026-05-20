@@ -420,30 +420,35 @@ namespace LVP_WPF.Windows
 
         internal void TogglePlayPause()
         {
-            if (mediaPlayer != null)
+            if (mediaPlayer == null) return;
+
+            if (mediaPlayer.IsPlaying)
             {
-                if (mediaPlayer.IsPlaying)
+                playButton.Dispatcher.Invoke(() =>
                 {
-                    playButton.Dispatcher.Invoke(() => { playButton.Background = playHoverBackground; });
-                    playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = playHoverBorderBrush; });
-                    overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Visible; });
-                    buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(0); });
-                    mediaPlayer.Pause();
-                    pollingTimer.Stop();
-                    TcpSerialListener.DoMouseClick();
-                    ComInterop.SetCursorPos(50, 1030);
-                }
-                else
+                    playButton.Background = playHoverBackground;
+                    playButton.BorderBrush = playHoverBorderBrush;
+                    overlayGrid.Visibility = Visibility.Visible;
+                    PlayButton_SetSymbol(0);
+                });
+                mediaPlayer.Pause();
+                pollingTimer.Stop();
+                TcpSerialListener.DoMouseClick();
+                ComInterop.SetCursorPos(50, 1030);
+            }
+            else
+            {
+                playButton.Dispatcher.Invoke(() =>
                 {
-                    playButton.Dispatcher.Invoke(() => { playButton.Background = System.Windows.Media.Brushes.Transparent; });
-                    playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = System.Windows.Media.Brushes.White; });
-                    overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Hidden; });
-                    buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(1); });
-                    mediaPlayer.Play();
-                    pollingTimer.Start();
-                    ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
-                    TcpSerialListener.DoMouseClick();
-                }
+                    playButton.Background = System.Windows.Media.Brushes.Transparent;
+                    playButton.BorderBrush = System.Windows.Media.Brushes.White;
+                    overlayGrid.Visibility = Visibility.Hidden;
+                    PlayButton_SetSymbol(1);
+                });
+                mediaPlayer.Play();
+                pollingTimer.Start();
+                ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
+                TcpSerialListener.DoMouseClick();
             }
         }
 
