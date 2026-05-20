@@ -5,34 +5,16 @@ namespace LVP_WPF
 {
     public class MainModel
     {
-        private Movie[] movies;
-        private TvShow[] tvShows;
-        internal List<Episode> historyList;
-
         public MainModel(int m, int s)
         {
-            movies = new Movie[m];
-            tvShows = new TvShow[s];
-            historyList = new List<Episode>();
+            Movies = new Movie[m];
+            TvShows = new TvShow[s];
+            HistoryList = new List<Episode>();
         }
 
-        public Movie[] Movies
-        {
-            get => movies;
-            set => movies = value;
-        }
-
-        public TvShow[] TvShows
-        {
-            get => tvShows;
-            set => tvShows = value;
-        }
-
-        public List<Episode> HistoryList
-        {
-            get => historyList;
-            set => historyList = value;
-        }
+        public Movie[] Movies { get; set; }
+        public TvShow[] TvShows { get; set; }
+        public List<Episode> HistoryList { get; set; }
 
         public int HistoryIndex { get; set; }
         public DateTime HistoryMin { get; set; }
@@ -44,32 +26,17 @@ namespace LVP_WPF
             Array.Sort(this.Movies, Movie.SortMoviesAlphabetically());
             Array.Sort(this.TvShows, TvShow.SortTvShowsAlphabetically());
 
-            if (this.movies.Length != prevMedia.movies.Length)
+            if (this.Movies.Length != prevMedia.Movies.Length) return false;
+            if (this.TvShows.Length != prevMedia.TvShows.Length) return false;
+
+            for (int i = 0; i < this.Movies.Length; i++)
             {
-                return false;
+                if (!this.Movies[i].Compare(prevMedia.Movies[i])) return false;
             }
 
-            if (this.tvShows.Length != prevMedia.tvShows.Length)
+            for (int i = 0; i < this.TvShows.Length; i++)
             {
-                return false;
-            }
-
-            for (int i = 0; i < this.movies.Length; i++)
-            {
-                if (!this.movies[i].Compare(prevMedia.movies[i]))
-                {
-                    return false;
-                }
-
-            }
-
-            for (int i = 0; i < this.tvShows.Length; i++)
-            {
-                if (!this.tvShows[i].Compare(prevMedia.tvShows[i]))
-                {
-                    return false;
-                }
-
+                if (!this.TvShows[i].Compare(prevMedia.TvShows[i])) return false;
             }
 
             return true;
@@ -88,8 +55,8 @@ namespace LVP_WPF
 
         internal void Ingest(MainModel prevMedia)
         {
-            Dictionary<string, Movie> prevMoviesByPath = prevMedia.movies.ToDictionary(m => m.Path);
-            foreach (Movie curr in this.movies)
+            Dictionary<string, Movie> prevMoviesByPath = prevMedia.Movies.ToDictionary(m => m.Path);
+            foreach (Movie curr in this.Movies)
             {
                 if (prevMoviesByPath.TryGetValue(curr.Path, out Movie? prev))
                 {
@@ -97,8 +64,8 @@ namespace LVP_WPF
                 }
             }
 
-            Dictionary<string, TvShow> prevShowsByPath = prevMedia.tvShows.ToDictionary(t => t.Path);
-            foreach (TvShow curr in this.tvShows)
+            Dictionary<string, TvShow> prevShowsByPath = prevMedia.TvShows.ToDictionary(t => t.Path);
+            foreach (TvShow curr in this.TvShows)
             {
                 if (!prevShowsByPath.TryGetValue(curr.Path, out TvShow? prev))
                 {
