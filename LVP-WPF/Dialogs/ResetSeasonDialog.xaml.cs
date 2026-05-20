@@ -20,22 +20,15 @@ namespace LVP_WPF.Dialogs
             ResetSeasonDialog resetDialog = new ResetSeasonDialog();
             string epString = tvShow.LastEpisode == null ? "" : $"E{tvShow.LastEpisode.Id}";
             resetDialog.Header = $"{tvShow.Name} (S{tvShow.CurrSeason}{epString})";
+
+            // First entry is the "All" pseudo-row; the rest are per-season.
             OptionWindowBox[] seasonBoxes = new OptionWindowBox[tvShow.Seasons.Length + 1];
             seasonBoxes[0] = new OptionWindowBox { Id = 0, Name = "  All" };
-            int idx = 0;
-            for (int i = 1; i <= tvShow.Seasons.Length; i++)
+            for (int i = 0; i < tvShow.Seasons.Length; i++)
             {
-                string name;
-                if (tvShow.Seasons[idx].Id == -1)
-                {
-                    name = "  Extras";
-                }
-                else name = $"   Season {tvShow.Seasons[idx].Id}";
-                seasonBoxes[i] = new OptionWindowBox
-                {
-                    Id = tvShow.Seasons[idx++].Id,
-                    Name = name
-                };
+                Season season = tvShow.Seasons[i];
+                string name = season.Id == -1 ? "  Extras" : $"   Season {season.Id}";
+                seasonBoxes[i + 1] = new OptionWindowBox { Id = season.Id, Name = name };
             }
             resetDialog.SeasonListView.ItemsSource = seasonBoxes;
             resetDialog.ShowDialog();
@@ -69,54 +62,25 @@ namespace LVP_WPF.Dialogs
         }
 
         private void CheckBox_Checked(object sender, RoutedEventArgs e)
-        {
-            CheckBox c = (CheckBox)sender;
-            string name = c.Content.ToString();
-            if (name.Equals("  All"))
-            {
-                results.Add(0);
-            }
-            else if (name.Equals("  Extras"))
-            {
-                results.Add(-1);
-            }
-            else
-            {
-                name = name.Replace("  Season ", "");
-                results.Add(Int32.Parse(name));
-            }
-        }
+            => results.Add(SeasonIdFromCheckbox((CheckBox)sender));
 
         private void CheckBox_Unchecked(object sender, RoutedEventArgs e)
+            => results.Remove(SeasonIdFromCheckbox((CheckBox)sender));
+
+        // Map a CheckBox's content label back to the season id encoding used
+        // by the results list. "  All" -> 0, "  Extras" -> -1, "  Season N" -> N.
+        private static int SeasonIdFromCheckbox(CheckBox c)
         {
-            CheckBox c = (CheckBox)sender;
             string name = c.Content.ToString();
-            if (name.Equals("  All"))
-            {
-                results.Remove(0);
-            }
-            else if (name.Equals("  Extras"))
-            {
-                results.Remove(-1);
-            }
-            else
-            {
-                name = name.Replace("  Season ", "");
-                results.Remove(Int32.Parse(name));
-            }
+            if (name.Equals("  All")) return 0;
+            if (name.Equals("  Extras")) return -1;
+            return Int32.Parse(name.Replace("  Season ", ""));
         }
 
-        private void SeasonListView_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-        {
-            /*ListView seasonListView = sender as ListView;
-            OptionWindowBox item = (OptionWindowBox)seasonListView.SelectedItem;
-            ItemContainerGenerator generator = seasonListView.ItemContainerGenerator;
-            ListViewItem container = (ListViewItem)generator.ContainerFromItem(item);
-            CheckBox c = WpfTreeHelpers.GetChildrenByType(container, typeof(CheckBox), "checkbox") as CheckBox;
-            if (c != null)
-            {
-                c.IsChecked = (bool)c.IsChecked ? false : true;
-            }*/
-        }
+        // XAML still wires this handler; keep the empty body so the binding
+        // resolves. The original click-toggles-checkbox logic was disabled
+        // long ago when row click started auto-toggling via the ListView
+        // selector instead.
+        private void SeasonListView_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e) { }
     }
 }
