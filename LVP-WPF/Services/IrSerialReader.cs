@@ -52,18 +52,8 @@ namespace LVP_WPF.Services
 
             if (!Enabled) return;
 
-            try
+            if (!TryOpenPort())
             {
-                _serialPort.Open();
-                Log.Information("Serial port connected");
-            }
-            catch
-            {
-                _retriesLeft--;
-                if (_retriesLeft < 0)
-                {
-                    Enabled = false;
-                }
                 Log.Warning("No device connected to serial port");
             }
         }
@@ -76,19 +66,27 @@ namespace LVP_WPF.Services
         public void CheckConnection()
         {
             if (!Enabled || _serialPort == null || _serialPort.IsOpen) return;
+            TryOpenPort();
+        }
 
+        // Attempt to open _serialPort. Returns true on success; on failure
+        // ticks down the retry budget and disables further attempts if
+        // exhausted. Initialize logs a warning on first failure; CheckConnection
+        // stays silent because it can fire repeatedly while the device is
+        // unplugged.
+        private bool TryOpenPort()
+        {
             try
             {
                 _serialPort.Open();
                 Log.Information("Serial port connected");
+                return true;
             }
             catch
             {
                 _retriesLeft--;
-                if (_retriesLeft < 0)
-                {
-                    Enabled = false;
-                }
+                if (_retriesLeft < 0) Enabled = false;
+                return false;
             }
         }
 
