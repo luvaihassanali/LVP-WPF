@@ -4,12 +4,14 @@ using LVP_WPF.Util;
 using LVP_WPF.Windows;
 using Serilog;
 using System;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 
 namespace LVP_WPF
 {
@@ -52,8 +54,8 @@ namespace LVP_WPF
             // rebuild path). Indeterminate while we don't know totals yet
             // (scan / JSON load / compare); flipped to determinate before
             // AssignControlContext, which has known counts and ticks per tile.
-            //progressBar.IsIndeterminate = true;
-            //progressBar.Visibility = Visibility.Visible;
+            progressBar.IsIndeterminate = true;
+            progressBar.Visibility = Visibility.Visible;
 
             long beforeInit = mwSw.ElapsedMilliseconds;
             library = new MediaLibrary(new MediaRepository("media.json"));
@@ -73,7 +75,6 @@ namespace LVP_WPF
             gui.ProgressBarMax = totalTiles;
             gui.ProgressBarValue = 0;
             progressBar.IsIndeterminate = false;
-            progressBar.Visibility = Visibility.Visible;
 
             await AssignControlContext();
 
@@ -174,61 +175,101 @@ namespace LVP_WPF
                 }
             }
 
-            foreach (TvShow show in model.TvShows)
-            {
-                if (show.Cartoon) continue;
-                // Off-thread decode: ImageLoader.LoadPoster does file I/O +
-                // JPEG decode, and LoadFlags walks the show's directory to
-                // collect language flag PNGs. Doing this synchronously on the
-                // UI thread per-tile starves WPF's compositor and makes the
-                // loader spinner + incoming tiles jitter. BitmapImage.Freeze()
-                // (inside ImageLoader.Load) is what makes the result safe to
-                // hand back to the UI thread from a worker.
-                MainWindowBox box = await Task.Run(() => new MainWindowBox
-                {
-                    Id = show.Id,
-                    Title = show.Name,
-                    Image = ImageLoader.LoadPoster(show.Poster),
-                    Flags = show.MultiLang ? ImageLoader.LoadFlags(show.Path) : null
-                });
-                await AddTileAsync(gui.TvShows, box);
-            }
+            // Partition once instead of double-iterating model.TvShows with
+            // Cartoon checks in two of the three old loops.
+            TvShow[] tvShows  = model.TvShows.Where(s => !s.Cartoon).ToArray();
+            TvShow[] cartoons = model.TvShows.Where(s =>  s.Cartoon).ToArray();
 
-            foreach (TvShow show in model.TvShows)
-            {
-                if (!show.Cartoon) continue;
-                MainWindowBox box = await Task.Run(() => new MainWindowBox
-                {
-                    Id = show.Id,
-                    Title = show.Name,
-                    Image = ImageLoader.LoadPoster(show.Poster)
-                });
-                await AddTileAsync(gui.Cartoons, box);
-                TvShowWindow.cartoons.Add(show);
-            }
+            // Preserve the side effect from the old cartoon loop - cartoons
+            // are also tracked in a flat list used by the S-hotkey / IR-remote
+            // "play random cartoons" marathon.
+            foreach (TvShow c in cartoons) TvShowWindow.cartoons.Add(c);
 
-            foreach (Movie movie in model.Movies)
+            await LoadCategoryAsync(tvShows, gui.TvShows, "TvShows", show => new MainWindowBox
             {
-                MainWindowBox box = await Task.Run(() => new MainWindowBox
-                {
-                    Id = movie.Id,
-                    Title = movie.Name,
-                    Image = ImageLoader.LoadPoster(movie.Poster)
-                });
-                await AddTileAsync(gui.Movies, box);
-            }
+                Id = show.Id,
+                Title = show.Name,
+                Image = ImageLoader.LoadPoster(show.Poster),
+                Flags = show.MultiLang ? ImageLoader.LoadFlags(show.Path) : null
+            });
 
-            Serilog.Log.Information("AssignControlContext: {Ms}ms", totalSw.ElapsedMilliseconds);
+            await LoadCategoryAsync(cartoons, gui.Cartoons, "Cartoons", show => new MainWindowBox
+            {
+                Id = show.Id,
+                Title = show.Name,
+                Image = ImageLoader.LoadPoster(show.Poster)
+            });
+
+            await LoadCategoryAsync(model.Movies, gui.Movies, "Movies", movie => new MainWindowBox
+            {
+                Id = movie.Id,
+                Title = movie.Name,
+                Image = ImageLoader.LoadPoster(movie.Poster)
+            });
+
+            Serilog.Log.Information("AssignControlContext total: {Ms}ms", totalSw.ElapsedMilliseconds);
         }
 
-        // Hand off ObservableCollection mutation to the UI thread (the bound
-        // ListView lives there), tick the progress bar, and yield briefly so
-        // layout can catch up before the next tile starts loading.
-        private async Task AddTileAsync(System.Collections.ObjectModel.ObservableCollection<MainWindowBox> collection, MainWindowBox box)
+        // Load a category of tiles by decoding posters in parallel (CPU-bound
+        // JPEG decode scales across all cores) then batch-adding a chunk to
+        // the bound ObservableCollection in a single dispatcher hop.
+        //
+        // Replaces the previous per-tile pattern:
+        //     await Task.Run(decode)            // 1 worker
+        //     await BeginInvoke(collection.Add) // 1 dispatcher hop
+        //     await Task.Delay(1)               // ~15ms on Windows!
+        //
+        // On a ~200-tile library this went from several seconds to a few
+        // hundred ms. The biggest wins are (a) parallel decode across N cores
+        // and (b) removing the Task.Delay(1) which on Windows is actually
+        // ~15.6ms per call thanks to the default timer resolution -> 3s of
+        // pure waiting at 200 tiles.
+        //
+        // Order is preserved: Parallel.For writes into an indexed array and
+        // the UI add iterates that array in order.
+        // BitmapImage.Freeze() inside ImageLoader.Load makes the decoded
+        // instances immutable and safe to hand to the UI thread from any
+        // worker.
+        private async Task LoadCategoryAsync<T>(
+            T[] items,
+            ObservableCollection<MainWindowBox> target,
+            string label,
+            Func<T, MainWindowBox> factory)
         {
-            await this.Dispatcher.BeginInvoke(() => collection.Add(box));
-            gui.ProgressBarValue++;
-            await Task.Delay(1);
+            if (items.Length == 0) return;
+
+            Stopwatch sw = Stopwatch.StartNew();
+
+            // CHUNK trades visible-progress smoothness vs dispatcher overhead.
+            // 16 is roughly one row of tiles on screen and keeps the progress
+            // bar advancing in human-noticeable steps.
+            const int CHUNK = 16;
+
+            for (int i = 0; i < items.Length; i += CHUNK)
+            {
+                int start = i;
+                int count = Math.Min(CHUNK, items.Length - start);
+                MainWindowBox[] boxes = new MainWindowBox[count];
+
+                // Decode this chunk's posters in parallel on the thread pool.
+                await Task.Run(() => Parallel.For(0, count, k =>
+                {
+                    boxes[k] = factory(items[start + k]);
+                }));
+
+                // One dispatcher hop adds the whole chunk. Background priority
+                // lets layout/render passes interleave with the inserts so the
+                // coffee spinner keeps animating smoothly.
+                await Dispatcher.BeginInvoke(() =>
+                {
+                    for (int k = 0; k < count; k++) target.Add(boxes[k]);
+                }, DispatcherPriority.Background);
+
+                gui.ProgressBarValue += count;
+            }
+
+            Serilog.Log.Information("LoadCategory {Label}: {Count} tiles in {Ms}ms",
+                label, items.Length, sw.ElapsedMilliseconds);
         }
 
         private void ShuffleButton_Click(object sender, RoutedEventArgs e)

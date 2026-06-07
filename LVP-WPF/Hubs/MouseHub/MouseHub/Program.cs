@@ -39,12 +39,67 @@ namespace MouseMoverClient
             Console.BackgroundColor = ConsoleColor.Black;
             //Console.CursorSize = 1;
             Console.CursorVisible = false;
+
+            // Read console layout from App.config so the window matches what
+            // the shortcut's Properties dialog sets (Screen Buffer Size,
+            // Window Size, Window Position). Without these the previously
+            // hardcoded 112x27 @ (-8,-8) would clobber the shortcut layout
+            // whenever LVP-WPF restarted MouseHub.
+            int winW = Int32.Parse(ConfigurationManager.AppSettings["ConsoleWindowWidth"]);
+            int winH = Int32.Parse(ConfigurationManager.AppSettings["ConsoleWindowHeight"]);
+            int bufH = Int32.Parse(ConfigurationManager.AppSettings["ConsoleBufferHeight"]);
+            int winLeft = Int32.Parse(ConfigurationManager.AppSettings["ConsoleWindowLeft"]);
+            int winTop  = Int32.Parse(ConfigurationManager.AppSettings["ConsoleWindowTop"]);
+
 #pragma warning disable CA1416 // Validate platform compatibility
-            Console.SetWindowSize(112, 27);
-            Console.SetBufferSize(112, 27);
+            // Two launch paths to support:
+            //   1. From MouseHub.lnk - conhost already applied the shortcut's
+            //      Properties (size/buffer/position) before Main ran. State
+            //      matches our target -> skip the resize entirely. This avoids
+            //      the "buffer size would be too large" ArgumentOutOfRangeException
+            //      we hit when we shrunk to 1x1 first: at the configured font
+            //      size (Segoe Mono Boot @ 38pt) the implicit max-window-height
+            //      after the shrink rejects 31 rows.
+            //   2. From LVP-WPF's Process.Start(MouseHub.exe) restart - conhost
+            //      uses default console host settings (not the .lnk), so we
+            //      need to resize to match the shortcut layout.
+            //
+            // Either way: be defensive. If the configured dimensions don't fit
+            // the current display state for whatever reason, log and continue
+            // instead of crashing - the app is still functional at whatever
+            // size conhost gave us.
+            try
+            {
+                bool sizeMatches = Console.WindowWidth  == winW
+                                && Console.WindowHeight == winH
+                                && Console.BufferWidth  == winW
+                                && Console.BufferHeight == bufH;
+
+                if (!sizeMatches)
+                {
+                    // Window must always be <= buffer in both dimensions.
+                    // Safe pattern when both might need to shrink: first
+                    // shrink window to min(current, target), then set buffer
+                    // (now guaranteed >= window), then set window to target.
+                    int shrinkW = Math.Min(Console.WindowWidth,  winW);
+                    int shrinkH = Math.Min(Console.WindowHeight, winH);
+                    if (shrinkW < Console.WindowWidth || shrinkH < Console.WindowHeight)
+                    {
+                        Console.SetWindowSize(shrinkW, shrinkH);
+                    }
+                    Console.SetBufferSize(winW, bufH);
+                    Console.SetWindowSize(winW, winH);
+                }
+            }
+            catch (ArgumentOutOfRangeException ex)
+            {
+                // Configured size exceeds dwMaximumWindowSize for the current
+                // font + display. Leave conhost's default and keep going.
+                Console.WriteLine($"[MouseHub] Console resize skipped: {ex.Message}");
+            }
 #pragma warning restore CA1416 // Validate platform compatibility
-            ConsoleHelper.SetWindowPosition(-8, -8);
-            //ConsoleHelper.SetWindowPosition(Screen.PrimaryScreen.Bounds.Width / 4 - 10, Screen.PrimaryScreen.Bounds.Height / 4  - 10);
+
+            ConsoleHelper.SetWindowPosition(winLeft, winTop);
             int opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
             ConsoleHelper.SetWindowTransparency(opacity); // /256
             ConsoleHelper.HideTitleBar();
