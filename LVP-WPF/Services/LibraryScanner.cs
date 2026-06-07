@@ -39,30 +39,48 @@ namespace LVP_WPF.Services
 
         public ScanResult Scan(IEnumerable<LibraryRoot> roots)
         {
+            System.Diagnostics.Stopwatch phase = System.Diagnostics.Stopwatch.StartNew();
             foreach (LibraryRoot root in roots)
             {
                 ProcessRoot(root);
             }
+            Log.Information("Scan: roots enumerated in {Ms}ms ({Movies} movie dirs, {Tv} tv dirs)",
+                phase.ElapsedMilliseconds, _moviePaths.Count, _tvPaths.Count);
 
             MainModel model = new MainModel(_moviePaths.Count, _tvPaths.Count);
 
+            phase.Restart();
             for (int i = 0; i < _moviePaths.Count; i++)
             {
                 model.Movies[i] = ProcessMovieDirectory(_moviePaths[i]);
             }
             _mediaCount += _moviePaths.Count;
+            Log.Information("Scan: movies processed in {Ms}ms", phase.ElapsedMilliseconds);
 
+            phase.Restart();
+            System.Diagnostics.Stopwatch perShow = new System.Diagnostics.Stopwatch();
             for (int i = 0; i < _tvPaths.Count; i++)
             {
+                perShow.Restart();
                 model.TvShows[i] = ProcessTvDirectory(_tvPaths[i]);
+                long ms = perShow.ElapsedMilliseconds;
+                // Log any show that takes >50ms - that's the hot-spot search.
+                // Below threshold the show is silent so the log doesn't drown
+                // in noise from fast shows.
+                if (ms > 50)
+                {
+                    Log.Information("Scan: slow show {Ms}ms - {Name}", ms, Path.GetFileName(_tvPaths[i]));
+                }
             }
+            Log.Information("Scan: tv shows processed in {Ms}ms ({Count} shows)",
+                phase.ElapsedMilliseconds, _tvPaths.Count);
 
             return new ScanResult(model, _mediaCount, _warnings);
         }
 
         private void ProcessRoot(LibraryRoot root)
         {
-            Log.Debug("Process root dir {Tv} / {Movie}", root.TvDirectory, root.MovieDirectory);
+            //Log.Debug("Process root dir {Tv} / {Movie}", root.TvDirectory, root.MovieDirectory);
 
             if (!Directory.Exists(root.TvDirectory))
             {
@@ -79,7 +97,7 @@ namespace LVP_WPF.Services
 
         private Movie ProcessMovieDirectory(string targetDir)
         {
-            Log.Debug("Process movies dir {Dir}", targetDir);
+            //Log.Debug("Process movies dir {Dir}", targetDir);
             string[] movieEntry = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
             string movieName = Path.GetFileNameWithoutExtension(movieEntry[0]);
             return new Movie(movieName.Trim(), movieEntry[0]);
@@ -87,7 +105,7 @@ namespace LVP_WPF.Services
 
         private TvShow ProcessTvDirectory(string targetDir)
         {
-            Log.Debug("Process tv show dir {Dir}", targetDir);
+            //Log.Debug("Process tv show dir {Dir}", targetDir);
             // Show directory naming convention: "Show Name%suffix-with-cache-key".
             // Strip the % suffix to get the display name.
             string name = Path.GetFileName(targetDir).Split('%')[0];
@@ -116,7 +134,7 @@ namespace LVP_WPF.Services
 
         private TvShow ProcessMultiLangTvDirectory(string folder, TvShow tvShow)
         {
-            Log.Debug("Process multi lang tv show dir {Dir}", folder);
+            //Log.Debug("Process multi lang tv show dir {Dir}", folder);
             tvShow.EnableMultiLang();
 
             string[] langFolders = Directory.GetDirectories(folder);
@@ -170,7 +188,7 @@ namespace LVP_WPF.Services
 
         private Season BuildSeason(string seasonDir, int seasonNumber, TvShow tvShow)
         {
-            Log.Debug("Process tv show season dir {Dir}", seasonDir);
+            //Log.Debug("Process tv show season dir {Dir}", seasonDir);
             Season season = new Season(seasonNumber);
             string[] episodeEntries = Directory.GetFiles(seasonDir)
                 .Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase))
@@ -211,7 +229,7 @@ namespace LVP_WPF.Services
 
         private void ProcessExtrasDirectory(List<Episode> extras, string targetDir)
         {
-            Log.Debug("Process extras dir {Dir}", targetDir);
+            //Log.Debug("Process extras dir {Dir}", targetDir);
             string[] rootEntries = Directory.GetFiles(targetDir).Where(name => !name.EndsWith(".srt", StringComparison.OrdinalIgnoreCase)).ToArray();
             foreach (string entry in rootEntries)
             {

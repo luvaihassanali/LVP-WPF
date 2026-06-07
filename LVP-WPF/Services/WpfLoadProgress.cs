@@ -5,42 +5,29 @@ namespace LVP_WPF.Services
 {
     /// <summary>
     /// WPF-backed implementation of <see cref="ILoadProgress"/>. Owned by
-    /// MainWindow; threads writes through the relevant controls' dispatchers
-    /// so MediaLibrary can call from a Task.Run worker.
+    /// MainWindow; marshals writes through the controls' dispatchers so
+    /// MediaLibrary can call from a worker thread.
     /// </summary>
     internal sealed class WpfLoadProgress : ILoadProgress
     {
         private readonly ProgressBar _progressBar;
-        private readonly MediaElement _spinner;
-        private readonly TextBox _log;
 
-        public WpfLoadProgress(ProgressBar progressBar, MediaElement spinner, TextBox log)
+        public WpfLoadProgress(ProgressBar progressBar)
         {
             _progressBar = progressBar;
-            _spinner = spinner;
-            _log = log;
         }
 
-        public void AppendLog(string message)
-        {
-            _log.Dispatcher.Invoke(delegate
-            {
-                _log.Text += MainWindow.gui.ProgressBarValue != 1
-                    ? $"[{MainWindow.gui.ProgressBarValue}/{MainWindow.gui.ProgressBarMax}] {message}\n"
-                    : $"{message}\n";
-                _log.Focus();
-                _log.CaretIndex = _log.Text.Length;
-                _log.ScrollToEnd();
-            });
-        }
-
+        // The progress bar is already Visible (MainWindow_Loaded sets that for
+        // the regular load path). On a rebuild we just flip it from
+        // indeterminate (marquee) to determinate so the per-item ticks from
+        // BuildCache become a real fill. The animated coffee.gif is always
+        // visible, so no separate spinner toggle here anymore.
         public void ShowRebuildIndicators()
         {
             Application.Current.Dispatcher.Invoke(delegate
             {
                 _progressBar.Visibility = Visibility.Visible;
-                _spinner.Visibility = Visibility.Visible;
-                _log.Visibility = Visibility.Visible;
+                _progressBar.IsIndeterminate = false;
             });
         }
     }

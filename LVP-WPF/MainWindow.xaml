@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:sf="clr-namespace:WpfSnowfall;assembly=WpfSnowfall"
-        xmlns:fa="clr-namespace:FontAwesome.Sharp;assembly=FontAwesome.Sharp"
+        xmlns:gif="http://wpfanimatedgif.codeplex.com"
         xmlns:local="clr-namespace:LVP_WPF"
         mc:Ignorable="d"
         Title="MainWindow" Width="1200" Height="800" Background="Black" Loaded="MainWindow_Loaded" WindowStartupLocation="CenterScreen" UseLayoutRounding="true" 
@@ -97,27 +97,22 @@
         </ScrollViewer>
         <sf:Snowfall Name="snow" EmissionRate="5" Fill="White" ScaleFactor="1.1" OpacityFactor="1" LeaveAnimation="Fade" ParticleSpeed="1" Visibility="Hidden" />
         <Grid Name="loadGrid" Background="Transparent">
-            <fa:IconImage Name="loadIcon" Icon="Spinner" Foreground="White" Height="128" Width="128" RenderTransformOrigin="0.5,0.5">
-                <fa:IconImage.RenderTransform>
-                    <RotateTransform x:Name="loadIconRotate" Angle="0"/>
-                </fa:IconImage.RenderTransform>
-                <fa:IconImage.Triggers>
-                    <EventTrigger RoutedEvent="Loaded">
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetName="loadIconRotate" Storyboard.TargetProperty="Angle"
-                                                 From="0" To="360" Duration="0:0:2" RepeatBehavior="Forever"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </EventTrigger>
-                </fa:IconImage.Triggers>
-            </fa:IconImage>
-            <MediaElement Name="coffeeGif" MediaEnded="Coffee_Gif_Ended" Source="Resources\coffee.gif" MaxWidth="498" MaxHeight="431" LoadedBehavior="Play" Visibility="Hidden" />
+            <!-- coffee.gif drives the load animation. Was originally an
+                 fa:IconImage spinner whose storyboard stuttered (shared the
+                 dispatcher render timer), then a MediaElement whose WMF
+                 pipeline flashed on first decode and loop wraparound. Now an
+                 Image with WpfAnimatedGif: decodes each frame to a
+                 BitmapSource up front and animates them via a standard WPF
+                 ObjectAnimationUsingKeyFrames storyboard - no codec
+                 reinitialization on loop, no surface-clear flash, animates
+                 through the same render pipeline as everything else. -->
+            <Image Name="coffeeGif"
+                   gif:ImageBehavior.AnimatedSource="Resources\coffee.gif"
+                   gif:ImageBehavior.RepeatBehavior="Forever"
+                   MaxWidth="498" MaxHeight="431"
+                   Visibility="Visible" />
             <ProgressBar Name="progressBar" Value="{Binding ProgressBarValue}" Maximum="{Binding ProgressBarMax}" Width="498" Height= "10" IsIndeterminate="False"
                          HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,428,0,0" Background="#FF9CCAC4" Foreground="#FF068494" BorderBrush="#FF9CCAC4" Visibility="Hidden"/>
-            <TextBox Name="logTxtBox" FontSize="14" Foreground="White" FontFamily="Consolas" BorderThickness="0"
-                     TextWrapping="Wrap" Background="Transparent" AcceptsReturn="True" VerticalScrollBarVisibility="Hidden" Margin="10,0,0,0" MaxHeight="300" Visibility="Visible" VerticalAlignment="Bottom" Height="300">
-            </TextBox>
         </Grid>
     </Grid>
 </Window>

@@ -37,19 +37,43 @@ namespace LVP_WPF
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            Stopwatch mwSw = Stopwatch.StartNew();
+            Serilog.Log.Information("MW.Loaded: START");
+
             await Task.Run(() =>
             {
 #if RELEASE
                 CursorManager.InitializeCustomCursor();
 #endif
             });
+            Serilog.Log.Information("MW.Loaded: cursor init done {Ms}ms", mwSw.ElapsedMilliseconds);
 
+            // Show the progress bar during the regular load (not just the
+            // rebuild path). Indeterminate while we don't know totals yet
+            // (scan / JSON load / compare); flipped to determinate before
+            // AssignControlContext, which has known counts and ticks per tile.
+            //progressBar.IsIndeterminate = true;
+            //progressBar.Visibility = Visibility.Visible;
+
+            long beforeInit = mwSw.ElapsedMilliseconds;
             library = new MediaLibrary(new MediaRepository("media.json"));
-            await library.Initialize(new WpfLoadProgress(progressBar, coffeeGif, logTxtBox));
+            await library.Initialize(new WpfLoadProgress(progressBar));
+            Serilog.Log.Information("MW.Loaded: library.Initialize await done at {Ms}ms (took {InitMs}ms)",
+                mwSw.ElapsedMilliseconds, mwSw.ElapsedMilliseconds - beforeInit);
             if (model == null)
             {
                 return;
             }
+
+            // Switch to determinate now that we know the total work for the
+            // tile-population phase: every TV show + cartoon + movie becomes
+            // one tile. AssignControlContext increments ProgressBarValue per
+            // tile added.
+            int totalTiles = model.TvShows.Length + model.Movies.Length;
+            gui.ProgressBarMax = totalTiles;
+            gui.ProgressBarValue = 0;
+            progressBar.IsIndeterminate = false;
+            progressBar.Visibility = Visibility.Visible;
 
             await AssignControlContext();
 
@@ -60,8 +84,10 @@ namespace LVP_WPF
                 // Setting to Hidden is a no-op when already Hidden.
                 progressBar.Visibility = Visibility.Hidden;
                 coffeeGif.Visibility = Visibility.Hidden;
-                logTxtBox.Visibility = Visibility.Hidden;
-                coffeeGif.Source = null;
+                // coffeeGif is now an Image driven by WpfAnimatedGif - hiding
+                // it stops it being painted. The storyboard keeps running in
+                // memory but doesn't render; cheap enough to leave alone.
+                // No more MediaElement Source = null teardown needed.
 
                 gui.mainCloseButton = this.closeButton;
                 gui.mainScrollViewer = this.scrollViewer;
@@ -87,7 +113,10 @@ namespace LVP_WPF
         {
             _ = Task.Run(() =>
             {
-                ComInterop.SetCursorPos(CursorConfig.CenterX, CursorConfig.CenterY);
+                // Top-right corner of coffeeGif, computed from screen-center + gif half-dims.
+                // coffee.gif is 498x431 native; rendered 1:1 centered in the loadGrid.
+                ComInterop.SetCursorPos(CursorConfig.CenterX + 249, CursorConfig.CenterY - 216);
+
                 Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
                 if (mouseHubProcess.Length == 0) return;
                 try
@@ -134,6 +163,8 @@ namespace LVP_WPF
 
         internal async Task AssignControlContext()
         {
+            Stopwatch totalSw = Stopwatch.StartNew();
+
             // Apply runtime cartoon-exception overrides before partitioning.
             foreach (TvShow show in model.TvShows)
             {
@@ -146,44 +177,57 @@ namespace LVP_WPF
             foreach (TvShow show in model.TvShows)
             {
                 if (show.Cartoon) continue;
-                await AddTileAsync(gui.TvShows, new MainWindowBox
+                // Off-thread decode: ImageLoader.LoadPoster does file I/O +
+                // JPEG decode, and LoadFlags walks the show's directory to
+                // collect language flag PNGs. Doing this synchronously on the
+                // UI thread per-tile starves WPF's compositor and makes the
+                // loader spinner + incoming tiles jitter. BitmapImage.Freeze()
+                // (inside ImageLoader.Load) is what makes the result safe to
+                // hand back to the UI thread from a worker.
+                MainWindowBox box = await Task.Run(() => new MainWindowBox
                 {
                     Id = show.Id,
                     Title = show.Name,
                     Image = ImageLoader.LoadPoster(show.Poster),
-                    Flags = ImageLoader.LoadFlags(show.Path)
+                    Flags = show.MultiLang ? ImageLoader.LoadFlags(show.Path) : null
                 });
+                await AddTileAsync(gui.TvShows, box);
             }
 
             foreach (TvShow show in model.TvShows)
             {
                 if (!show.Cartoon) continue;
-                await AddTileAsync(gui.Cartoons, new MainWindowBox
+                MainWindowBox box = await Task.Run(() => new MainWindowBox
                 {
                     Id = show.Id,
                     Title = show.Name,
                     Image = ImageLoader.LoadPoster(show.Poster)
                 });
+                await AddTileAsync(gui.Cartoons, box);
                 TvShowWindow.cartoons.Add(show);
             }
 
             foreach (Movie movie in model.Movies)
             {
-                await AddTileAsync(gui.Movies, new MainWindowBox
+                MainWindowBox box = await Task.Run(() => new MainWindowBox
                 {
                     Id = movie.Id,
                     Title = movie.Name,
                     Image = ImageLoader.LoadPoster(movie.Poster)
                 });
+                await AddTileAsync(gui.Movies, box);
             }
+
+            Serilog.Log.Information("AssignControlContext: {Ms}ms", totalSw.ElapsedMilliseconds);
         }
 
         // Hand off ObservableCollection mutation to the UI thread (the bound
-        // ListView lives there) and yield briefly so layout can catch up
-        // before the next tile starts loading.
+        // ListView lives there), tick the progress bar, and yield briefly so
+        // layout can catch up before the next tile starts loading.
         private async Task AddTileAsync(System.Collections.ObjectModel.ObservableCollection<MainWindowBox> collection, MainWindowBox box)
         {
             await this.Dispatcher.BeginInvoke(() => collection.Add(box));
+            gui.ProgressBarValue++;
             await Task.Delay(1);
         }
 
@@ -201,10 +245,6 @@ namespace LVP_WPF
             TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayHistoryList());
         }
 
-        private void Coffee_Gif_Ended(object sender, EventArgs e)
-        {
-            coffeeGif.Position = TimeSpan.FromMilliseconds(1);
-        }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {

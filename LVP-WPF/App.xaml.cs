@@ -22,6 +22,20 @@ namespace LVP_WPF
                 Directory.CreateDirectory(logPath);
             }
 
+            // Pipeline-wide min level stays at Debug so the in-process Debug
+            // sink (visible in VS Output > "Debug" pane during F5) still gets
+            // everything. But the FILE sink is restricted to Information+:
+            //
+            // The scanner emits one Log.Debug per directory it visits. For a
+            // medium-or-larger library that's thousands of structured
+            // LogEvent allocations + thousands of small synchronous disk
+            // writes during MediaLibrary.Initialize, which (a) GC-pressures
+            // the worker thread enough to stutter WPF's render thread and
+            // (b) directly contends for disk bandwidth with the JSON load
+            // happening right after. Skipping them at the file sink keeps
+            // them visible while debugging in VS but stops the startup
+            // jitter.
+            //
             // .WriteTo.Debug() routes through System.Diagnostics.Debug.WriteLine,
             // which appears in Visual Studio's Output window under the "Debug"
             // pane (View > Output, "Show output from: Debug") when launched
@@ -32,6 +46,7 @@ namespace LVP_WPF
                 .MinimumLevel.Debug()
                 .WriteTo.Debug()
                 .WriteTo.File(path: $"{logPath}LVP-WPF-.log",
+                    restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information,
                     rollingInterval: RollingInterval.Month,
                     rollOnFileSizeLimit: true)
                 .CreateLogger();

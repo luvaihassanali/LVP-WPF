@@ -21,15 +21,26 @@ namespace LVP_WPF.Services
             _tempPath = path + ".tmp";
         }
 
-        /// <summary>Loads the persisted model, or null if no file exists.</summary>
+        /// <summary>
+        /// Loads the persisted model, or null if no file exists. Streams the
+        /// file straight into the model via JsonTextReader rather than
+        /// File.ReadAllText + DeserializeObject(string); that pair allocates
+        /// (1) the whole JSON as one large string on the LOH, and (2) a full
+        /// intermediate JObject tree before materializing the model. Together
+        /// they generate enough garbage to trigger GC pauses big enough to
+        /// stutter WPF's render thread (the load-screen spinner jitters
+        /// during this call). Streaming avoids both allocations.
+        /// </summary>
         public MainModel? Load()
         {
             if (!File.Exists(_path))
             {
                 return null;
             }
-            string json = File.ReadAllText(_path);
-            return JsonConvert.DeserializeObject<MainModel>(json);
+            using FileStream fs = File.OpenRead(_path);
+            using StreamReader sr = new StreamReader(fs);
+            using JsonTextReader jr = new JsonTextReader(sr);
+            return new JsonSerializer().Deserialize<MainModel>(jr);
         }
 
         /// <summary>

@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 
@@ -30,69 +31,138 @@ namespace LVP_WPF
             _repository = repository;
         }
 
-        internal async Task Initialize(ILoadProgress progress)
+        internal Task Initialize(ILoadProgress progress)
         {
             _progress = progress;
-            await Task.Run(async () =>
+
+            // Run the heavy startup work on a dedicated BelowNormal-priority
+            // thread instead of the thread pool. Two reasons:
+            //
+            // (1) Priority: the OS scheduler now lets WPF's render thread
+            //     preempt this worker, so the load-screen spinner gets CPU
+            //     time during the scan + JSON load and doesn't stutter.
+            //
+            // (2) GC latency mode: we flip the GC to LowLatency for the
+            //     duration of init so it skips Gen 2 collections. Those
+            //     Gen 2 pauses are what blip the render thread - they
+            //     suspend all managed threads briefly, regardless of
+            //     priority. The heap grows temporarily; a normal full GC
+            //     happens after init returns.
+            //
+            // The dedicated thread also lets us call BuildCache (only on
+            // the rare needsRebuild path) via .GetAwaiter().GetResult()
+            // without a sync-over-async deadlock - we own this thread, no
+            // SynchronizationContext to deadlock on.
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+            Thread worker = new Thread(() =>
             {
-                LibraryRoot[] roots = AppConfig.Drives.Select(d =>
-                {
-#if DEBUG
-                    return new LibraryRoot($"{d}\\media\\tv", $"{d}\\media\\movie");
-#else
-                    return new LibraryRoot($"{d}:\\media\\tv", $"{d}:\\media\\movie");
-#endif
-                }).ToArray();
-
-                LibraryScanner scanner = new LibraryScanner(AppConfig.Languages);
-                ScanResult scanResult = scanner.Scan(roots);
-
-                foreach (string warning in scanResult.Warnings)
-                {
-                    Application.Current.Dispatcher.Invoke(delegate
-                    {
-                        NotificationDialog.Show("Error", warning);
-                    });
-                }
-
-                MainWindow.model = scanResult.Model;
-
-                bool needsRebuild;
+                System.Runtime.GCLatencyMode prevMode = System.Runtime.GCSettings.LatencyMode;
                 try
                 {
-                    needsRebuild = CheckForUpdates();
+                    System.Runtime.GCSettings.LatencyMode = System.Runtime.GCLatencyMode.LowLatency;
+                    RunInitializeBody();
+                    tcs.SetResult(true);
                 }
                 catch (Exception ex)
                 {
-                    NotificationDialog.Show(ex.Message, ex.StackTrace);
-                    needsRebuild = false;
+                    tcs.SetException(ex);
                 }
-
-                if (needsRebuild)
+                finally
                 {
-                    //To-do MultiLang: Detect file extension changes and episode deletions
-                    _progress.ShowRebuildIndicators();
-                    MainWindow.gui.ProgressBarMax = scanResult.MediaCount;
-                    await BuildCache();
-                }
-
-                foreach (Movie m in MainWindow.model.Movies)   MainWindow.gui.mediaDict[m.Id] = m;
-                foreach (TvShow t in MainWindow.model.TvShows) MainWindow.gui.mediaDict[t.Id] = t;
-
-                if (MainWindow.model.HistoryList.Count == 0 || needsRebuild)
-                {
-                    // Flatten all non-cartoon episodes into the history list, sorted
-                    // by air date. Keeps the existing List<Episode> instance (Clear+AddRange
-                    // rather than reassign) in case anything has captured the reference.
-                    MainWindow.model.HistoryList.Clear();
-                    MainWindow.model.HistoryList.AddRange(
-                        MainWindow.model.TvShows
-                            .Where(t => !t.Cartoon)
-                            .SelectMany(t => t.Seasons)
-                            .SelectMany(s => s.Episodes));
-                    MainWindow.model.HistoryList.Sort((a, b) => a.Date.CompareTo(b.Date));
+                    System.Runtime.GCSettings.LatencyMode = prevMode;
                 }
             });
+            worker.IsBackground = true;
+            worker.Priority = ThreadPriority.BelowNormal;
+            worker.Name = "MediaLibrary.Initialize";
+            worker.Start();
+            return tcs.Task;
+        }
+
+        private void RunInitializeBody()
+        {
+            Stopwatch totalSw = Stopwatch.StartNew();
+            Stopwatch phaseSw = Stopwatch.StartNew();
+            Log("Init: START");
+
+            LibraryRoot[] roots = AppConfig.Drives.Select(d =>
+            {
+#if DEBUG
+                return new LibraryRoot($"{d}\\media\\tv", $"{d}\\media\\movie");
+#else
+                return new LibraryRoot($"{d}:\\media\\tv", $"{d}:\\media\\movie");
+#endif
+            }).ToArray();
+            Log($"Init: roots built in {phaseSw.ElapsedMilliseconds}ms ({roots.Length} drives)");
+
+            LibraryScanner scanner = new LibraryScanner(AppConfig.Languages);
+            phaseSw.Restart();
+            ScanResult scanResult = scanner.Scan(roots);
+            Log($"Init: scanner.Scan TOTAL {phaseSw.ElapsedMilliseconds}ms ({scanResult.Model.Movies.Length} movies, {scanResult.Model.TvShows.Length} tv shows, {scanResult.MediaCount} media)");
+
+            phaseSw.Restart();
+            foreach (string warning in scanResult.Warnings)
+            {
+                Application.Current.Dispatcher.Invoke(delegate
+                {
+                    NotificationDialog.Show("Error", warning);
+                });
+            }
+            if (scanResult.Warnings.Count > 0)
+            {
+                Log($"Init: warnings dispatched in {phaseSw.ElapsedMilliseconds}ms ({scanResult.Warnings.Count})");
+            }
+
+            MainWindow.model = scanResult.Model;
+
+            bool needsRebuild;
+            phaseSw.Restart();
+            try
+            {
+                needsRebuild = CheckForUpdates();
+            }
+            catch (Exception ex)
+            {
+                NotificationDialog.Show(ex.Message, ex.StackTrace);
+                needsRebuild = false;
+            }
+            Log($"Init: CheckForUpdates TOTAL {phaseSw.ElapsedMilliseconds}ms (needsRebuild={needsRebuild})");
+
+            if (needsRebuild)
+            {
+                //To-do MultiLang: Detect file extension changes and episode deletions
+                _progress.ShowRebuildIndicators();
+                MainWindow.gui.ProgressBarMax = scanResult.MediaCount;
+                // Sync-over-async is intentional here - we own this thread,
+                // no captured SynchronizationContext to deadlock on, and
+                // BuildCache only runs in the rare rebuild path.
+                phaseSw.Restart();
+                BuildCache().GetAwaiter().GetResult();
+                Log($"Init: BuildCache {phaseSw.ElapsedMilliseconds}ms");
+            }
+
+            phaseSw.Restart();
+            foreach (Movie m in MainWindow.model.Movies)   MainWindow.gui.mediaDict[m.Id] = m;
+            foreach (TvShow t in MainWindow.model.TvShows) MainWindow.gui.mediaDict[t.Id] = t;
+            Log($"Init: mediaDict populated in {phaseSw.ElapsedMilliseconds}ms ({MainWindow.gui.mediaDict.Count} entries)");
+
+            if (MainWindow.model.HistoryList.Count == 0 || needsRebuild)
+            {
+                phaseSw.Restart();
+                // Flatten all non-cartoon episodes into the history list, sorted
+                // by air date. Keeps the existing List<Episode> instance (Clear+AddRange
+                // rather than reassign) in case anything has captured the reference.
+                MainWindow.model.HistoryList.Clear();
+                MainWindow.model.HistoryList.AddRange(
+                    MainWindow.model.TvShows
+                        .Where(t => !t.Cartoon)
+                        .SelectMany(t => t.Seasons)
+                        .SelectMany(s => s.Episodes));
+                MainWindow.model.HistoryList.Sort((a, b) => a.Date.CompareTo(b.Date));
+                Log($"Init: HistoryList rebuilt in {phaseSw.ElapsedMilliseconds}ms ({MainWindow.model.HistoryList.Count} episodes)");
+            }
+
+            Log($"Init: END (total {totalSw.ElapsedMilliseconds}ms)");
         }
 
         internal async Task BuildCache()
@@ -136,16 +206,11 @@ namespace LVP_WPF
         {
             Log("Check for updates start...");
 
-            // TEMP instrumentation - throwaway, remove after profiling.
-            // Splits CheckForUpdates into its three sub-phases so we can see
-            // which one dominates startup time on a real library. Routed
-            // through Serilog so the numbers land in the file log even when
-            // the load-screen TextBox isn't visible (no rebuild needed).
+            // Split CheckForUpdates into its three sub-phases so we can see
+            // which one dominates startup time on a real library.
             Stopwatch sw = Stopwatch.StartNew();
             MainModel? prevMedia = _repository.Load();
-            long loadMs = sw.ElapsedMilliseconds;
-            Serilog.Log.Information("CheckForUpdates Load: {Ms}ms", loadMs);
-            Log($"  Load: {loadMs}ms");
+            Log($"  Load: {sw.ElapsedMilliseconds}ms");
 
             if (prevMedia == null)
             {
@@ -154,9 +219,7 @@ namespace LVP_WPF
 
             sw.Restart();
             bool result = !MainWindow.model.Compare(prevMedia);
-            long compareMs = sw.ElapsedMilliseconds;
-            Serilog.Log.Information("CheckForUpdates Compare: {Ms}ms changed={Changed}", compareMs, result);
-            Log($"  Compare: {compareMs}ms (changed={result})");
+            Log($"  Compare: {sw.ElapsedMilliseconds}ms (changed={result})");
 
             sw.Restart();
             if (!result)
@@ -167,9 +230,7 @@ namespace LVP_WPF
             {
                 MainWindow.model.Ingest(prevMedia);
             }
-            long tailMs = sw.ElapsedMilliseconds;
-            Serilog.Log.Information("CheckForUpdates {Phase}: {Ms}ms", result ? "Ingest" : "Swap", tailMs);
-            Log($"  {(result ? "Ingest" : "Swap")}: {tailMs}ms");
+            Log($"  {(result ? "Ingest" : "Swap")}: {sw.ElapsedMilliseconds}ms");
 
             Log("Check for updates end");
             return result;
@@ -180,12 +241,12 @@ namespace LVP_WPF
             _repository.Save(MainWindow.model);
         }
 
-        private void Log(string msg)
-        {
-#if DEBUG
-            Debug.WriteLine(msg);
-#endif
-            _progress.AppendLog(msg);
-        }
+        // Single log helper: writes to Serilog (file + Debug sinks). The
+        // previous version also wrote to a load-screen TextBox, but the
+        // per-call dispatcher hop + TextBox layout work was eating enough
+        // UI-thread cycles to visibly stutter the load-screen spinner.
+        // Log lines now live only in Serilog destinations (file under
+        // {baseDir}\logs and the Debug pane in VS).
+        private void Log(string msg) => Serilog.Log.Information(msg);
     }
 }
