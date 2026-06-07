@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Copy this file to "appsettings.local.config" and fill in your secrets.
+  The real file is gitignored. Values here override the placeholders in App.config.
+
+  Get a TMDB v3 API key from https://www.themoviedb.org/settings/api
+-->
+<appSettings>
+	<add key="TmdbApiKey" value="your-tmdb-v3-api-key-here"/>
+</appSettings>

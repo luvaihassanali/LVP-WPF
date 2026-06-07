@@ -1,10 +1,12 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LVP_WPF.Dialogs;
+using LVP_WPF.Models;
+using LVP_WPF.Services;
+using LVP_WPF.Util;
 using Serilog;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Configuration;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -19,15 +21,18 @@ namespace LVP_WPF.Windows
     [ObservableObject]
     public partial class TvShowWindow : Window
     {
+        private const int OverviewMaxLen = 370;
+
+        /// <summary>
+        /// Trim a TMDB Overview string for display. Anything longer than
+        /// OverviewMaxLen gets cut to that length with an ellipsis appended.
+        /// </summary>
+        private static string TruncateOverview(string overview)
+            => overview.Length > OverviewMaxLen ? $"{overview.Substring(0, OverviewMaxLen)}..." : overview;
+
         static internal TvShow tvShow;
         static internal EpisodeWindowBox[] episodes;
-        static internal bool historyWatch = false;
-        static internal bool cartoonShuffle = false;
-        static internal int cartoonIndex = 0;
-        static internal int cartoonLimit = 20;
         static internal List<TvShow> cartoons = new List<TvShow>();
-        static internal List<Episode> cartoonShuffleList = new List<Episode>();
-        static internal bool subtitleSwitch = true;
 
         public static void Show(TvShow t)
         {
@@ -35,13 +40,12 @@ namespace LVP_WPF.Windows
             TvShowWindow window = new TvShowWindow();
             window.ShowName = tvShow.Name.Contains("(") ? tvShow.Name.Split(" (")[0] : tvShow.Name;
             window.ShowName += $" ({tvShow.Date.GetValueOrDefault().Year})";
-            window.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : tvShow.Overview;
-            string img = tvShow.Backdrop == null ? "Resources\\noPrevWide.png" : tvShow.Backdrop;
-            window.Backdrop = Cache.LoadImage(img, 960);
+            window.Description = TruncateOverview(tvShow.Overview);
+            window.Backdrop = ImageLoader.LoadBackdrop(tvShow.Backdrop);
             window.seasonButton.Content = tvShow.CurrSeason == -1 ? "Extras" : $"Season {tvShow.CurrSeason}";
             int index = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
             Episode[] episodes = tvShow.Seasons[index].Episodes;
-            window.Overlay = Cache.LoadImage("Resources\\play.png", 960);
+            window.Overlay = ImageLoader.PlayOverlay;
             TvShowWindow.episodes = CreateEpisodeListItems(episodes);
             window.EpisodeListView.ItemsSource = TvShowWindow.episodes;
             window.ShowDialog();
@@ -99,19 +103,14 @@ namespace LVP_WPF.Windows
             if (tvShow.MultiLang)
             {
                 TcpSerialListener.layoutPoint.tvControlList.Add(this.langComboBox);
-                if (this.langComboBox.SelectedIndex != 0)
+                bool toggleAtIndex1 = TcpSerialListener.layoutPoint.tvControlList[1] is ToggleButton;
+                if (this.langComboBox.SelectedIndex != 0 && !toggleAtIndex1)
                 {
-                    if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton == null)
-                    {
-                        TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
-                    }
+                    TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
                 }
-                else
+                else if (this.langComboBox.SelectedIndex == 0 && toggleAtIndex1)
                 {
-                    if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
-                    {
-                        TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
-                    }
+                    TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
                 }
             }
             TcpSerialListener.layoutPoint.tvControlList.Add(this.seasonButton);
@@ -120,9 +119,36 @@ namespace LVP_WPF.Windows
             for (int j = 0; j < episodes.Length; j++)
             {
                 ListViewItem container = (ListViewItem)generator.ContainerFromItem(episodes[j]);
-                Image img = GuiModel.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
+                Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "episodeImage") as Image;
                 TcpSerialListener.layoutPoint.tvControlList.Add(img);
             }
+        }
+
+        // Reset SavedTime on a batch of episodes. fill==false clears progress
+        // to 0; fill==true marks each episode as "watched" - using its
+        // measured Length when available + preferExactLength, otherwise
+        // falling back to the show's nominal RunningTime.
+        private static void ResetEpisodeProgress(Episode[] episodes, bool fill, int runningTimeMs, bool preferExactLength)
+        {
+            foreach (Episode ep in episodes)
+            {
+                if (!fill) { ep.SavedTime = 0; continue; }
+                ep.SavedTime = (preferExactLength && ep.Length != 0) ? ep.Length : runningTimeMs;
+            }
+        }
+
+        // Returns the language tag from a "Show Name (Language)" string, or
+        // "English" if no parenthesized tag is present. Previously inlined
+        // twice with subtly different parsers; the second site left a stray
+        // leading space (Replace("name", "") doesn't strip the trailing space).
+        private static string ExtractLanguageOrDefault(string showOrLangName)
+        {
+            int open = showOrLangName.IndexOf('(');
+            if (open < 0) return "English";
+            int close = showOrLangName.IndexOf(')', open + 1);
+            return close > open
+                ? showOrLangName.Substring(open + 1, close - open - 1)
+                : "English";
         }
 
         private void GetLanguageInfo(TvShow tvShow)
@@ -136,43 +162,22 @@ namespace LVP_WPF.Windows
             langComboBox.Visibility = Visibility.Visible;
             TcpSerialListener.layoutPoint.langComboBoxItems.Clear();
 
-            string lang = "";
+            string lang = ExtractLanguageOrDefault(tvShow.Name);
+            langComboBox.Items.Add(lang);
             if (tvShow.Name.Contains("("))
             {
-                string item = tvShow.Name.Split(" (")[1];
-                item = item.Split(")")[0];
-                langComboBox.Items.Add(item);
-                lang = item;
-                PlayerWindow.subtitleFile = true;
-            }
-            else
-            {
-                langComboBox.Items.Add("English");
-                lang = "English";
+                SubtitleConfig.HasSrtFile = true;
             }
 
             foreach (string name in tvShow.MultiLangName)
             {
-                if (!name.Contains("("))
-                {
-                    langComboBox.Items.Add("English");
-                }
-                else
-                {
-                    langComboBox.Items.Add(name.Replace(tvShow.Name, "").Replace("(", "").Replace(")", ""));
-                }
+                langComboBox.Items.Add(ExtractLanguageOrDefault(name));
             }
             langComboBox.SelectedValue = lang;
             langComboBox.SelectionChanged += LangComboBox_SelectionChanged;
 
             langComboBox.IsDropDownOpen = true;
-            for (int i = 0; i < langComboBox.Items.Count; i++)
-            {
-                ComboBoxItem item = (ComboBoxItem)langComboBox.ItemContainerGenerator.ContainerFromIndex(i);
-                Point pos = item.PointToScreen(new Point(0d, 0d));
-                TcpSerialListener.layoutPoint.langComboBoxItems.Add(item);
-                TcpSerialListener.layoutPoint.langComboBoxItemPts.Add(pos);
-            }
+            TcpSerialListener.layoutPoint.CaptureComboBoxItems(langComboBox, capturePositions: true);
 
             ScrollViewer langScrollViewer = (ScrollViewer)langComboBox.Template.FindName("DropDownSV", langComboBox);
             langScrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
@@ -185,11 +190,10 @@ namespace LVP_WPF.Windows
             EpisodeWindowBox[] episodeBoxes = new EpisodeWindowBox[episodes.Length];
             for (int i = 0; i < episodes.Length; i++)
             {
-                string img = episodes[i].Backdrop == null ? "Resources\\noPrevWide.png" : episodes[i].Backdrop;
                 string description;
                 if (episodes[i].Overview != null)
                 {
-                    description = episodes[i].Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{episodes[i].Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : episodes[i].Overview;
+                    description = TruncateOverview(episodes[i].Overview);
                 }
                 else
                 {
@@ -207,10 +211,10 @@ namespace LVP_WPF.Windows
                     Id = episodes[i].Id,
                     Name = episodes[i].Name,
                     Description = description,
-                    Image = Cache.LoadImage(img, 300),
+                    Image = ImageLoader.LoadBackdrop(episodes[i].Backdrop, 300),
                     Progress = (int)episodes[i].SavedTime,
                     Total = (int)total,
-                    Overlay = Cache.LoadImage("Resources\\play.png", 960),
+                    Overlay = ImageLoader.PlayOverlay,
                     Opacity = 0
                 };
             }
@@ -239,22 +243,16 @@ namespace LVP_WPF.Windows
                 episodeWindowBox.Opacity = 1.0;
             }
 
-            for (int i = 0; i < EpisodeListView.Items.Count; i++)
+            foreach (EpisodeWindowBox ep in EpisodeListView.Items)
             {
-                EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeListView.Items[i];
-                if (ep == episodeWindowBox)
-                {
-                    continue;
-                }
-                ep.Opacity = 0.0;
+                if (ep != episodeWindowBox) ep.Opacity = 0.0;
             }
         }
 
         private void EpisodeListView_MouseLeave(object sender, MouseEventArgs e)
         {
-            for (int i = 0; i < EpisodeListView.Items.Count; i++)
+            foreach (EpisodeWindowBox ep in EpisodeListView.Items)
             {
-                EpisodeWindowBox ep = (EpisodeWindowBox)EpisodeListView.Items[i];
                 ep.Opacity = 0.0;
             }
         }
@@ -301,23 +299,7 @@ namespace LVP_WPF.Windows
         }
 
         private void TvShowWindow_Fade(double direction)
-        {
-            DoubleAnimation da = new DoubleAnimation();
-            if (direction == 0.1)
-            {
-                da.From = 1.0;
-                da.To = 0.1;
-            }
-            else
-            {
-                da.From = 0.1;
-                da.To = 1.0;
-            }
-            da.Duration = new Duration(TimeSpan.FromMilliseconds(250));
-            da.AutoReverse = false;
-            da.RepeatBehavior = new RepeatBehavior(1);
-            mainGrid.BeginAnimation(OpacityProperty, da);
-        }
+            => FadeHelper.Fade(mainGrid, fadeOut: direction == 0.1);
 
         internal void UpdateTvWindowSeasonChange(int seasonIndex)
         {
@@ -351,35 +333,28 @@ namespace LVP_WPF.Windows
 
         private void Play_Click(object sender, MouseButtonEventArgs e)
         {
-            if (tvShow.LastEpisode == null)
+            // Resume LastEpisode if it lives in the currently selected season;
+            // otherwise fall back to the first episode of that season.
+            Episode[] currentSeason = tvShow.Seasons[tvShow.CurrSeason - 1].Episodes;
+            Episode toPlay = currentSeason[0];
+            if (tvShow.LastEpisode != null)
             {
-                PlayerWindow.Show(tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0], this);
-            }
-            else
-            {
-                foreach (Episode episode in tvShow.Seasons[tvShow.CurrSeason - 1].Episodes)
+                foreach (Episode ep in currentSeason)
                 {
-                    if (episode.Compare(tvShow.LastEpisode))
+                    if (ep.Compare(tvShow.LastEpisode))
                     {
-                        PlayerWindow.Show(tvShow.LastEpisode, this);
-                        return;
+                        toPlay = tvShow.LastEpisode;
+                        break;
                     }
                 }
-                PlayerWindow.Show(tvShow.Seasons[tvShow.CurrSeason - 1].Episodes[0], this);
             }
+            PlayerWindow.Show(toPlay, this);
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
-            if (!TcpSerialListener.layoutPoint.incomingSerialMsg)
-            {
-                TcpSerialListener.layoutPoint.CloseCurrWindow(false);
-            }
-            else
-            {
-                TcpSerialListener.layoutPoint.incomingSerialMsg = false;
-            }
+            TcpSerialListener.layoutPoint.NotifyWindowClosedFromUI();
             TcpSerialListener.layoutPoint.langComboBoxItems.Clear();
             TcpSerialListener.layoutPoint.langComboBoxItemPts.Clear();
         }
@@ -405,57 +380,27 @@ namespace LVP_WPF.Windows
                 fill = true;
             }
 
+            int runningTimeMs = tvShow.RunningTime * 60000;
             if (seasons[0] == 0)
             {
-                tvShow.LastEpisode = null;
-                for (int j = 0; j < tvShow.Seasons.Length; j++)
+                // Reset every season. Episodes have no measured Length context
+                // here so fill uniformly to the show's RunningTime.
+                foreach (Season s in tvShow.Seasons)
                 {
-                    Season currSeason = tvShow.Seasons[j];
-                    for (int k = 0; k < currSeason.Episodes.Length; k++)
-                    {
-                        Episode currEpisode = currSeason.Episodes[k];
-                        if (fill)
-                        {
-                            currEpisode.SavedTime = tvShow.RunningTime * 60000;
-                        }
-                        else
-                        {
-                            currEpisode.SavedTime = 0;
-                        }
-                    }
+                    ResetEpisodeProgress(s.Episodes, fill, runningTimeMs, preferExactLength: false);
                 }
                 tvShow.CurrSeason = 1;
-                tvShow.LastEpisode = null;
             }
             else
             {
-                for (int i = 0; i < seasons.Length - 1; i++)
-                {
-                    int seasonIndex = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
-                    Season currSeason = tvShow.Seasons[seasonIndex];
-                    for (int j = 0; j < currSeason.Episodes.Length; j++)
-                    {
-                        Episode currEpisode = currSeason.Episodes[j];
-                        if (fill)
-                        {
-                            if (currEpisode.Length != 0)
-                            {
-                                currEpisode.SavedTime = currEpisode.Length;
-                            }
-                            else
-                            {
-                                currEpisode.SavedTime = tvShow.RunningTime * 60000;
-                            }
-                        }
-                        else
-                        {
-                            currEpisode.SavedTime = 0;
-                        }
-                    }
-                }
+                // Reset only the current season. The original outer "for i in
+                // 1..seasons.Length" loop was dead repetition - its body never
+                // read i and the inner ops are idempotent.
+                int seasonIndex = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
+                ResetEpisodeProgress(tvShow.Seasons[seasonIndex].Episodes, fill, runningTimeMs, preferExactLength: true);
                 tvShow.CurrSeason = fill ? seasons[0] + 1 : seasons[seasons.Length - 2];
-                tvShow.LastEpisode = null;
             }
+            tvShow.LastEpisode = null;
             UpdateTvWindowSeasonChange(tvShow.CurrSeason);
             await GenerateEpisodeItemContainers();
             scrollViewer.ScrollToHome();
@@ -466,65 +411,36 @@ namespace LVP_WPF.Windows
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             scrollViewerOffset = e.VerticalOffset;
-            if (e.VerticalOffset == 0)
-            {
-                closeButton.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                closeButton.Visibility = Visibility.Hidden;
-            }
-
-            if (MainWindow.gui.scrollViewerAdjust)
-            {
-                MainWindow.gui.scrollViewerAdjust = false;
-                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
-                scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
-            }
+            closeButton.Visibility = e.VerticalOffset == 0 ? Visibility.Visible : Visibility.Hidden;
+            ScrollHelper.ApplyAdjust(scrollViewer, e);
         }
 
         private void TvShowWindow_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-        {
-            if (e.Delta > 0)
-            {
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset - 300);
-            }
-            else
-            {
-
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
-            }
-        }
+            => ScrollHelper.StepFromWheel(scrollViewer, scrollViewerOffset, e);
 
         private async void LangComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             loadGrid.Visibility = Visibility.Visible;
             TvShowWindow_Fade(0.1);
 
-            if (langComboBox.SelectedIndex == 0)
+            bool english = langComboBox.SelectedIndex == 0;
+            bool toggleAtIndex1 = TcpSerialListener.layoutPoint.tvControlList[1] is ToggleButton;
+            SubtitleConfig.HasSrtFile = !english;
+            toggleButton.Visibility = english ? Visibility.Hidden : Visibility.Visible;
+            if (english && toggleAtIndex1)
             {
-                PlayerWindow.subtitleFile = false;
-                toggleButton.Visibility = Visibility.Hidden;
-                if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
-                {
-                    TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
-                }
+                TcpSerialListener.layoutPoint.tvControlList.RemoveAt(1);
             }
-            else
+            else if (!english && !toggleAtIndex1)
             {
-                PlayerWindow.subtitleFile = true;
-                toggleButton.Visibility = Visibility.Visible;
-                if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton == null)
-                {
-                    TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
-                }
+                TcpSerialListener.layoutPoint.tvControlList.Insert(1, toggleButton);
             }
 
             if (!tvShow.Name.Contains(langComboBox.SelectedValue.ToString()))
             {
                 SwitchMultiLangTvIndex(tvShow, langComboBox.SelectedValue.ToString());
                 this.ShowName = tvShow.Name.Contains('(') ? tvShow.Name : $"{tvShow.Name} ({tvShow.Date.GetValueOrDefault().Year})";
-                this.Description = tvShow.Overview.Length > GuiModel.OVERVIEW_MAX_LEN ? $"{tvShow.Overview.Substring(0, GuiModel.OVERVIEW_MAX_LEN)}..." : tvShow.Overview;
+                this.Description = TruncateOverview(tvShow.Overview);
                 UpdateTvWindowSeasonChange(tvShow.CurrSeason);
                 await GenerateEpisodeItemContainers();
             }
@@ -560,25 +476,7 @@ namespace LVP_WPF.Windows
             }
 
             Log.Information("Switching language for {TvShowName} to {Lang}", tvShow.Name, lang);
-            string currName = tvShow.Name;
-            tvShow.Name = tvShow.MultiLangName[index];
-            tvShow.MultiLangName[index] = currName;
-
-            string currOverview = tvShow.Overview;
-            tvShow.Overview = tvShow.MultiLangOverview[index];
-            tvShow.MultiLangOverview[index] = currOverview;
-
-            int currSeasonIdx = tvShow.CurrSeason;
-            tvShow.CurrSeason = tvShow.MultiLangCurrSeason[index];
-            tvShow.MultiLangCurrSeason[index] = currSeasonIdx;
-
-            Episode currLastWatched = tvShow.LastEpisode;
-            tvShow.LastEpisode = tvShow.MultiLangLastWatched[index];
-            tvShow.MultiLangLastWatched[index] = currLastWatched;
-
-            Season[] currSeason = tvShow.Seasons;
-            tvShow.Seasons = tvShow.MultiLangSeasons[index];
-            tvShow.MultiLangSeasons[index] = currSeason;
+            tvShow.SwapWithLanguageIndex(index);
         }
 
         private async void LangComboBox_MouseDown(object sender, MouseButtonEventArgs e)
@@ -590,71 +488,39 @@ namespace LVP_WPF.Windows
             TcpSerialListener.layoutPoint.Select("languageDropdown");
         }
 
-        private void LangComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            e.Handled = true;
-        }
+        // Stop arrow/enter keys from triggering ComboBox/ListView's built-in
+        // selection behavior - the joystick-driven nav owns that state.
+        private void LangComboBox_PreviewKeyDown(object sender, KeyEventArgs e) => e.Handled = true;
+        private void EpisodeListView_PreviewKeyDown(object sender, KeyEventArgs e) => e.Handled = true;
 
-        private void EpisodeListView_PreviewKeyDown(object sender, KeyEventArgs e)
-        {
-            e.Handled = true;
-        }
-
-        private void toggleButton_Unchecked(object sender, RoutedEventArgs e)
-        {
-            subtitleSwitch = false;
-        }
-
-        private void toggleButton_Checked(object sender, RoutedEventArgs e)
-        {
-            subtitleSwitch = true;
-        }
+        // Both Checked and Unchecked just mirror IsChecked into the global
+        // SubtitleConfig; one body covers both.
+        private void toggleButton_Checked(object sender, RoutedEventArgs e) => SyncSubtitleEnabled();
+        private void toggleButton_Unchecked(object sender, RoutedEventArgs e) => SyncSubtitleEnabled();
+        private void SyncSubtitleEnabled() => SubtitleConfig.EnableSubtitles = toggleButton.IsChecked == true;
 
         internal static void PlayRandomCartoons()
         {
-            cartoonIndex = 0;
-            cartoonShuffleList.Clear();
-            cartoonShuffle = true;
+            PlaybackSession.StartCartoonShuffle(AppConfig.CartoonLimit, cartoons);
             TcpSerialListener.layoutPoint.playerWindowActive = true;
-            cartoonLimit = Int32.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
-            for (int i = 0; i < cartoonLimit; i++)
-            {
-                Episode e = GetRandomEpisode();
-                cartoonShuffleList.Add(e);
-            }
-            Episode rndEpisode = cartoonShuffleList[cartoonIndex];
-            PlayerWindow.Show(rndEpisode);
-        }
-
-        internal static Random rnd = new Random();
-        internal static Episode GetRandomEpisode()
-        {
-            Episode rndEpisode;
-            int rndVal = rnd.Next(cartoons.Count);
-            TvShow rndShow = cartoons[rndVal];
-            rndVal = rnd.Next(rndShow.Seasons.Length);
-            Season rndSeason = rndShow.Seasons[rndVal];
-            rndVal = rnd.Next(rndSeason.Episodes.Length);
-            rndEpisode = rndSeason.Episodes[rndVal];
-            return rndEpisode;
+            PlayerWindow.Show(PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex]);
         }
 
         internal static void PlayHistoryList()
         {
-            historyWatch = true;
+            PlaybackSession.StartHistoryWatch();
             TcpSerialListener.layoutPoint.playerWindowActive = true;
-            Episode currEpisode;
+
+            // First time through: pin to the start of the history list. After
+            // that, the saved HistoryIndex is whatever the last MediaPlayer_EndReached
+            // advanced to, so just resume from there.
             if (MainWindow.model.HistoryEpisode == null)
             {
                 MainWindow.model.HistoryEpisode = MainWindow.model.HistoryList[0];
                 MainWindow.model.HistoryIndex = 0;
-                currEpisode = MainWindow.model.HistoryEpisode;
             }
-            else
-            {
-                currEpisode = MainWindow.model.HistoryList[MainWindow.model.HistoryIndex];
-            }
-            PlayerWindow.Show(currEpisode);
+
+            PlayerWindow.Show(MainWindow.model.HistoryList[MainWindow.model.HistoryIndex]);
         }
     }
 }

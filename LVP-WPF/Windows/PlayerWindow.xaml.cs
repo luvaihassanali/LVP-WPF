@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
+using LVP_WPF.Models;
+using LVP_WPF.Services;
 using Serilog;
 using System;
 using System.Threading;
@@ -15,15 +17,21 @@ namespace LVP_WPF.Windows
     {
         static private Media currMedia;
         static private TvShowWindow? tvShowWindow;
-        static internal LibVLC libVLC = new LibVLC(GuiModel.fontStyle, GuiModel.fontSize);
-        static internal int subtitleTrack = Int32.MaxValue;
-        static internal bool subtitleFile = false;
+        private const string VlcFontStyle = "--freetype-font=Segoe UI";
+        private const string VlcFontSize = "--freetype-fontsize=48";
+        static internal LibVLC libVLC = new LibVLC(VlcFontStyle, VlcFontSize);
         private MediaPlayer mediaPlayer;
         private DispatcherTimer pollingTimer;
         InactivityTimer inactivityTimer;
         private bool skipClosing = false;
         private bool sliderMouseDown = false;
         private double prevSliderValue;
+        // Environment.TickCount of the most recent programmatic seek
+        // (SeekRelative / JumpToEdge). Used by Slider_ValueChanged to
+        // distinguish "user clicked the slider track" (a real seek intent)
+        // from "TimeChanged echoed our own seek back at the binding" (a
+        // recursive call that deadlocks LibVLC when playing).
+        private int lastProgrammaticSeekTick = 0;
         private System.Windows.Media.SolidColorBrush playHoverBackground = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#FF26A0DA");
         private System.Windows.Media.SolidColorBrush playHoverBorderBrush = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#3c7fb1");
 
@@ -60,7 +68,7 @@ namespace LVP_WPF.Windows
 
         }
 
-        internal static void InitiaizeLibVlcCore()
+        internal static void InitializeLibVlcCore()
         {
             Core.Initialize();
         }
@@ -91,18 +99,11 @@ namespace LVP_WPF.Windows
                 NotificationDialog.Show("Error", "Media player failed to start.");
             }
 
-            if (currMedia as Episode != null)
+            if (currMedia is Episode episode)
             {
-                Episode episode = (Episode)currMedia;
-
-                if (TvShowWindow.historyWatch)
+                if (PlaybackSession.IsHistoryWatch)
                 {
-                    hwTxtBlock.Text = $"{episode.Date:MMMM dd, yyyy}\n{episode.Name}";
-                    hwGrid.Visibility = Visibility.Visible;
-                    Task.Delay(5000).ContinueWith(t =>
-                    {
-                        hwGrid.Dispatcher.BeginInvoke(() => { hwGrid.Visibility = Visibility.Hidden; });
-                    });
+                    ShowHistoryWatchBanner(episode);
                 }
 
                 if (episode.SavedTime != 0 && episode.SavedTime < episode.Length)
@@ -113,24 +114,64 @@ namespace LVP_WPF.Windows
 
             MainWindow.gui.playerWindow = this;
             MainWindow.gui.playerCloseButton = this.closeButton;
+
+            // Register the playback row's buttons (left-to-right) so LayoutPoint's
+            // joystick / IR remote Left/Right walks through them. The IR remote's
+            // dedicated "fastforward"/"rewind"/"forward"/"backward" commands still
+            // work in parallel - this just adds a navigable cursor surface.
+            TcpSerialListener.layoutPoint.playerControlList.Clear();
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.backwardButton);
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.rewindButton);
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.playButton);
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.fastForwardButton);
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.forwardButton);
+
             TcpSerialListener.layoutPoint.Select("PlayerWindow");
-            ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+            ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
+
+            // overlayGrid starts Visible (XAML default) so the user gets brief
+            // visual confirmation the controls exist. Start the polling timer
+            // here so it auto-hides after a few seconds; without this the
+            // overlay would stay pinned forever until some other input fired.
+            pollingTimer.Start();
+        }
+
+        // Used by LayoutPoint and the IR remote dispatch when any input arrives
+        // while the player is open. Forces the timeline / button overlay back
+        // on so the user gets visual feedback. The auto-hide timer only rearms
+        // when actually playing - when paused we want the controls to stay
+        // pinned indefinitely (same convention as TogglePlayPause's pause path).
+        //
+        // The Start() is scheduled at Background priority because callers
+        // often warp the cursor onto a button right after (FocusPlayerControl /
+        // MovePlayerPoint -> CenterMouseOverControl), which fires the OS
+        // MouseEnter event synchronously - and Control_MouseEnter stops the
+        // polling timer. Without the deferred Start, the auto-hide we just
+        // armed would be cancelled the moment the cursor lands on its target,
+        // leaving the overlay pinned indefinitely.
+        internal void WakeOverlay()
+        {
+            Dispatcher.Invoke(() => overlayGrid.Visibility = Visibility.Visible);
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
+            {
+                if (pollingTimer == null) return;
+                pollingTimer.Stop();
+                if (mediaPlayer != null && mediaPlayer.IsPlaying)
+                {
+                    pollingTimer.Start();
+                }
+            });
         }
 
         private void PlayerWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             timelineSlider.ValueChanged -= Slider_ValueChanged;
-            if (pollingTimer != null)
-            {
-                if (pollingTimer.IsEnabled)
-                {
-                    pollingTimer.Stop();
-                }
-                pollingTimer.IsEnabled = false;
-                pollingTimer = null;
-            }
+            // DispatcherTimer.Stop() is a no-op when already stopped, and
+            // setting IsEnabled=false after Stop() is redundant - Stop does both.
+            pollingTimer?.Stop();
+            pollingTimer = null;
 
-            if (TvShowWindow.historyWatch)
+            if (PlaybackSession.IsHistoryWatch)
             {
                 if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
                 {
@@ -138,31 +179,12 @@ namespace LVP_WPF.Windows
                     MainWindow.model.HistoryEpisode = null;
                 }
             }
-            else if (!TvShowWindow.cartoonShuffle && !skipClosing)
+            else if (!PlaybackSession.IsCartoonShuffle && !skipClosing)
             {
-                if (currMedia as Episode != null)
+                if (currMedia is Episode episode)
                 {
-                    Episode episode = (Episode)currMedia;
                     TvShow tvShow = TvShowWindow.tvShow;
-                    int seasonIndex = 0;
-                    bool found = false;
-                    for (int i = 0; i < tvShow.Seasons.Length; i++)
-                    {
-                        Season season = tvShow.Seasons[i];
-                        for (int j = 0; j < season.Episodes.Length; j++)
-                        {
-                            if (episode.Name.Equals(season.Episodes[j].Name))
-                            {
-                                seasonIndex = season.Id;
-                                found = true;
-                                break;
-                            }
-                        }
-                        if (found)
-                        {
-                            break;
-                        }
-                    }
+                    int? seasonId = tvShow.FindSeasonIdOf(episode);
 
                     long endTime = mediaPlayer.Time;
                     if (endTime > episode.Length)
@@ -170,16 +192,12 @@ namespace LVP_WPF.Windows
                         endTime = episode.Length;
                     }
 
-                    if (endTime > 0)
+                    if (endTime > 0 && seasonId.HasValue)
                     {
-                        if (seasonIndex == -1)
+                        episode.SavedTime = endTime;
+                        if (seasonId.Value != -1)  // -1 means the Extras pseudo-season; don't promote that to LastEpisode
                         {
-                            episode.SavedTime = endTime;
-                        }
-                        else
-                        {
-                            episode.SavedTime = endTime;
-                            tvShow.CurrSeason = seasonIndex;
+                            tvShow.CurrSeason = seasonId.Value;
                             tvShow.LastEpisode = episode;
                         }
                     }
@@ -199,22 +217,37 @@ namespace LVP_WPF.Windows
         {
             tvShowWindow.Dispatcher.BeginInvoke(() =>
             {
-                for (int i = 0; i < tvShowWindow.EpisodeListView.Items.Count; i++)
+                foreach (EpisodeWindowBox epBox in tvShowWindow.EpisodeListView.Items)
                 {
-                    EpisodeWindowBox epBox = (EpisodeWindowBox)tvShowWindow.EpisodeListView.Items[i];
-                    if (epBox.Id == episode.Id)
-                    {
-                        epBox.Progress = (int)episode.SavedTime;
-                        epBox.Total = (int)episode.Length;
-                        break;
-                    }
+                    if (epBox.Id != episode.Id) continue;
+                    epBox.Progress = (int)episode.SavedTime;
+                    epBox.Total = (int)episode.Length;
+                    break;
                 }
+            });
+        }
+
+        /// <summary>
+        /// Show the "what's playing next during history watch" overlay text
+        /// for 5 seconds, then fade it out. Used both at initial playback start
+        /// and when MediaPlayer_EndReached advances to the next history entry.
+        /// </summary>
+        private void ShowHistoryWatchBanner(Episode episode)
+        {
+            hwGrid.Dispatcher.BeginInvoke(() =>
+            {
+                hwTxtBlock.Text = $"{episode.Date:MMMM dd, yyyy}\n{episode.Name}";
+                hwGrid.Visibility = Visibility.Visible;
+            });
+            Task.Delay(5000).ContinueWith(t =>
+            {
+                hwGrid.Dispatcher.BeginInvoke(() => { hwGrid.Visibility = Visibility.Hidden; });
             });
         }
 
         private void MediaPlayer_EndReached(object? sender, EventArgs e)
         {
-            if (TvShowWindow.historyWatch)
+            if (PlaybackSession.IsHistoryWatch)
             {
                 MainWindow.model.HistoryIndex++;
                 if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
@@ -222,44 +255,26 @@ namespace LVP_WPF.Windows
                     TcpSerialListener.layoutPoint.CloseCurrWindow();
                 }
                 MainWindow.model.HistoryEpisode = MainWindow.model.HistoryList[MainWindow.model.HistoryIndex];
-                currMedia = MainWindow.model.HistoryEpisode;
-
-                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                Log.Information("Playing {Media}", currMedia.Path);
-                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-
-                hwGrid.Dispatcher.BeginInvoke(() =>
-                {
-                    hwTxtBlock.Text = $"{MainWindow.model.HistoryEpisode.Date:MMMM dd, yyyy}\n{MainWindow.model.HistoryEpisode.Name}";
-                    hwGrid.Visibility = Visibility.Visible;
-                });
-                Task.Delay(5000).ContinueWith(t =>
-                {
-                    hwGrid.Dispatcher.BeginInvoke(() => { hwGrid.Visibility = Visibility.Hidden; });
-                });
+                PlayMediaOnVlcThread(MainWindow.model.HistoryEpisode);
+                ShowHistoryWatchBanner(MainWindow.model.HistoryEpisode);
                 return;
             }
 
-            if (TvShowWindow.cartoonShuffle)
+            if (PlaybackSession.IsCartoonShuffle)
             {
-                TvShowWindow.cartoonIndex++;
-                if (TvShowWindow.cartoonIndex == TvShowWindow.cartoonLimit)
+                PlaybackSession.CartoonShuffleIndex++;
+                if (PlaybackSession.CartoonShuffleIndex == PlaybackSession.CartoonShuffleLimit)
                 {
                     skipClosing = true;
                     TcpSerialListener.layoutPoint.CloseCurrWindow();
                 }
 
-                currMedia = TvShowWindow.cartoonShuffleList[TvShowWindow.cartoonIndex];
-                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                Log.Information("Playing {Media}", currMedia.Path);
-                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
+                PlayMediaOnVlcThread(PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex]);
                 return;
             }
 
-            if (currMedia as Episode != null)
+            if (currMedia is Episode episode)
             {
-
-                Episode episode = (Episode)currMedia;
                 if (episode.Id < 0)
                 {
                     skipClosing = true;
@@ -271,56 +286,47 @@ namespace LVP_WPF.Windows
                 UpdateProgressBar(episode);
 
                 TvShow tvShow = TvShowWindow.tvShow;
-                for (int i = 0; i < tvShow.Seasons.Length; i++)
+                Episode? nextEpisode = tvShow.GetNextEpisode(episode, out bool seasonChanged);
+                if (nextEpisode == null)
                 {
-                    Season season = tvShow.Seasons[i];
-                    for (int j = 0; j < season.Episodes.Length; j++)
-                    {
-                        if (episode.Name.Equals(season.Episodes[j].Name))
-                        {
-                            if (j == season.Episodes.Length - 1)
-                            {
-                                // if last season (check for extras)
-                                if (i == tvShow.Seasons.Length - 2 && tvShow.Seasons[tvShow.Seasons.Length - 1].Id == -1 || i == tvShow.Seasons.Length - 1)
-                                {
-                                    skipClosing = true;
-                                    TcpSerialListener.layoutPoint.CloseCurrWindow();
-                                    return;
-                                }
-                                else
-                                {
-                                    Log.Information("{TvShowName} season change from {Count1} to {Count2}", tvShow.Name, i, i + 1);
-                                    season = tvShow.Seasons[i + 1];
-                                    tvShow.CurrSeason = season.Id;
-                                    currMedia = season.Episodes[0];
-                                    LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                    Log.Information("Play: {Media}", currMedia.Path);
-                                    ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                    tvShowWindow.Dispatcher.BeginInvoke(() =>
-                                    {
-                                        tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
-                                    });
-                                    return;
-                                }
-                            }
-                            else
-                            {
-                                currMedia = season.Episodes[j + 1];
-                                LibVLCSharp.Shared.Media next = CreateMedia(currMedia);
-                                Log.Information("Play: {Media}", currMedia.Path);
-                                ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
-                                return;
-                            }
-                        }
-                    }
+                    // End of show (current was last episode of last non-Extras season).
+                    skipClosing = true;
+                    TcpSerialListener.layoutPoint.CloseCurrWindow();
+                    return;
                 }
 
+                if (seasonChanged)
+                {
+                    int newSeasonId = tvShow.FindSeasonIdOf(nextEpisode) ?? tvShow.CurrSeason;
+                    Log.Information("{TvShowName} season change to {NewSeason}", tvShow.Name, newSeasonId);
+                    tvShow.CurrSeason = newSeasonId;
+                    tvShowWindow.Dispatcher.BeginInvoke(() =>
+                    {
+                        tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
+                    });
+                }
+
+                PlayMediaOnVlcThread(nextEpisode);
             }
             else //if Movie
             {
                 skipClosing = true;
                 TcpSerialListener.layoutPoint.CloseCurrWindow();
             }
+        }
+
+        /// <summary>
+        /// Hand off the next media item to LibVLC on the threadpool. The pool
+        /// hop is required because Play() blocks for a beat while VLC builds
+        /// the demuxer chain, and we don't want to stall the UI thread during
+        /// auto-advance between episodes.
+        /// </summary>
+        private void PlayMediaOnVlcThread(Media m)
+        {
+            currMedia = m;
+            LibVLCSharp.Shared.Media next = CreateMedia(m);
+            Log.Information("Play: {Media}", m.Path);
+            ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
         }
 
         private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
@@ -331,9 +337,8 @@ namespace LVP_WPF.Windows
         private void MediaPlayer_LengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e)
         {
             SliderMax = mediaPlayer.Length;
-            if (currMedia as Episode != null)
+            if (currMedia is Episode episode)
             {
-                Episode episode = (Episode)currMedia;
                 episode.Length = mediaPlayer.Length;
             }
         }
@@ -357,30 +362,17 @@ namespace LVP_WPF.Windows
             media.AddOption(":avcodec-hw=auto");
             media.AddOption(":no-mkv-preload-local-dir");
 
-            if (subtitleFile)
+            bool useSrtFile = SubtitleConfig.HasSrtFile && SubtitleConfig.EnableSubtitles;
+            if (useSrtFile)
             {
-                if (TvShowWindow.subtitleSwitch)
-                {
-                    string[] pathParts = m.Path.Split("\\");
-                    string path = "";
-                    string name = pathParts[pathParts.Length - 1].Split(".")[0];
-                    for (int i = 0; i < pathParts.Length - 1; i++)
-                    {
-                        path += $"{pathParts[i]}\\";
-                    }
-                    path += $"{name}.srt";
-                    mediaPlayer.AddSlave(MediaSlaveType.Subtitle, $"file:///{path}", true);
-                }
-                else
-                {
-                    string subtitleTrackOption = String.Format(":sub-track={0}", subtitleTrack);
-                    media.AddOption(subtitleTrackOption);
-                }
+                string dir = System.IO.Path.GetDirectoryName(m.Path) ?? "";
+                string name = System.IO.Path.GetFileNameWithoutExtension(m.Path);
+                string srtPath = System.IO.Path.Combine(dir, $"{name}.srt");
+                mediaPlayer.AddSlave(MediaSlaveType.Subtitle, $"file:///{srtPath}", true);
             }
             else
             {
-                string subtitleTrackOption = String.Format(":sub-track={0}", subtitleTrack);
-                media.AddOption(subtitleTrackOption);
+                media.AddOption($":sub-track={SubtitleConfig.Track}");
             }
             return media;
         }
@@ -399,51 +391,56 @@ namespace LVP_WPF.Windows
         {
             closeButton.MouseLeave -= Control_MouseLeave;
             this.Close();
-            if (!TcpSerialListener.layoutPoint.incomingSerialMsg)
-            {
-                TcpSerialListener.layoutPoint.CloseCurrWindow(false);
-            }
-            else
-            {
-                TcpSerialListener.layoutPoint.incomingSerialMsg = false;
-            }
+            TcpSerialListener.layoutPoint.NotifyWindowClosedFromUI();
         }
+
+        // Mouse-clickable mirrors of the IR remote's "backward" / "rewind" /
+        // "fastforward" / "forward" commands. Same underlying SeekRelative /
+        // JumpToEdge methods; the IR-remote dispatch in IrSerialReader and
+        // these handlers route through the same place.
+        private void BackwardButton_Click(object sender, RoutedEventArgs e) => JumpToEdge(toStart: true);
+        private void RewindButton_Click(object sender, RoutedEventArgs e) => SeekRelative(rewind: true);
+        private void FastForwardButton_Click(object sender, RoutedEventArgs e) => SeekRelative(rewind: false);
+        private void ForwardButton_Click(object sender, RoutedEventArgs e) => JumpToEdge(toStart: false);
 
         private void PlayButton_Click(object sender, RoutedEventArgs e)
         {
             if (mediaPlayer.IsPlaying)
             {
-                PlayButton_SetSymbol(0);
-                playButton.Background = playHoverBackground;
-                playButton.BorderBrush = playHoverBorderBrush;
+                ApplyPausedVisuals();
                 mediaPlayer.Pause();
                 pollingTimer.Stop();
             }
             else
             {
-                PlayButton_SetSymbol(1);
-                playButton.Background = System.Windows.Media.Brushes.Transparent;
-                playButton.BorderBrush = System.Windows.Media.Brushes.White;
+                ApplyPlayingVisuals();
                 mediaPlayer.Play();
                 pollingTimer.Start();
             }
         }
 
-        private void PlayButton_SetSymbol(int symbol)
+        // Paint the play button + glyph for the "currently paused" state. The
+        // hover-colored background reads as "this is the button you'll click
+        // to resume" and the ❚❚ glyph confirms it.
+        private void ApplyPausedVisuals()
         {
-            switch (symbol)
-            {
-                case 0:
-                    buttonText.Text = "❚❚";
-                    buttonText.Margin = new Thickness(1, -3, 0, 0);
-                    buttonText.FontSize = 28;
-                    break;
-                case 1:
-                    buttonText.Text = "▶️";
-                    buttonText.Margin = new Thickness(6, -4, 0, 0);
-                    buttonText.FontSize = 30;
-                    break;
-            }
+            playButton.Background = playHoverBackground;
+            playButton.BorderBrush = playHoverBorderBrush;
+            buttonText.Text = "❚❚";
+            buttonText.Margin = new Thickness(1, -3, 0, 0);
+            buttonText.FontSize = 28;
+        }
+
+        // Paint the play button + glyph for the "currently playing" state -
+        // transparent background fades the control out of the way during
+        // playback; the ▶️ glyph confirms it.
+        private void ApplyPlayingVisuals()
+        {
+            playButton.Background = System.Windows.Media.Brushes.Transparent;
+            playButton.BorderBrush = System.Windows.Media.Brushes.White;
+            buttonText.Text = "▶️";
+            buttonText.Margin = new Thickness(6, -4, 0, 0);
+            buttonText.FontSize = 30;
         }
 
         private void Slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -466,6 +463,19 @@ namespace LVP_WPF.Windows
 
                     if (Math.Abs(SliderValue - prevSliderValue) > 3000 && prevSliderValue != 0)
                     {
+                        // Distinguish "user clicked the slider track" (real seek
+                        // intent, big delta) from "TimeChanged echoed our own
+                        // SeekRelative/JumpToEdge back at the binding" (same big
+                        // delta, but recursive). The recursive case calls SeekTo
+                        // again on the UI thread while LibVLC is still processing
+                        // the first seek - deadlocks when playing.
+                        int sinceProgrammatic = Environment.TickCount - lastProgrammaticSeekTick;
+                        if (sinceProgrammatic >= 0 && sinceProgrammatic < 2000)
+                        {
+                            // Echo: just refresh prev and return.
+                            prevSliderValue = SliderValue;
+                            return;
+                        }
                         sliderMouseDown = true;
                         TimeSpan seekTime = TimeSpan.FromMilliseconds(SliderValue);
                         mediaPlayer.SeekTo(seekTime);
@@ -479,89 +489,59 @@ namespace LVP_WPF.Windows
             }
         }
 
-        internal void TcpSerialListener_PlayPause()
+        internal void TogglePlayPause()
         {
-            if (mediaPlayer != null)
+            if (mediaPlayer == null) return;
+
+            // The previous version ended each branch with DoMouseClick() +
+            // SetCursorPos(). Those were defensive cursor-parking calls from
+            // before joystick nav existed. They now actively misfire: after
+            // the IR-remote dispatch's FocusPlayerControl warps the cursor
+            // onto the play button, DoMouseClick fires PlayButton_Click as
+            // a SECOND click on the same press - toggling state back and
+            // leaving the user stuck. Cursor positioning is now owned by
+            // LayoutPoint.FocusPlayerControl; both side effects are gone.
+            if (mediaPlayer.IsPlaying)
             {
-                if (mediaPlayer.IsPlaying)
+                playButton.Dispatcher.Invoke(() =>
                 {
-                    playButton.Dispatcher.Invoke(() => { playButton.Background = playHoverBackground; });
-                    playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = playHoverBorderBrush; });
-                    overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Visible; });
-                    buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(0); });
-                    mediaPlayer.Pause();
-                    pollingTimer.Stop();
-                    TcpSerialListener.DoMouseClick();
-                    ComInterop.SetCursorPos(50, 1030);
-                }
-                else
+                    ApplyPausedVisuals();
+                    overlayGrid.Visibility = Visibility.Visible;
+                });
+                mediaPlayer.Pause();
+                pollingTimer.Stop();
+            }
+            else
+            {
+                playButton.Dispatcher.Invoke(() =>
                 {
-                    playButton.Dispatcher.Invoke(() => { playButton.Background = System.Windows.Media.Brushes.Transparent; });
-                    playButton.Dispatcher.Invoke(() => { playButton.BorderBrush = System.Windows.Media.Brushes.White; });
-                    overlayGrid.Dispatcher.Invoke(() => { overlayGrid.Visibility = Visibility.Hidden; });
-                    buttonText.Dispatcher.Invoke(() => { PlayButton_SetSymbol(1); });
-                    mediaPlayer.Play();
-                    pollingTimer.Start();
-                    ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
-                    TcpSerialListener.DoMouseClick();
-                }
+                    ApplyPlayingVisuals();
+                    overlayGrid.Visibility = Visibility.Hidden;
+                });
+                mediaPlayer.Play();
+                pollingTimer.Start();
             }
         }
 
-        internal void TcpSerialListener_Stop()
+        internal void JumpToEdge(bool toStart)
         {
-            if (mediaPlayer != null)
-            {
-                this.Dispatcher.Invoke(() => { this.Close(); });
-            }
+            if (mediaPlayer == null) return;
+            lastProgrammaticSeekTick = Environment.TickCount;
+            long target = toStart ? 0 : mediaPlayer.Length - 1;
+            mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(target));
         }
 
-        internal void TcpSerialListerner_BeginEnd(bool begin)
+        internal void SeekRelative(bool rewind)
         {
-            if (mediaPlayer != null)
-            {
-                if (begin)
-                {
-                    mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(0));
-                }
-                else
-                {
-                    mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Length - 1));
-                }
-            }
-        }
+            if (mediaPlayer == null) return;
+            lastProgrammaticSeekTick = Environment.TickCount;
 
-        internal void TcpSerialListener_Seek(bool rewind)
-        {
-            if (mediaPlayer != null)
-            {
-                TimeSpan lengthTime = TimeSpan.FromMilliseconds(mediaPlayer.Length);
-                TimeSpan currTime = TimeSpan.FromMilliseconds(mediaPlayer.Time);
-                TimeSpan thirtySecs = TimeSpan.FromSeconds(30);
-
-                if (rewind)
-                {
-                    if (currTime.TotalMilliseconds < thirtySecs.TotalMilliseconds)
-                    {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(0));
-                    }
-                    else
-                    {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(mediaPlayer.Time - thirtySecs.TotalMilliseconds));
-                    }
-                }
-                else
-                {
-                    if ((currTime.TotalMilliseconds + thirtySecs.TotalMilliseconds) > lengthTime.TotalMilliseconds)
-                    {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(lengthTime.TotalMilliseconds));
-                    }
-                    else
-                    {
-                        mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(currTime.TotalMilliseconds + thirtySecs.TotalMilliseconds));
-                    }
-                }
-            }
+            const int seekStepMs = 30 * 1000;
+            long current = mediaPlayer.Time;
+            long length = mediaPlayer.Length;
+            long target = rewind ? current - seekStepMs : current + seekStepMs;
+            target = Math.Clamp(target, 0, length);
+            mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(target));
         }
 
         private void VideoView_MouseMove(object sender, MouseEventArgs e)
@@ -586,29 +566,17 @@ namespace LVP_WPF.Windows
 
         private async void InactivityDetected(object sender, EventArgs e)
         {
-            if (mediaPlayer.IsPlaying)
-            {
-                return;
-            }
+            if (mediaPlayer.IsPlaying) return;
 
-            else
-            {
-                // Double check after 10s to make sure media player was not in process of changing to new video
-                await Task.Delay(10000);
-                if (mediaPlayer.IsPlaying)
-                {
-                    return;
-                }
-
-            }
+            // Double check after 10s in case the player is mid-transition
+            // to the next episode/cartoon and wasn't strictly playing for a moment.
+            await Task.Delay(10000);
+            if (mediaPlayer.IsPlaying) return;
 
             this.Dispatcher.Invoke(() => { this.Close(); });
             foreach (Window w in Application.Current.Windows)
             {
-                if (w as TvShowWindow != null)
-                {
-                    w.Close();
-                }
+                if (w is TvShowWindow) w.Close();
             }
 
             await Task.Delay(1000);

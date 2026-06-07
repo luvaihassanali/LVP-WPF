@@ -1,7 +1,9 @@
-﻿using LVP_WPF.Windows;
+﻿using LVP_WPF.Models;
+using LVP_WPF.Services;
+using LVP_WPF.Util;
+using LVP_WPF.Windows;
 using Serilog;
 using System;
-using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,6 +18,7 @@ namespace LVP_WPF
         static public MainModel model;
         static public GuiModel gui;
         static public TcpSerialListener tcpWorker;
+        static internal MediaLibrary library;
         static private bool mouseHubKilled;
         private InactivityTimer inactivityTimer;
         private double scrollViewerOffset = 0;
@@ -23,7 +26,8 @@ namespace LVP_WPF
         public MainWindow()
         {
             InitializeComponent();
-            gui = new GuiModel(ConfigurationManager.AppSettings["Esp8226HideCursor"]);
+            AppConfig.Initialize();
+            gui = new GuiModel();
             DataContext = gui;
 #if DEBUG
             this.WindowStyle = WindowStyle.SingleBorderWindow;
@@ -36,11 +40,12 @@ namespace LVP_WPF
             await Task.Run(() =>
             {
 #if RELEASE
-                GuiModel.InitializeCustomCursor();
+                CursorManager.InitializeCustomCursor();
 #endif
             });
 
-            await Cache.Initialize(progressBar, coffeeGif, logTxtBox);
+            library = new MediaLibrary(new MediaRepository("media.json"));
+            await library.Initialize(new WpfLoadProgress(progressBar, coffeeGif, logTxtBox));
             if (model == null)
             {
                 return;
@@ -50,33 +55,29 @@ namespace LVP_WPF
 
             await this.Dispatcher.BeginInvoke(() =>
             {
-                if (progressBar.Visibility == Visibility.Visible)
-                {
-                    progressBar.Visibility = Visibility.Hidden;
-                }
-                if (coffeeGif.Visibility == Visibility.Visible)
-                {
-                    coffeeGif.Visibility = Visibility.Hidden;
-                }
-                if (logTxtBox.Visibility == Visibility.Visible)
-                {
-                    logTxtBox.Visibility = Visibility.Hidden;
-                }
-
+                // These get switched to Visible by WpfLoadProgress.ShowRebuildIndicators
+                // when a TMDB rebuild was needed; if no rebuild ran they're still Hidden.
+                // Setting to Hidden is a no-op when already Hidden.
+                progressBar.Visibility = Visibility.Hidden;
+                coffeeGif.Visibility = Visibility.Hidden;
+                logTxtBox.Visibility = Visibility.Hidden;
                 coffeeGif.Source = null;
+
                 gui.mainCloseButton = this.closeButton;
                 gui.mainScrollViewer = this.scrollViewer;
                 gui.mainGrid = this.mainGrid;
+                gui.historyButton = this.historyButton;
+                gui.shuffleButton = this.shuffleButton;
                 tcpWorker = new TcpSerialListener(gui);
                 tcpWorker.StartThread();
             });
 
             inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30));
             inactivityTimer.Inactivity += InactivityDetected;
-            PlayerWindow.InitiaizeLibVlcCore();
+            PlayerWindow.InitializeLibVlcCore();
             MainWindow_Fade(1.0);
             loadGrid.Visibility = Visibility.Hidden;
-            if (bool.Parse(ConfigurationManager.AppSettings["Snow"]))
+            if (AppConfig.ShowSnow)
             {
                 snow.Visibility = Visibility.Visible;
             }
@@ -86,12 +87,19 @@ namespace LVP_WPF
         {
             _ = Task.Run(() =>
             {
-                ComInterop.SetCursorPos(GuiModel.centerX, GuiModel.centerY);
+                ComInterop.SetCursorPos(CursorConfig.CenterX, CursorConfig.CenterY);
                 Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
-                if (mouseHubProcess.Length != 0)
+                if (mouseHubProcess.Length == 0) return;
+                try
                 {
                     mouseHubProcess[0].Kill();
                     mouseHubKilled = true;
+                }
+                catch (Exception ex)
+                {
+                    // Process can exit between GetProcessesByName and Kill;
+                    // also fails with Win32 access-denied if MouseHub was started elevated.
+                    Log.Warning("Failed to kill MouseHub: {Message}", ex.Message);
                 }
             });
         }
@@ -99,22 +107,26 @@ namespace LVP_WPF
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             inactivityTimer?.Dispose();
-            Cache.SaveData();
-            GuiModel.RestoreSystemCursor();
+            library?.SaveData();
+            CursorManager.RestoreSystemCursor();
             tcpWorker?.StopThread();
             PlayerWindow.libVLC.Dispose();
 
             if (mouseHubKilled)
             {
-                string path = AppDomain.CurrentDomain.BaseDirectory;
 #if DEBUG
-                path = path.Replace("bin\\Debug\\net6.0-windows\\", "Utilities\\MouseHub\\MouseHub\\bin\\Debug\\MouseHub.exe");
+                // Dev build: hop over to the sibling MouseHub project's matching
+                // bin folder. BaseDirectory looks like
+                //   ...\LVP-WPF\bin\Debug\<tfm>\
+                // so derive the TFM and the project root from that path instead
+                // of hard-coding "net10.0-windows" - any future TFM bump won't
+                // break this line.
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory.TrimEnd(System.IO.Path.DirectorySeparatorChar);
+                string tfm = System.IO.Path.GetFileName(baseDir);
+                string projectRoot = System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, "..", "..", ".."));
+                string path = System.IO.Path.Combine(projectRoot, "Hubs", "MouseHub", "MouseHub", "bin", "Debug", tfm, "MouseHub.exe");
 #else
-                path = $"{ConfigurationManager.AppSettings["MouseHubPath"]}MouseHub.exe";
-                if (path.Contains("%USERPROFILE%"))
-                {
-                    path = path.Replace("%USERPROFILE%", Environment.GetEnvironmentVariable("USERPROFILE"));
-                }
+                string path = Environment.ExpandEnvironmentVariables($"{AppConfig.MouseHubPath}MouseHub.exe");
 #endif
                 Process.Start(path);
             }
@@ -122,56 +134,71 @@ namespace LVP_WPF
 
         internal async Task AssignControlContext()
         {
-            string cartoonExceptionStr = ConfigurationManager.AppSettings["CartoonExceptions"];
-            string[] cartoonExceptions = cartoonExceptionStr.Split(";");
-            TimeSpan delay = new TimeSpan(1);
-
-            for (int i = 0; i < model.TvShows.Length; i++)
+            // Apply runtime cartoon-exception overrides before partitioning.
+            foreach (TvShow show in model.TvShows)
             {
-                if (model.TvShows[i].Cartoon && cartoonExceptions.Contains(model.TvShows[i].Name))
+                if (show.Cartoon && AppConfig.CartoonExceptions.Contains(show.Name))
                 {
-                    model.TvShows[i].Cartoon = false;
-                }
-
-                if (!model.TvShows[i].Cartoon)
-                {
-                    string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
-                    await TvShowListView.Dispatcher.BeginInvoke(() =>
-                    {
-                        gui.TvShows.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300), Flags = Cache.LoadFlags(model.TvShows[i].Path) });
-                    });
-                    await Task.Delay(1);
+                    show.Cartoon = false;
                 }
             }
 
-            for (int i = 0; i < model.TvShows.Length; i++)
+            foreach (TvShow show in model.TvShows)
             {
-                if (model.TvShows[i].Cartoon)
+                if (show.Cartoon) continue;
+                await AddTileAsync(gui.TvShows, new MainWindowBox
                 {
-                    string img = model.TvShows[i].Poster == null ? "Resources\\noPrev.png" : model.TvShows[i].Poster;
-                    await CartoonsListView.Dispatcher.BeginInvoke(() =>
-                    {
-                        gui.Cartoons.Add(new MainWindowBox { Id = model.TvShows[i].Id, Title = model.TvShows[i].Name, Image = Cache.LoadImage(img, 300) });
-                    });
-                    await Task.Delay(1);
-                    TvShowWindow.cartoons.Add(model.TvShows[i]);
-                }
-            }
-
-            for (int i = 0; i < model.Movies.Length; i++)
-            {
-                string img = model.Movies[i].Poster == null ? "Resources\\noPrev.png" : model.Movies[i].Poster;
-                await MovieListView.Dispatcher.BeginInvoke(() =>
-                {
-                    gui.Movies.Add(new MainWindowBox { Id = model.Movies[i].Id, Title = model.Movies[i].Name, Image = Cache.LoadImage(img, 300) });
+                    Id = show.Id,
+                    Title = show.Name,
+                    Image = ImageLoader.LoadPoster(show.Poster),
+                    Flags = ImageLoader.LoadFlags(show.Path)
                 });
-                await Task.Delay(1);
+            }
+
+            foreach (TvShow show in model.TvShows)
+            {
+                if (!show.Cartoon) continue;
+                await AddTileAsync(gui.Cartoons, new MainWindowBox
+                {
+                    Id = show.Id,
+                    Title = show.Name,
+                    Image = ImageLoader.LoadPoster(show.Poster)
+                });
+                TvShowWindow.cartoons.Add(show);
+            }
+
+            foreach (Movie movie in model.Movies)
+            {
+                await AddTileAsync(gui.Movies, new MainWindowBox
+                {
+                    Id = movie.Id,
+                    Title = movie.Name,
+                    Image = ImageLoader.LoadPoster(movie.Poster)
+                });
             }
         }
 
-        private void CartoonsHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        // Hand off ObservableCollection mutation to the UI thread (the bound
+        // ListView lives there) and yield briefly so layout can catch up
+        // before the next tile starts loading.
+        private async Task AddTileAsync(System.Collections.ObjectModel.ObservableCollection<MainWindowBox> collection, MainWindowBox box)
         {
-            TvShowWindow.PlayRandomCartoons();
+            await this.Dispatcher.BeginInvoke(() => collection.Add(box));
+            await Task.Delay(1);
+        }
+
+        private void ShuffleButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Same dispatch shape as the IR remote's "cartoons" command and the
+            // S hotkey in App.GlobalKeyUp - run the marathon on an STA pump
+            // thread so its modal PlayerWindow can own the message loop.
+            TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayRandomCartoons());
+        }
+
+        private void HistoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (gui == null || model == null || model.HistoryList.Count == 0) return;
+            TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayHistoryList());
         }
 
         private void Coffee_Gif_Ended(object sender, EventArgs e)
@@ -206,62 +233,17 @@ namespace LVP_WPF
         }
 
         private void MainWindow_Fade(double direction)
-        {
-            DoubleAnimation da = new DoubleAnimation
-            {
-                Duration = new Duration(TimeSpan.FromMilliseconds(250)),
-                AutoReverse = false,
-                RepeatBehavior = new RepeatBehavior(1)
-            };
-
-            if (direction == 0.1)
-            {
-                da.From = 1.0;
-                da.To = 0.1;
-            }
-            else
-            {
-                da.From = 0.1;
-                da.To = 1.0;
-            }
-            this.Dispatcher.BeginInvoke(() =>
-            {
-                mainGrid.BeginAnimation(OpacityProperty, da);
-            });
-        }
+            => this.Dispatcher.BeginInvoke(() => FadeHelper.Fade(mainGrid, fadeOut: direction == 0.1));
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             scrollViewerOffset = e.VerticalOffset;
-            if (e.VerticalOffset == 0)
-            {
-                closeButton.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                closeButton.Visibility = Visibility.Hidden;
-            }
-
-            if (gui.scrollViewerAdjust)
-            {
-                gui.scrollViewerAdjust = false;
-                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
-                scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
-            }
+            closeButton.Visibility = e.VerticalOffset == 0 ? Visibility.Visible : Visibility.Hidden;
+            ScrollHelper.ApplyAdjust(scrollViewer, e);
         }
 
         private void MainWindow_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-        {
-            if (e.Delta > 0)
-            {
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset - 300);
-            }
-            else
-            {
-
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
-            }
-        }
+            => ScrollHelper.StepFromWheel(scrollViewer, scrollViewerOffset, e);
 
         private async void InactivityDetected(object sender, EventArgs e)
         {
@@ -272,10 +254,7 @@ namespace LVP_WPF
 
             foreach (Window w in Application.Current.Windows)
             {
-                if (w as TvShowWindow != null)
-                {
-                    w.Close();
-                }
+                if (w is TvShowWindow) w.Close();
             }
             await Task.Delay(1000);
             Log.Information("Inactivity shutdown");

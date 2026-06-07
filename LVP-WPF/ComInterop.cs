@@ -18,6 +18,7 @@ namespace LVP_WPF
         internal const int MOUSEEVENTF_RIGHTDOWN = 0x08;
         internal const int MOUSEEVENTF_RIGHTUP = 0x10;
         internal const int MOUSEEVENTF_WHEEL = 0x0800;
+        private const uint WM_CLOSE = 0x0010;
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
         internal static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
@@ -69,22 +70,14 @@ namespace LVP_WPF
                 return;
             }
 
-            Process p = pp[0];
-            List<IntPtr> rootWindows = GetRootWindowsOfProcess(p.Id);
-            foreach (IntPtr rw in rootWindows)
+
+            foreach (IntPtr rw in GetRootWindowsOfProcess(pp[0].Id))
             {
-                string parentTitle = GetWindowTitle(rw);
-                //Debug.WriteLine($"Parent: {parentTitle}");
-                if (parentTitle.Equals("Sponsored session"))
+                if (GetWindowTitle(rw).Equals("Sponsored session"))
                 {
-                    SendMessage(rw, 0x0010, IntPtr.Zero, IntPtr.Zero); // WM_CLOSE = 0x0010;
+                    SendMessage(rw, WM_CLOSE, IntPtr.Zero, IntPtr.Zero);
                     break;
                 }
-                /*List<IntPtr> children = GetChildWindows(rw);
-                foreach (IntPtr child in children)
-                {
-                    //Debug.WriteLine($"Child: {GetWindowTitle(child)}");
-                }*/
             }
         }
 

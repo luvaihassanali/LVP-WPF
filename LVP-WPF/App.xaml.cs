@@ -22,13 +22,19 @@ namespace LVP_WPF
                 Directory.CreateDirectory(logPath);
             }
 
+            // .WriteTo.Debug() routes through System.Diagnostics.Debug.WriteLine,
+            // which appears in Visual Studio's Output window under the "Debug"
+            // pane (View > Output, "Show output from: Debug") when launched
+            // with F5. Make sure that pane is selected and that
+            // Tools > Options > Debugging > General >
+            // "Redirect All Output Window Text to the Immediate Window" is OFF.
             Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Debug()
-            .WriteTo.File(path: $"{logPath}LVP-WPF-.log",
-            rollingInterval: RollingInterval.Month,
-            rollOnFileSizeLimit: true)
-            .CreateLogger();
+                .MinimumLevel.Debug()
+                .WriteTo.Debug()
+                .WriteTo.File(path: $"{logPath}LVP-WPF-.log",
+                    rollingInterval: RollingInterval.Month,
+                    rollOnFileSizeLimit: true)
+                .CreateLogger();
         }
 
         private void GlobalKeyUp(object sender, KeyEventArgs e)
@@ -38,24 +44,26 @@ namespace LVP_WPF
                 return;
             }
 
+            // Arrow-key cases all do the same shape (log + Move). Dispatch via
+            // a tiny table so adding/changing one of them only touches one line.
+            LayoutPoint lp = TcpSerialListener.layoutPoint;
+            (string Label, (int x, int y) Dir)? mapped = e.Key switch
+            {
+                Key.Up    => ("up",    lp.up),
+                Key.Down  => ("down",  lp.down),
+                Key.Left  => ("left",  lp.left),
+                Key.Right => ("right", lp.right),
+                _ => null
+            };
+            if (mapped.HasValue)
+            {
+                Log.Debug(mapped.Value.Label);
+                lp.Move(mapped.Value.Dir);
+                return;
+            }
+
             switch (e.Key)
             {
-                case Key.Up:
-                    Log.Debug("up");
-                    TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.up);
-                    break;
-                case Key.Down:
-                    Log.Debug("down");
-                    TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.down);
-                    break;
-                case Key.Left:
-                    Log.Debug("left");
-                    TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.left);
-                    break;
-                case Key.Right:
-                    Log.Debug("right");
-                    TcpSerialListener.layoutPoint.Move(TcpSerialListener.layoutPoint.right);
-                    break;
                 case Key.Enter:
                     Log.Debug("enter");
                     TcpSerialListener.DoMouseClick();

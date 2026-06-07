@@ -1,6 +1,10 @@
-﻿using Serilog;
+﻿using LVP_WPF.Models;
+using LVP_WPF.Services;
+using LVP_WPF.Util;
+using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
@@ -9,23 +13,91 @@ using System.Windows.Controls.Primitives;
 
 namespace LVP_WPF.Windows
 {
+    public enum PrimaryWindow { Main, Movie, TvShow }
+    public enum WindowOverlay { None, Season, Player, LanguageDropdown }
+
     public class LayoutPoint
     {
         public GuiModel gui;
-        public bool mainWindowActive = true;
-        public bool movieWindowActive = false;
-        public bool tvShowWindowActive = false;
-        public bool seasonWindowActive = false;
-        public bool playerWindowActive = false;
-        public bool lanuageDropdownActive = false;
+
+        // Window state is two orthogonal axes:
+        //   _primary: which underlying screen is open (Main/Movie/TvShow)
+        //   _overlay: optional modal on top (Season picker, Player, lang dropdown)
+        // Previously expressed as 6 separate bool fields; the bool properties
+        // below remain for backward compatibility with the ~50 existing read
+        // sites (LayoutPoint internal + TcpSerialListener + TvShowWindow).
+        private PrimaryWindow _primary = PrimaryWindow.Main;
+        private WindowOverlay _overlay = WindowOverlay.None;
+
+        // Primary setters: only `true` is meaningful. Setting `false` is a
+        // no-op (the next assignment of a different primary establishes the
+        // new state). Original code did `mainWindowActive = false;` right
+        // before `movieWindowActive = true;`, and the no-op semantic
+        // preserves that pattern without ever leaving primary undefined.
+        public bool mainWindowActive
+        {
+            get => _primary == PrimaryWindow.Main;
+            set { if (value) _primary = PrimaryWindow.Main; }
+        }
+        public bool movieWindowActive
+        {
+            get => _primary == PrimaryWindow.Movie;
+            set { if (value) _primary = PrimaryWindow.Movie; }
+        }
+        public bool tvShowWindowActive
+        {
+            get => _primary == PrimaryWindow.TvShow;
+            set { if (value) _primary = PrimaryWindow.TvShow; }
+        }
+
+        // Overlay setters: both directions are meaningful. Setting `true`
+        // enters the overlay, setting `false` clears any overlay to None.
+        public bool seasonWindowActive
+        {
+            get => _overlay == WindowOverlay.Season;
+            set => _overlay = value ? WindowOverlay.Season : WindowOverlay.None;
+        }
+        public bool playerWindowActive
+        {
+            get => _overlay == WindowOverlay.Player;
+            set => _overlay = value ? WindowOverlay.Player : WindowOverlay.None;
+        }
+        public bool languageDropdownActive
+        {
+            get => _overlay == WindowOverlay.LanguageDropdown;
+            set => _overlay = value ? WindowOverlay.LanguageDropdown : WindowOverlay.None;
+        }
+
         public bool incomingSerialMsg = false;
+
+        /// <summary>
+        /// Called by a Window's close-button click handler AFTER the window
+        /// closed itself. If the close was initiated by the user clicking the
+        /// button (incomingSerialMsg == false), we still need to walk
+        /// LayoutPoint's state machine back one level. If instead the close
+        /// originated from a serial "return" command (which already called
+        /// CloseCurrWindow and set incomingSerialMsg), we just clear the flag.
+        /// </summary>
+        public void NotifyWindowClosedFromUI()
+        {
+            if (!incomingSerialMsg)
+            {
+                CloseCurrWindow(false);
+            }
+            else
+            {
+                incomingSerialMsg = false;
+            }
+        }
         public (int x, int y) currPoint = (0, 0);
         public (int x, int y) returnPointA = (0, 0);
         public (int x, int y) returnPointB = (0, 0);
 
         public object currControl = null;
         public List<int[]> mainWindowGrid = new List<int[]>();
-        public List<Image[]> mainWindowControlGrid = new List<Image[]>();
+        // FrameworkElement instead of Image so the grid can hold both poster
+        // tiles (Image) and the new History / Shuffle header buttons (Button).
+        public List<FrameworkElement[]> mainWindowControlGrid = new List<FrameworkElement[]>();
         public Image movieBackdrop = null;
         public ComboBox movieLangComboBox = null;
         public List<ComboBoxItem> langComboBoxItems = new List<ComboBoxItem>();
@@ -37,6 +109,65 @@ namespace LVP_WPF.Windows
         public int langIndex = 0;
         public List<object> tvControlList = new List<object>();
         public List<Image> seasonControlList = new List<Image>();
+
+        // Playback-control buttons inside PlayerWindow, populated by
+        // PlayerWindow_Loaded. Ordered left-to-right as they appear in the
+        // bottom row: backward, rewind, play, fast-forward, forward.
+        // Joystick Left/Right cycles through them; Up/Down is ignored
+        // because the player has only one row of nav-targets.
+        public List<object> playerControlList = new List<object>();
+        public int playerIndex = 0;
+
+        // Named slots in playerControlList - used by IR remote dispatch so
+        // pressing "fastforward" warps the cursor to the FF button etc.
+        public const int PlayerButtonBackward    = 0;
+        public const int PlayerButtonRewind      = 1;
+        public const int PlayerButtonPlay        = 2;
+        public const int PlayerButtonFastForward = 3;
+        public const int PlayerButtonForward     = 4;
+
+        // True while the cursor is hidden / not yet positioned on a player
+        // control. EnterPlayerNav sets it true on player open; the first
+        // arrow press flips it false (and reveals the cursor at play
+        // without applying a delta) so subsequent arrows step from there.
+        // FocusPlayerControl also flips it false because that path warps
+        // the cursor to a specific button explicitly.
+        private bool playerCursorParked = true;
+
+        // Warp the cursor to a specific button in the player overlay,
+        // update currPoint/currControl, and mark the cursor as no longer
+        // parked. Used by the IR remote transport keys to give visual
+        // feedback ("you just pressed fast-forward -> look at the FF
+        // button highlighting").
+        internal void FocusPlayerControl(int index)
+        {
+            if (index < 0 || index >= playerControlList.Count) return;
+            currPoint = (index, 0);
+            currControl = playerControlList[index];
+            playerCursorParked = false;
+            CenterMouseOverControl(currControl, index, scrollViewer: null);
+        }
+
+        /// <summary>
+        /// Capture each item container in <paramref name="comboBox"/> into
+        /// langComboBoxItems (and optionally their on-screen Points into
+        /// langComboBoxItemPts) so the joystick/IR navigator can later
+        /// position the cursor over individual dropdown entries.
+        /// The caller is responsible for opening/closing the dropdown -
+        /// item containers are only realized while it's open.
+        /// </summary>
+        public void CaptureComboBoxItems(ComboBox comboBox, bool capturePositions)
+        {
+            for (int i = 0; i < comboBox.Items.Count; i++)
+            {
+                ComboBoxItem item = (ComboBoxItem)comboBox.ItemContainerGenerator.ContainerFromIndex(i);
+                langComboBoxItems.Add(item);
+                if (capturePositions)
+                {
+                    langComboBoxItemPts.Add(item.PointToScreen(new Point(0d, 0d)));
+                }
+            }
+        }
         public List<int[]> seasonWindowGrid = new List<int[]>();
         public List<Image[]> seasonWindowControlGrid = new List<Image[]>();
 
@@ -51,18 +182,54 @@ namespace LVP_WPF.Windows
             BuildMainWindowGrid();
             ComInterop.SetCursorPos(20, 20);
             TcpSerialListener.DoMouseClick();
-            currControl = mainWindowControlGrid.Count != 0 ? mainWindowControlGrid[0][0] : gui.mainCloseButton;
-            CenterMouseOverControl(currControl, 0);
+
+            // Default focus: first poster tile (matches the original behavior
+            // before the History / Shuffle pseudo-rows existed). Walk forward
+            // skipping pseudo-rows whose [0] holds a Button. Fall back to
+            // (0,0) if there are no posters at all (empty library), and to
+            // mainCloseButton if the grid itself is empty.
+            if (mainWindowControlGrid.Count == 0)
+            {
+                currControl = gui.mainCloseButton;
+                CenterMouseOverControl(currControl, 0);
+                return;
+            }
+            int initialRow = 0;
+            for (int r = 0; r < mainWindowControlGrid.Count; r++)
+            {
+                if (mainWindowControlGrid[r][0] is Image)
+                {
+                    initialRow = r;
+                    break;
+                }
+            }
+            currPoint = (initialRow, 0);
+            currControl = mainWindowControlGrid[initialRow][0];
+            CenterMouseOverControl(currControl, initialRow);
         }
 
         public void Move((int x, int y) pos)
         {
             if (playerWindowActive)
             {
+                // Player has a single horizontal row of buttons. Left/Right
+                // walks the row via MovePlayerPoint (which itself wakes the
+                // overlay). Up/Down has no nav target but still wakes the
+                // overlay so the user gets visible feedback that input was
+                // received. pos.y carries the horizontal delta in this
+                // codebase (see `left`/`right` tuples at the top of the class).
+                if (pos.y != 0)
+                {
+                    MovePlayerPoint(pos.y);
+                }
+                else
+                {
+                    gui.playerWindow?.WakeOverlay();
+                }
                 return;
             }
 
-            if (lanuageDropdownActive)
+            if (languageDropdownActive)
             {
                 MoveLangPoint(pos.x);
             }
@@ -86,7 +253,7 @@ namespace LVP_WPF.Windows
 
         public void Select(string controlName, bool isMovie = false)
         {
-            if (TvShowWindow.cartoonShuffle || TvShowWindow.historyWatch)
+            if (PlaybackSession.IsCartoonShuffle || PlaybackSession.IsHistoryWatch)
             {
                 returnPointA = currPoint;
                 return;
@@ -133,6 +300,7 @@ namespace LVP_WPF.Windows
                 if (controlName.Equals("PlayerWindow"))
                 {
                     playerWindowActive = true;
+                    EnterPlayerNav();
                 }
             }
             else if (movieWindowActive)
@@ -141,6 +309,7 @@ namespace LVP_WPF.Windows
                 if (controlName.Equals("PlayerWindow"))
                 {
                     playerWindowActive = true;
+                    EnterPlayerNav();
                 }
             }
         }
@@ -148,10 +317,10 @@ namespace LVP_WPF.Windows
         private void SelectLangDropdown()
         {
             Task.Delay(200).Wait();
-            if (!lanuageDropdownActive)
+            if (!languageDropdownActive)
             {
                 returnPointB = currPoint;
-                lanuageDropdownActive = true;
+                languageDropdownActive = true;
                 currPoint = (langIndex, -1);
                 currControl = langComboBoxItems[currPoint.x];
                 CenterMouseOverComboBoxItem(langComboBoxItemPts[currPoint.x], (ComboBoxItem)currControl);
@@ -159,18 +328,12 @@ namespace LVP_WPF.Windows
             else
             {
                 langIndex = currPoint.x;
-                lanuageDropdownActive = false;
+                languageDropdownActive = false;
                 currPoint = returnPointB;
                 if (tvShowWindowActive)
                 {
-                    if (TcpSerialListener.layoutPoint.tvControlList[1] as ToggleButton != null)
-                    {
-                        currPoint = (2, -1);
-                    }
-                    else
-                    {
-                        currPoint = (1, -1);
-                    }
+                    bool toggleVisible = TcpSerialListener.layoutPoint.tvControlList[1] is ToggleButton;
+                    currPoint = toggleVisible ? (2, -1) : (1, -1);
                     currControl = tvControlList[currPoint.x];
                 }
                 else
@@ -204,7 +367,7 @@ namespace LVP_WPF.Windows
 
         internal void CloseCurrWindow(bool click = true)
         {
-            if (seasonWindowActive || lanuageDropdownActive)
+            if (seasonWindowActive || languageDropdownActive)
             {
                 return;
             }
@@ -243,18 +406,7 @@ namespace LVP_WPF.Windows
         {
             movieWindowActive = false;
             mainWindowActive = true;
-
-            if (click)
-            {
-                CenterMouseOverControl(gui.tvMovieCloseButton);
-                await Task.Delay(200);
-                TcpSerialListener.DoMouseClick();
-                await Task.Delay(200);
-            }
-
-            currPoint = returnPointA;
-            currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
-            CenterMouseOverControl(currControl);
+            await PerformCloseToMain(click);
         }
 
         private async void CloseTvWindow(bool click)
@@ -267,8 +419,23 @@ namespace LVP_WPF.Windows
 
             if (click)
             {
+                // Reset the episode list scroll before falling through to the
+                // shared close-to-main routine so the cursor lands on the
+                // close-button at the expected screen Y.
                 gui.episodeScrollViewer.Dispatcher.Invoke(() => { gui.episodeScrollViewer.ScrollToHome(); });
-                GuiModel.DoEvents();
+                WpfTreeHelpers.DoEvents();
+            }
+
+            await PerformCloseToMain(click);
+        }
+
+        // Shared tail for movie/tv close handlers: optionally simulate a
+        // click on the close button, then move the cursor back to whichever
+        // main-grid tile the user was on before they opened the sub-window.
+        private async Task PerformCloseToMain(bool click)
+        {
+            if (click)
+            {
                 CenterMouseOverControl(gui.tvMovieCloseButton);
                 await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
@@ -286,7 +453,7 @@ namespace LVP_WPF.Windows
             if (click)
             {
                 CenterMouseOverControl(gui.playerCloseButton);
-                GuiModel.DoEvents();
+                WpfTreeHelpers.DoEvents();
                 await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
                 await Task.Delay(200);
@@ -303,13 +470,12 @@ namespace LVP_WPF.Windows
                 currControl = tvControlList[currPoint.x];
                 CenterMouseOverControl(currControl);
             }
-            else if (TvShowWindow.cartoonShuffle || TvShowWindow.historyWatch)
+            else if (PlaybackSession.IsCartoonShuffle || PlaybackSession.IsHistoryWatch)
             {
                 currPoint = returnPointA;
                 currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
                 CenterMouseOverControl(currControl);
-                TvShowWindow.historyWatch = false;
-                TvShowWindow.cartoonShuffle = false;
+                PlaybackSession.End();
                 playerWindowActive = false;
             }
         }
@@ -317,504 +483,384 @@ namespace LVP_WPF.Windows
         private async void CloseMainWindow()
         {
             gui.mainScrollViewer.Dispatcher.Invoke(() => { gui.mainScrollViewer.ScrollToHome(); });
-            GuiModel.DoEvents();
+            WpfTreeHelpers.DoEvents();
             CenterMouseOverControl(gui.mainCloseButton);
             await Task.Delay(200);
             TcpSerialListener.DoMouseClick();
         }
 
-        private void MoveTvPoint(int x)
-        {
+        private void MoveTvPoint(int x) =>
+            MoveAlong1D(x, tvControlList, MainWindow.gui.episodeScrollViewer);
 
-            int newIndex = currPoint.x + x;
-            if (newIndex < 0 || newIndex >= tvControlList.Count)
+        // Walks playerControlList left/right. No scrollViewer because the
+        // player has a single fixed-position row of buttons; nothing to
+        // scroll into view. WakeOverlay() makes the overlayGrid visible so
+        // the user can see which button they just focused (it would otherwise
+        // still be hidden from a prior pollingTimer fire).
+        private void MovePlayerPoint(int delta)
+        {
+            gui.playerWindow?.WakeOverlay();
+
+            // First arrow press after entering the player just reveals the
+            // cursor at the play button - no delta applied. Subsequent presses
+            // step from there. Without this, currPoint.x is already 2 (play)
+            // and the first LEFT would land on rewind without the user ever
+            // seeing the cursor at play - which makes orientation confusing.
+            if (playerCursorParked)
             {
+                playerCursorParked = false;
+                CenterMouseOverControl(currControl, currPoint.x, scrollViewer: null);
                 return;
             }
-
-
-            currPoint = (newIndex, currPoint.y);
-            currControl = tvControlList[newIndex];
-            CenterMouseOverControl(currControl, newIndex, MainWindow.gui.episodeScrollViewer);
+            MoveAlong1D(delta, playerControlList, scrollViewer: null);
         }
 
-        private void MoveLangPoint(int x)
+        // Reset currPoint to the play button (middle of the 5-button row) on
+        // each player open. Without this, currPoint carries whatever index
+        // the previous window (TvShowWindow / MovieWindow) left it at, which
+        // could be 0 (locking Left out immediately) or out of range.
+        // Doesn't warp the cursor - PlayerWindow_Loaded explicitly hides it
+        // until the user's first arrow press reveals it (see MovePlayerPoint).
+        private void EnterPlayerNav()
         {
-            int newIndex = currPoint.x + x;
-            if (newIndex < 0 || newIndex >= langComboBoxItems.Count)
-            {
-                return;
-            }
-
-
-            currPoint = (newIndex, currPoint.y);
-            currControl = langComboBoxItems[newIndex];
-            CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.langScrollViewer);
+            if (playerControlList.Count == 0) return;
+            int defaultIdx = playerControlList.Count / 2;  // play button
+            currPoint = (defaultIdx, 0);
+            currControl = playerControlList[defaultIdx];
+            playerIndex = defaultIdx;
+            playerCursorParked = true;
         }
 
-        private void MoveMoviePoint(int x)
+        private void MoveLangPoint(int x) =>
+            MoveAlong1D(x, langComboBoxItems, MainWindow.gui.langScrollViewer);
+
+        private void MoveMoviePoint(int x) =>
+            MoveAlong1D(x, new object[] { movieBackdrop, movieLangComboBox }, scrollViewer: null);
+
+        // Shared 1-D navigation (used by movie / tv-show / language-dropdown
+        // overlays where the items are a flat indexable list rather than a 2-D
+        // grid). Steps currPoint.x by `delta`, clamps to range, updates currControl,
+        // and centers the cursor (optionally scrolling the supplied viewer).
+        private void MoveAlong1D(int delta, System.Collections.IList controls, ScrollViewer scrollViewer)
         {
-
-            int newIndex = currPoint.x + x;
-            if (newIndex < 0 || newIndex > 1)
-            {
-                return;
-            }
-
-
+            int newIndex = currPoint.x + delta;
+            if (newIndex < 0 || newIndex >= controls.Count) return;
             currPoint = (newIndex, currPoint.y);
-            currControl = newIndex == 0 ? movieBackdrop : movieLangComboBox;
-            CenterMouseOverControl(currControl, newIndex);
+            currControl = controls[newIndex];
+            CenterMouseOverControl(currControl, newIndex, scrollViewer);
         }
 
+        // Convert a linear season-form index to (row, col) in the
+        // 3-column season-picker grid, and mark that cell as the
+        // currently-selected one (state value 2).
         private (int x, int y) GetCurrSeasonPoint(int seasonFormIndex)
         {
-            int count = 0;
-            (int x, int y) point = (0, 0);
-            while (seasonFormIndex > 0)
-            {
-                seasonFormIndex--;
-                if (count == 2)
-                {
-                    count = 0;
-                    point = (point.x + 1, 0);
-                    if (seasonFormIndex == 0)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    point = (point.x, point.y + 1);
-                    count++;
-                }
-            }
-            seasonWindowGrid[point.x][point.y] = 2;
-            return point;
+            const int columnsPerRow = 3;
+            int row = seasonFormIndex / columnsPerRow;
+            int col = seasonFormIndex % columnsPerRow;
+            seasonWindowGrid[row][col] = 2;
+            return (row, col);
         }
 
         public void MoveSeasonPoint((int x, int y) movePoint)
         {
-            (int x, int y) newPoint = (currPoint.x + movePoint.x, currPoint.y + movePoint.y);
-            if (OutOfSeasonGridRange(newPoint))
+            MoveInGrid(movePoint, seasonWindowGrid, seasonWindowControlGrid, columns: 3, MainWindow.gui.seasonScrollViewer, wrapVertically: false);
+        }
+
+        // ---------- Shared grid navigation helpers ----------
+        //
+        // Previously this file had two parallel sets of these (MoveSeasonPoint /
+        // NextSeasonGridPoint / ClosestSeasonGridPoint / OutOfSeasonGridRange and
+        // their MainGrid twins). Consolidated into the parameterized helpers
+        // below; MovePoint and MoveSeasonPoint are now one-liners that just bind
+        // the per-grid config (columns, wrap behavior, scroll viewer).
+
+        private void MoveInGrid<T>((int x, int y) move, List<int[]> grid, List<T[]> controls, int columns, ScrollViewer scrollViewer, bool wrapVertically)
+            where T : class
+        {
+            (int x, int y) newPoint = (currPoint.x + move.x, currPoint.y + move.y);
+            if (wrapVertically)
             {
-                return;
+                if (newPoint.x == -1) newPoint.x = grid.Count - 1;
+                if (newPoint.x == grid.Count) newPoint.x = 0;
             }
+            if (IsOutOfRange(newPoint, grid, columns)) return;
 
-
-            if (seasonWindowControlGrid[newPoint.x][newPoint.y] == null)
+            if (controls[newPoint.x][newPoint.y] == null)
             {
-                (int x, int y) candidatePoint = ClosestSeasonGridPoint(newPoint);
+                (int x, int y) candidatePoint = ClosestOccupied(newPoint, controls, columns);
                 if (candidatePoint.x != -1)
                 {
                     newPoint = candidatePoint;
                 }
                 else
                 {
-                    newPoint = NextSeasonGridPoint(newPoint, movePoint);
-                    if (newPoint.x == -1)
-                    {
-                        return;
-                    }
-
+                    newPoint = NextOccupied(newPoint, move, grid, controls, columns);
+                    if (newPoint.x == -1) return;
                 }
             }
 
-            seasonWindowGrid[newPoint.x][newPoint.y] = 2;
-            seasonWindowGrid[currPoint.x][currPoint.y] = 1;
+            grid[newPoint.x][newPoint.y] = 2;
+            grid[currPoint.x][currPoint.y] = 1;
             currPoint = newPoint;
-            currControl = seasonWindowControlGrid[currPoint.x][currPoint.y];
-            CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.seasonScrollViewer);
+            currControl = controls[currPoint.x][currPoint.y];
+            CenterMouseOverControl(currControl, currPoint.x, scrollViewer);
         }
 
-        public (int x, int y) NextSeasonGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
+        private static bool IsOutOfRange((int x, int y) p, List<int[]> grid, int columns)
         {
-            (int x, int y) nextPoint = (currentPoint.x + movePoint.x, currentPoint.y + movePoint.y);
-            if (OutOfSeasonGridRange(nextPoint))
-            {
-                return (-1, -1);
-            }
-
-            if (seasonWindowControlGrid[nextPoint.x][nextPoint.y] == null)
-            {
-                NextSeasonGridPoint(nextPoint, movePoint);
-            }
-            else
-            {
-                return nextPoint;
-            }
-            return (-1, -1);
+            return p.y < 0 || p.x < 0 || p.y >= columns || p.x >= grid.Count;
         }
 
-        private (int x, int y) ClosestSeasonGridPoint((int x, int y) nextPoint)
+        // Walk one cell at a time in the requested direction until we hit
+        // an occupied cell (return its coords) or leave the grid (return
+        // sentinel (-1, -1)). Skipping over empty cells matters for the
+        // sparse last-row case: a row with only the first two slots filled
+        // shouldn't trap the cursor when the user navigates right.
+        private static (int x, int y) NextOccupied<T>((int x, int y) current, (int x, int y) move, List<int[]> grid, List<T[]> controls, int columns)
+            where T : class
         {
-            int low = nextPoint.y - 1;
-            int high = nextPoint.y + 1;
-            while (low >= 0 || high > 3)
+            (int x, int y) next = (current.x + move.x, current.y + move.y);
+            if (IsOutOfRange(next, grid, columns)) return (-1, -1);
+            if (controls[next.x][next.y] == null)
             {
-                if (low >= 0)
-                {
-                    if (seasonWindowControlGrid[nextPoint.x][low] != null)
-                    {
-                        return (nextPoint.x, low);
-                    }
-                }
-                if (high < 3)
-                {
-                    if (seasonWindowControlGrid[nextPoint.x][high] != null)
-                    {
-                        return (nextPoint.x, high);
-                    }
-                }
+                return NextOccupied(next, move, grid, controls, columns);
+            }
+            return next;
+        }
+
+        // From `point`, search left and right within the same row for the
+        // nearest occupied cell. Returns sentinel (-1, -1) if the entire
+        // row is empty (shouldn't happen in practice).
+        private static (int x, int y) ClosestOccupied<T>((int x, int y) point, List<T[]> controls, int columns)
+            where T : class
+        {
+            int low = point.y - 1;
+            int high = point.y + 1;
+            while (low >= 0 || high < columns)
+            {
+                if (low >= 0 && controls[point.x][low] != null) return (point.x, low);
+                if (high < columns && controls[point.x][high] != null) return (point.x, high);
                 low--;
                 high++;
             }
             return (-1, -1);
         }
 
-        private bool OutOfSeasonGridRange((int x, int y) testPoint)
-        {
-            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 3 || testPoint.x >= seasonWindowGrid.Count)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
+        // Lay out the season-picker tiles as rows of 3. Builds both the
+        // occupancy grid (1 = filled, 0 = empty trailing slot in last row)
+        // and the parallel control-reference grid in one pass.
         private void BuildSeasonGrid()
         {
-            int seasonCount = seasonControlList.Count;
-            int count = 0;
+            const int columnsPerRow = 3;
             int[] currRow = null;
             Image[] currControlRow = null;
-            for (int i = 0; i < seasonCount; i++)
+            for (int i = 0; i < seasonControlList.Count; i++)
             {
-                if (count == 3)
+                int col = i % columnsPerRow;
+                if (col == 0)
                 {
-                    count = 0;
-                }
-
-                if (count == 0)
-                {
-                    currRow = new int[3];
-                    currControlRow = new Image[3];
+                    currRow = new int[columnsPerRow];
+                    currControlRow = new Image[columnsPerRow];
                     seasonWindowGrid.Add(currRow);
                     seasonWindowControlGrid.Add(currControlRow);
-                    currRow[count] = 1;
-                    currControlRow[count] = null;
                 }
-                currRow[count] = 1; ;
-                currControlRow[count] = null;
-                count++;
-            }
-            BuildSeasonControlGrid();
-        }
-
-
-        private void BuildSeasonControlGrid()
-        {
-            int seasonCount = seasonControlList.Count;
-            int count = 0;
-            int rowIndex = 0;
-            int controlIndex = 0;
-
-            for (int i = 0; i < seasonCount; i++)
-            {
-                if (count == 3)
-                {
-                    rowIndex++;
-                    if (rowIndex >= seasonWindowGrid.Count)
-                    {
-                        break;
-                    }
-                    count = 0;
-                }
-
-                if (seasonWindowGrid[rowIndex][count] == 0)
-                {
-                    seasonWindowControlGrid[rowIndex][count] = null;
-                }
-                else
-                {
-                    seasonWindowControlGrid[rowIndex][count] = seasonControlList[controlIndex];
-                    controlIndex++;
-                }
-                count++;
+                currRow[col] = 1;
+                currControlRow[col] = seasonControlList[i];
             }
         }
 
         public void MovePoint((int x, int y) movePoint)
         {
-            (int x, int y) newPoint = (currPoint.x + movePoint.x, currPoint.y + movePoint.y);
-            if (newPoint.x == -1)
-            {
-                newPoint.x = mainWindowGrid.Count - 1;
-            }
-            if (newPoint.x == mainWindowGrid.Count)
-            {
-                newPoint.x = 0;
-            }
-            if (OutOfMainGridRange(newPoint))
-            {
-                return;
-            }
-
-
-            if (mainWindowControlGrid[newPoint.x][newPoint.y] == null)
-            {
-                (int x, int y) candidatePoint = ClosestMainGridPoint(newPoint);
-                if (candidatePoint.x != -1)
-                {
-                    newPoint = candidatePoint;
-                }
-                else
-                {
-                    newPoint = NextMainGridPoint(newPoint, movePoint);
-                    if (newPoint.x == -1)
-                    {
-                        return;
-                    }
-
-                }
-            }
-
-            mainWindowGrid[newPoint.x][newPoint.y] = 2;
-            mainWindowGrid[currPoint.x][currPoint.y] = 1;
-            currPoint = newPoint;
-            currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
-            CenterMouseOverControl(currControl, currPoint.x, MainWindow.gui.mainScrollViewer);
+            MoveInGrid(movePoint, mainWindowGrid, mainWindowControlGrid, columns: 6, MainWindow.gui.mainScrollViewer, wrapVertically: true);
         }
 
-        public (int x, int y) NextMainGridPoint((int x, int y) currentPoint, (int x, int y) movePoint)
-        {
-            (int x, int y) nextPoint = (currentPoint.x + movePoint.x, currentPoint.y + movePoint.y);
-            if (OutOfMainGridRange(nextPoint))
-            {
-                return (-1, -1);
-            }
-
-            if (mainWindowControlGrid[nextPoint.x][nextPoint.y] == null)
-            {
-                NextMainGridPoint(nextPoint, movePoint);
-            }
-            else
-            {
-                return nextPoint;
-            }
-            return (-1, -1);
-        }
-
-        private (int x, int y) ClosestMainGridPoint((int x, int y) nextPoint)
-        {
-            int low = nextPoint.y - 1;
-            int high = nextPoint.y + 1;
-            while (low >= 0 || high > 6)
-            {
-                if (low >= 0)
-                {
-                    if (mainWindowControlGrid[nextPoint.x][low] != null)
-                    {
-                        return (nextPoint.x, low);
-                    }
-                }
-
-                if (high < 6)
-                {
-                    if (mainWindowControlGrid[nextPoint.x][high] != null)
-                    {
-                        return (nextPoint.x, high);
-                    }
-                }
-                low--;
-                high++;
-            }
-            return (-1, -1);
-        }
-
-        private bool OutOfMainGridRange((int x, int y) testPoint)
-        {
-            if (testPoint.y < 0 || testPoint.x < 0 || testPoint.y >= 6 || testPoint.x >= mainWindowGrid.Count)
-            {
-                return true;
-            }
-
-            return false;
-        }
-
+        // Lay out the main screen as three independent sections (TV shows,
+        // cartoons, movies), each chunked into rows of 6. Each section
+        // begins on a fresh row even if the previous section's last row
+        // was only partially full.
+        //
+        // The layout also inserts two single-cell pseudo-rows that hold the
+        // History (above TV) and Shuffle (between TV and Cartoons) marathon
+        // buttons - so joystick / IR-remote nav lands on them naturally.
         private void BuildMainWindowGrid()
         {
-            for (int i = 0; i < 2; i++)
-            {
-                int count = i == 1 ? gui.Movies.Count : (gui.TvShows.Count + gui.Cartoons.Count);
-                int rowIndex = 0;
-                int[] currGridRow = null;
-                Image[] currControlRow = null;
-                for (int j = 0; j < count; j++)
-                {
-                    if (i == 0 && j == count - gui.Cartoons.Count)
-                    {
-                        rowIndex = 0;
-                    }
-
-                    if (rowIndex == 6)
-                    {
-                        rowIndex = 0;
-                    }
-
-                    if (rowIndex == 0)
-                    {
-                        currGridRow = new int[6];
-                        currControlRow = new Image[6];
-                        mainWindowGrid.Add(currGridRow);
-                        mainWindowControlGrid.Add(currControlRow);
-                        currGridRow[rowIndex] = 1;
-                        currControlRow[rowIndex] = null;
-                    }
-
-                    currGridRow[rowIndex] = 1;
-                    currControlRow[rowIndex] = null;
-                    rowIndex++;
-                }
-            }
+            AddButtonPseudoRow();                                      // Row 0: History
+            AppendMainGridSection(gui.TvShows.Count, columnsPerRow: 6);
+            AddButtonPseudoRow();                                      // between TV and Cartoons: Shuffle
+            AppendMainGridSection(gui.Cartoons.Count, columnsPerRow: 6);
+            AppendMainGridSection(gui.Movies.Count, columnsPerRow: 6);
             BuildMainWindowControlGrid();
         }
 
-        private void BuildMainWindowControlGrid()
+        // Append a row where only column 0 is occupied (1) and cols 1..N-1
+        // are sentinels (0). Used to give the History / Shuffle buttons a
+        // dedicated navigable cell in the otherwise poster-only grid.
+        private void AddButtonPseudoRow()
         {
-            int count = 0;
-            int rowIndex = 0;
-            int controlIndex = gui.Movies.Count;
-            List<Image> mainWindowControlList = new List<Image>();
-            ListView[] mainWindowLists = new ListView[]
+            int[] row = new int[MainGridColumns];
+            row[0] = 1;
+            mainWindowGrid.Add(row);
+            mainWindowControlGrid.Add(new FrameworkElement[MainGridColumns]);
+        }
+
+        private void AppendMainGridSection(int itemCount, int columnsPerRow)
+        {
+            int[] currGridRow = null;
+            for (int j = 0; j < itemCount; j++)
             {
-                (ListView)gui.mainGrid.Children[6],
-                (ListView)gui.mainGrid.Children[2],
-                (ListView)gui.mainGrid.Children[4]
-            };
-
-            for (int i = 0; i < 3; i++)
-            {
-                ItemContainerGenerator generator = mainWindowLists[i].ItemContainerGenerator;
-                switch (i)
+                int col = j % columnsPerRow;
+                if (col == 0)
                 {
-                    case 0:
-                        for (int j = 0; j < gui.Movies.Count; j++)
-                        {
-                            ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.Movies[j]);
-                            Image img = GuiModel.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
-                            mainWindowControlList.Add(img);
-                        }
-                        break;
-                    case 1:
-                        for (int j = 0; j < gui.TvShows.Count; j++)
-                        {
-                            ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.TvShows[j]);
-                            Image img = GuiModel.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
-                            mainWindowControlList.Add(img);
-                        }
-                        break;
-                    case 2:
-                        for (int j = 0; j < gui.Cartoons.Count; j++)
-                        {
-                            ListViewItem container = (ListViewItem)generator.ContainerFromItem(gui.Cartoons[j]);
-                            Image img = GuiModel.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
-                            mainWindowControlList.Add(img);
-                        }
-                        break;
+                    currGridRow = new int[columnsPerRow];
+                    mainWindowGrid.Add(currGridRow);
+                    mainWindowControlGrid.Add(new FrameworkElement[columnsPerRow]);
                 }
-            }
-
-            int totalTvShows = gui.TvShows.Count + gui.Cartoons.Count;
-            for (int i = 0; i < totalTvShows; i++)
-            {
-                if (i == totalTvShows - gui.Cartoons.Count)
-                {
-                    count = 6;
-                }
-
-                if (count == 6)
-                {
-                    rowIndex++;
-                    if (rowIndex >= mainWindowGrid.Count)
-                    {
-                        break;
-                    }
-                    count = 0;
-                }
-
-                if (mainWindowGrid[rowIndex][count] == 0)
-                {
-                    mainWindowControlGrid[rowIndex][count] = null;
-                }
-                else
-                {
-                    mainWindowControlGrid[rowIndex][count] = mainWindowControlList[controlIndex];
-                    controlIndex++;
-                }
-                count++;
-            }
-
-            count = 0;
-            controlIndex = 0;
-            if (totalTvShows != 0)
-            {
-                rowIndex++;
-            }
-
-            for (int i = 0; i < gui.Movies.Count; i++)
-            {
-                if (count == 6)
-                {
-                    rowIndex++;
-                    if (rowIndex >= mainWindowGrid.Count)
-                    {
-                        break;
-                    }
-                    count = 0;
-                }
-
-                if (mainWindowGrid[rowIndex][count] == 0)
-                {
-                    mainWindowControlGrid[rowIndex][count] = null;
-                }
-                else
-                {
-                    mainWindowControlGrid[rowIndex][count] = mainWindowControlList[controlIndex];
-                    controlIndex++;
-                }
-                count++;
+                currGridRow[col] = 1;
             }
         }
 
+        private const int MainGridColumns = 6;
+
+        private void BuildMainWindowControlGrid()
+        {
+            // Look up the three poster ListViews by Name. Originally indexed
+            // into mainGrid.Children with hardcoded slots [6, 2, 4], but those
+            // shifted the moment History / Shuffle buttons were added as
+            // siblings - and would shift again next time anyone touches the
+            // XAML. Name-based lookup survives reordering.
+            //
+            // Walking them in [Movies, TvShows, Cartoons] order gives
+            // mainWindowControlList as [Movies..., TvShows..., Cartoons...];
+            // the grid below consumes them in a different order (TvShows first,
+            // then Cartoons, then Movies), so controlIndex jumps explicitly.
+            ListView tvList = null, cartoonsList = null, movieList = null;
+            foreach (UIElement child in gui.mainGrid.Children)
+            {
+                if (child is ListView lv)
+                {
+                    switch (lv.Name)
+                    {
+                        case "TvShowListView":   tvList = lv; break;
+                        case "CartoonsListView": cartoonsList = lv; break;
+                        case "MovieListView":    movieList = lv; break;
+                    }
+                }
+            }
+            ListView[] lists = { movieList, tvList, cartoonsList };
+            ObservableCollection<MainWindowBox>[] collections = { gui.Movies, gui.TvShows, gui.Cartoons };
+
+            List<Image> mainWindowControlList = new List<Image>();
+            for (int i = 0; i < lists.Length; i++)
+            {
+                ItemContainerGenerator generator = lists[i].ItemContainerGenerator;
+                foreach (MainWindowBox box in collections[i])
+                {
+                    ListViewItem container = (ListViewItem)generator.ContainerFromItem(box);
+                    Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "mainGridImage") as Image;
+                    mainWindowControlList.Add(img);
+                }
+            }
+
+            // Row layout produced by BuildMainWindowGrid:
+            //   row 0:                          History pseudo-row
+            //   rows 1..1+ceil(TV/6):           TV posters
+            //   row M:                          Shuffle pseudo-row
+            //   rows M+1..:                     Cartoon posters
+            //   rows ...:                       Movie posters
+
+            int row = 0;
+            int controlIndex = gui.Movies.Count;  // start at TvShows in source list
+
+            // History pseudo-row.
+            if (row < mainWindowGrid.Count) mainWindowControlGrid[row][0] = gui.historyButton;
+            row++;
+
+            // TV poster rows.
+            row = FillSectionRows(gui.TvShows.Count, row, mainWindowControlList, ref controlIndex);
+
+            // Shuffle pseudo-row.
+            if (row < mainWindowGrid.Count) mainWindowControlGrid[row][0] = gui.shuffleButton;
+            row++;
+
+            // Cartoon poster rows.
+            row = FillSectionRows(gui.Cartoons.Count, row, mainWindowControlList, ref controlIndex);
+
+            // Movie poster rows. controlIndex resets because Movies live at the
+            // start of mainWindowControlList.
+            controlIndex = 0;
+            FillSectionRows(gui.Movies.Count, row, mainWindowControlList, ref controlIndex);
+        }
+
+        // Fills mainWindowControlGrid[row..row+ceil(itemCount/6)] from `source`
+        // starting at `controlIndex`. Returns the row index just past the last
+        // filled row, so the caller can drop in the next section / pseudo-row.
+        private int FillSectionRows(int itemCount, int startRow, List<Image> source, ref int controlIndex)
+        {
+            int rowsNeeded = (itemCount + MainGridColumns - 1) / MainGridColumns;
+            int row = startRow;
+            for (int r = 0; r < rowsNeeded; r++, row++)
+            {
+                if (row >= mainWindowGrid.Count) break;
+                for (int c = 0; c < MainGridColumns; c++)
+                {
+                    AssignTileOrSentinel(row, c, source, ref controlIndex);
+                }
+            }
+            return row;
+        }
+
+        // mainWindowGrid[r][c] encodes whether that cell is filled (1) or a
+        // sentinel for "ragged trailing slot in last row" (0). Mirror the
+        // assignment into mainWindowControlGrid: real control if filled,
+        // null if sentinel. controlIndex only advances on real assignments.
+        private void AssignTileOrSentinel(int row, int col, List<Image> source, ref int controlIndex)
+        {
+            if (mainWindowGrid[row][col] == 0)
+            {
+                mainWindowControlGrid[row][col] = null;
+            }
+            else
+            {
+                mainWindowControlGrid[row][col] = source[controlIndex++];
+            }
+        }
+
+        /// <summary>
+        /// Move the cursor to the center of <paramref name="control"/>.
+        /// Three flavors:
+        ///   - ComboBoxItem: scrolls the combo dropdown into view, with an
+        ///     async delay because the popup needs a tick to lay out.
+        ///   - Image: scrolls the main/season/tv grid into view if a scrollViewer
+        ///     is supplied, then centers.
+        ///   - Anything else (Button, Label, ToggleButton, ComboBox, ...):
+        ///     plain center-on-screen via CenterMouseOverElement.
+        /// </summary>
         private void CenterMouseOverControl(object control, int row = -1, ScrollViewer scrollViewer = null)
         {
             try
             {
-                if (control as ComboBoxItem != null)
+                switch (control)
                 {
-                    ComboBoxItem comboBoxItem = (ComboBoxItem)control;
-                    CenterMouseOverComboBoxItem(comboBoxItem, row, scrollViewer);
-                }
-                if (control as ComboBox != null)
-                {
-                    ComboBox comboBox = (ComboBox)control;
-                    CenterMouseOverComboBox(comboBox);
-                }
-                if (control as Button != null)
-                {
-                    Button button = (Button)control;
-                    CenterMouseOverButton(button);
-                }
-                if (control as Image != null)
-                {
-                    Image image = (Image)control;
-                    CenterMouseOverImage(image, row, scrollViewer);
-                }
-                if (control as ToggleButton != null)
-                {
-                    ToggleButton tb = (ToggleButton)control;
-                    CenterMouseOverToggleButton(tb);
+                    case ComboBoxItem cbi:
+                        CenterMouseOverComboBoxItem(cbi, row, scrollViewer);
+                        break;
+                    case Image img:
+                        CenterMouseOverImage(img, row, scrollViewer);
+                        break;
+                    case Button btn when scrollViewer != null:
+                        // Buttons embedded in the main nav grid (History /
+                        // Shuffle pseudo-rows) need the same scroll-row-into-
+                        // view treatment as poster Images do.
+                        btn.Dispatcher.Invoke(() =>
+                        {
+                            ScrollGridRowIntoView(scrollViewer, row, btn);
+                            WarpCursorToCenter(btn);
+                        });
+                        break;
+                    case FrameworkElement fe:
+                        CenterMouseOverElement(fe);
+                        break;
                 }
             }
             catch (Exception ex)
@@ -823,107 +869,26 @@ namespace LVP_WPF.Windows
             }
         }
 
+        /// <summary>Plain "warp cursor to the visual center of this element."</summary>
+        private static void CenterMouseOverElement(FrameworkElement element)
+        {
+            element.Dispatcher.Invoke(() => WarpCursorToCenter(element));
+        }
+
         private void CenterMouseOverImage(Image image, int row = -1, ScrollViewer scrollViewer = null)
         {
             image.Dispatcher.Invoke(() =>
             {
-                if (scrollViewer != null)
-                {
-                    if (row == 0)
-                    {
-                        scrollViewer.ScrollToHome();
-                    }
-                    else if ((seasonWindowActive && row == seasonWindowGrid.Count - 1) ||
-                            (tvShowWindowActive && row == tvControlList.Count - 1) ||
-                            (mainWindowActive && row == mainWindowGrid.Count - 1))
-                    {
-                        scrollViewer.ScrollToBottom();
-                    }
-                    else
-                    {
-                        gui.scrollViewerAdjust = true;
-                        image.BringIntoView();
-                    }
-                    GuiModel.DoEvents();
-                }
-
-                Point target = image.PointToScreen(new Point(0, 0));
-                target.X += image.ActualWidth / 2;
-                target.Y += image.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
-        }
-
-        private static void CenterMouseOverButton(Button button)
-        {
-            button.Dispatcher.Invoke(() =>
-            {
-                Point target = button.PointToScreen(new Point(0, 0));
-                target.X += button.ActualWidth / 2;
-                target.Y += button.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
-        }
-
-        private static void CenterMouseOverToggleButton(ToggleButton tb)
-        {
-            tb.Dispatcher.Invoke(() =>
-            {
-                Point target = tb.PointToScreen(new Point(0, 0));
-                target.X += tb.ActualWidth / 2;
-                target.Y += tb.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
-        }
-
-        private static void CenterMouseOverComboBox(ComboBox comboBox)
-        {
-            comboBox.Dispatcher.Invoke(() =>
-            {
-                Point target = comboBox.PointToScreen(new Point(0, 0));
-                target.X += comboBox.ActualWidth / 2;
-                target.Y += comboBox.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
+                ScrollGridRowIntoView(scrollViewer, row, image);
+                WarpCursorToCenter(image);
             });
         }
 
         private async void CenterMouseOverComboBoxItem(ComboBoxItem comboBoxItem, int row = -1, ScrollViewer scrollViewer = null)
         {
             await Task.Delay(100);
-            if (scrollViewer != null)
-            {
-                if (row == 0)
-                {
-                    scrollViewer.Dispatcher.Invoke(() =>
-                    {
-                        scrollViewer.ScrollToHome();
-                    });
-                }
-                else if (row == langComboBoxItems.Count)
-                {
-                    scrollViewer.Dispatcher.Invoke(() =>
-                    {
-                        scrollViewer.ScrollToBottom();
-                    });
-                }
-                else
-                {
-                    gui.scrollViewerAdjust = true;
-                    comboBoxItem.Dispatcher.Invoke(() =>
-                    {
-                        comboBoxItem.BringIntoView();
-                    });
-                }
-                GuiModel.DoEvents();
-            }
-
-            comboBoxItem.Dispatcher.Invoke(() =>
-            {
-                Point target = comboBoxItem.PointToScreen(new Point(0d, 0d));
-                target.X += comboBoxItem.ActualWidth / 2;
-                target.Y += comboBoxItem.ActualHeight / 2;
-                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
-            });
+            ScrollDropdownRowIntoView(scrollViewer, row, comboBoxItem);
+            comboBoxItem.Dispatcher.Invoke(() => WarpCursorToCenter(comboBoxItem));
         }
 
         private static void CenterMouseOverComboBoxItem(Point p, ComboBoxItem c)
@@ -933,53 +898,85 @@ namespace LVP_WPF.Windows
             ComInterop.SetCursorPos((int)p.X, (int)p.Y);
         }
 
-        /*private void PrintGrid()
+        // Cursor-warp tail shared by every "center on control" path: take
+        // the control's top-left in screen coords, add half its rendered
+        // size, SetCursorPos. The caller is responsible for Dispatcher
+        // marshalling because the rules differ per call site.
+        //
+        // Guards: PointToScreen requires the element to be connected to a
+        // live PresentationSource (i.e., hosted in a Window with a valid
+        // HWND). When a window has just been closed or hasn't finished
+        // initializing, PointToScreen throws Win32Exception "Invalid window
+        // handle" - which used to bubble up through SeasonWindow.ShowDialog
+        // / TvShowWindow callbacks and crash the app. Skip the warp in
+        // those cases; the user just doesn't see a cursor move.
+        private static void WarpCursorToCenter(FrameworkElement element)
         {
-            List<int[]> ctrl = seasonWindowActive ? seasonWindowGrid : mainWindowGrid;
-            foreach (int[] row in ctrl)
+            if (element == null) return;
+            if (PresentationSource.FromVisual(element) == null) return;
+            try
             {
-                Debug.Write("[ ");
-                for (int i = 0; i < row.Length; i++)
-                {
-                    Debug.Write(row[i]);
-                    if (i != row.Length - 1)
-                    {
-                        Debug.Write(", ");
-                    }
-                }
-                Debug.WriteLine(" ]");
+                Point target = element.PointToScreen(new Point(0, 0));
+                target.X += element.ActualWidth / 2;
+                target.Y += element.ActualHeight / 2;
+                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
             }
-            Debug.WriteLine(Environment.NewLine);
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                Log.Warning("WarpCursorToCenter skipped: {Msg} (element {Type})", ex.Message, element.GetType().Name);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Log.Warning("WarpCursorToCenter skipped: {Msg} (element {Type})", ex.Message, element.GetType().Name);
+            }
         }
 
-        private void PrintControlGrid()
+        // Grid (image-tile) variant of the scroll dispatcher: row==0 goes
+        // home, row==(last) goes to the bottom, anything else brings the
+        // tile itself into view via the BringIntoView event.
+        private void ScrollGridRowIntoView(ScrollViewer scrollViewer, int row, FrameworkElement target)
         {
-            List<Image[]> ctrl = seasonWindowActive ? seasonWindowControlGrid : mainWindowControlGrid;
-            foreach (Image[] row in ctrl)
+            if (scrollViewer == null) return;
+            if (row == 0)
             {
-                Debug.Write("[ ");
-                for (int i = 0; i < row.Length; i++)
-                {
-                    string itemName;
-                    if (row[i] == null)
-                    {
-                        itemName = "null";
-                    }
-                    else
-                    {
-                        string[] item = row[i].Source.ToString().Split("/");
-                        itemName = item[item.Length - 2];
-                    }
-                    Debug.Write(itemName);
-
-                    if (i != row.Length - 1)
-                    {
-                        Debug.Write(", ");
-                    }
-                }
-                Debug.WriteLine(" ]");
+                scrollViewer.ScrollToHome();
             }
-            Debug.WriteLine(Environment.NewLine);
-        }*/
+            else if ((seasonWindowActive && row == seasonWindowGrid.Count - 1) ||
+                     (tvShowWindowActive && row == tvControlList.Count - 1) ||
+                     (mainWindowActive && row == mainWindowGrid.Count - 1))
+            {
+                scrollViewer.ScrollToBottom();
+            }
+            else
+            {
+                gui.scrollViewerAdjust = true;
+                target.BringIntoView();
+            }
+            WpfTreeHelpers.DoEvents();
+        }
+
+        // Dropdown variant of the scroll dispatcher (used for the language
+        // ComboBox popup). Same shape as the grid version but checks
+        // row==langComboBoxItems.Count for the bottom edge and dispatches
+        // the scroll on the ScrollViewer's own dispatcher to be safe across
+        // popup teardown.
+        private void ScrollDropdownRowIntoView(ScrollViewer scrollViewer, int row, ComboBoxItem item)
+        {
+            if (scrollViewer == null) return;
+            if (row == 0)
+            {
+                scrollViewer.Dispatcher.Invoke(() => scrollViewer.ScrollToHome());
+            }
+            else if (row == langComboBoxItems.Count)
+            {
+                scrollViewer.Dispatcher.Invoke(() => scrollViewer.ScrollToBottom());
+            }
+            else
+            {
+                gui.scrollViewerAdjust = true;
+                item.Dispatcher.Invoke(() => item.BringIntoView());
+            }
+            WpfTreeHelpers.DoEvents();
+        }
     }
 }

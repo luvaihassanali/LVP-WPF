@@ -97,16 +97,11 @@ namespace LVP_WPF
         /// instance containing the event data.</param>
         void Current_PreNotifyInput(object sender, NotifyInputEventArgs e)
         {
-            if (e.StagingItem.Input is MouseEventArgs
-                || e.StagingItem.Input is KeyboardEventArgs
-                || e.StagingItem.Input is TextCompositionEventArgs
-                || e.StagingItem.Input is StylusEventArgs)
+            // Anything else (e.g. PreviewExecuted, command routing) is an
+            // internal event not caused by user intervention; ignore it.
+            if (e.StagingItem.Input is MouseEventArgs or KeyboardEventArgs or TextCompositionEventArgs or StylusEventArgs)
             {
                 _lastActivityTime = Environment.TickCount;
-            }
-            else
-            {
-                // The event is an internal event not caused by user intervention
             }
         }
 

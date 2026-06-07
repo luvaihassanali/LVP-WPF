@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LibVLCSharp.Shared;
+using LVP_WPF.Services;
+using LVP_WPF.Util;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -17,21 +19,20 @@ namespace LVP_WPF.Windows
 
         public static void Show(Movie m)
         {
-            PlayerWindow.subtitleTrack = Int32.MaxValue;
-            PlayerWindow.subtitleFile = false;
+            SubtitleConfig.Track = Int32.MaxValue;
+            SubtitleConfig.HasSrtFile = false;
             movie = m;
 
             TimeSpan temp = TimeSpan.FromMinutes(movie.RunningTime);
-            string hour = temp.Hours > 1 ? "hours " : "hour ";
-            string img = movie.Backdrop == null ? "Resources\\noPrevWide.png" : movie.Backdrop;
-
+            string hourUnit = temp.Hours == 1 ? "hour" : "hours";
+            string minuteUnit = temp.Minutes == 1 ? "minute" : "minutes";
             MovieWindow window = new MovieWindow
             {
                 MovieName = $"{movie.Name} ({movie.Date.GetValueOrDefault().Year})",
-                RunningTime = $"Running time: {temp.Hours} {hour} {temp.Minutes} minutes",
-                Description = movie.Overview, //.Length > 1011 ? $"{movie.Overview.Substring(0, 1011)}..." : movie.Overview;
-                Backdrop = Cache.LoadImage(img, 960),
-                Overlay = Cache.LoadImage("Resources\\play.png", 960)
+                RunningTime = $"Running time: {temp.Hours} {hourUnit} {temp.Minutes} {minuteUnit}",
+                Description = movie.Overview,
+                Backdrop = ImageLoader.LoadBackdrop(movie.Backdrop),
+                Overlay = ImageLoader.PlayOverlay
             };
             window.ShowDialog();
         }
@@ -74,14 +75,7 @@ namespace LVP_WPF.Windows
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
-            if (!TcpSerialListener.layoutPoint.incomingSerialMsg)
-            {
-                TcpSerialListener.layoutPoint.CloseCurrWindow(false);
-            }
-            else
-            {
-                TcpSerialListener.layoutPoint.incomingSerialMsg = false;
-            }
+            TcpSerialListener.layoutPoint.NotifyWindowClosedFromUI();
         }
 
         private void MovieWindow_Loaded(object sender, RoutedEventArgs e)
@@ -95,13 +89,7 @@ namespace LVP_WPF.Windows
                 TcpSerialListener.layoutPoint.movieLangComboBox = this.subTrackComboBox;
 
                 subTrackComboBox.IsDropDownOpen = true;
-                for (int i = 0; i < subTrackComboBox.Items.Count; i++)
-                {
-                    ComboBoxItem item = (ComboBoxItem)subTrackComboBox.ItemContainerGenerator.ContainerFromIndex(i);
-                    Point pos = item.PointToScreen(new Point(0d, 0d));
-                    TcpSerialListener.layoutPoint.langComboBoxItems.Add(item);
-                    TcpSerialListener.layoutPoint.langComboBoxItemPts.Add(pos);
-                }
+                TcpSerialListener.layoutPoint.CaptureComboBoxItems(subTrackComboBox, capturePositions: true);
                 subTrackComboBox.IsDropDownOpen = false;
             }
             TcpSerialListener.layoutPoint.Select("MovieWindow", true);
@@ -132,15 +120,10 @@ namespace LVP_WPF.Windows
                 return;
             }
 
-            string[] pathParts = movie.Path.Split("\\");
-            string path = "";
-            for (int i = 0; i < pathParts.Length - 1; i++)
-            {
-                path += $"{pathParts[i]}\\";
-            }
-            string name = pathParts[pathParts.Length - 1].Split('.')[0];
-
-            string[] movieFiles = Directory.GetFiles(path);
+            string dir = Path.GetDirectoryName(movie.Path) ?? "";
+            string[] movieFiles = Directory.GetFiles(dir);
+            // If the directory has only one file (the movie itself), there's
+            // no companion .srt; nothing to enable.
             if (movieFiles.Length == 1)
             {
                 return;
@@ -153,11 +136,7 @@ namespace LVP_WPF.Windows
             subTrackComboBox.SelectedIndex = 0;
 
             subTrackComboBox.IsDropDownOpen = true;
-            for (int i = 0; i < subTrackComboBox.Items.Count; i++)
-            {
-                ComboBoxItem item = (ComboBoxItem)subTrackComboBox.ItemContainerGenerator.ContainerFromIndex(i);
-                TcpSerialListener.layoutPoint.langComboBoxItems.Add(item);
-            }
+            TcpSerialListener.layoutPoint.CaptureComboBoxItems(subTrackComboBox, capturePositions: false);
 
             langScrollViewer = (ScrollViewer)subTrackComboBox.Template.FindName("DropDownSV", subTrackComboBox);
             langScrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
@@ -169,38 +148,25 @@ namespace LVP_WPF.Windows
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             scrollViewerOffset = e.VerticalOffset;
-            if (e.VerticalOffset == 0)
-            {
-                closeButton.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                closeButton.Visibility = Visibility.Hidden;
-            }
-
-            if (MainWindow.gui.scrollViewerAdjust)
-            {
-                MainWindow.gui.scrollViewerAdjust = false;
-                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
-                langScrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
-            }
+            closeButton.Visibility = e.VerticalOffset == 0 ? Visibility.Visible : Visibility.Hidden;
+            ScrollHelper.ApplyAdjust(langScrollViewer, e);
         }
 
         private void SubTrackComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (subTrackComboBox.SelectedIndex == 0)
             {
-                PlayerWindow.subtitleTrack = Int32.MaxValue;
-                PlayerWindow.subtitleFile = false;
+                SubtitleConfig.Track = Int32.MaxValue;
+                SubtitleConfig.HasSrtFile = false;
             }
             else
             {
                 if (srtFileExists)
                 {
-                    PlayerWindow.subtitleFile = true;
+                    SubtitleConfig.HasSrtFile = true;
                     return;
                 }
-                PlayerWindow.subtitleTrack = subTrackComboBox.SelectedIndex - 1;
+                SubtitleConfig.Track = subTrackComboBox.SelectedIndex - 1;
             }
         }
 

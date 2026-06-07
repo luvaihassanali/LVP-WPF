@@ -1,4 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LVP_WPF.Models;
+using LVP_WPF.Services;
 using System;
 using System.Windows;
 
@@ -7,17 +9,25 @@ namespace LVP_WPF
     [ObservableObject]
     public partial class OptionDialog : Window
     {
-        private static int returnId = -1;
+        /// <summary>
+        /// True while an OptionDialog is on screen. Read by App.xaml.cs's
+        /// GlobalKeyUp handler to gate keyboard navigation while the user
+        /// is making their TMDB-disambiguation choice.
+        /// </summary>
         internal static bool shown = false;
+
+        private int selectedId = -1;
 
         public static int Show(string title, string path, string[][] info, DateTime?[] dates)
         {
             shown = true;
-            OptionDialog dialog = new OptionDialog();
-            dialog.Caption = $"{title}?";
-            dialog.Message = $"Select the correct entry for: {title}";
-            dialog.Path = path;
-            dialog.Topmost = true;
+            OptionDialog dialog = new OptionDialog
+            {
+                Caption = $"{title}?",
+                Message = $"Select the correct entry for: {title}",
+                Path = path,
+                Topmost = true
+            };
             OptionWindowBox[] entries = new OptionWindowBox[info[0].Length];
             for (int i = 0; i < info[0].Length; i++)
             {
@@ -31,7 +41,7 @@ namespace LVP_WPF
             dialog.OptionListView.ItemsSource = entries;
             dialog.ShowDialog();
             shown = false;
-            return returnId;
+            return dialog.selectedId;
         }
 
         [ObservableProperty]
@@ -49,7 +59,7 @@ namespace LVP_WPF
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
-            GuiModel.RestoreSystemCursor();
+            CursorManager.RestoreSystemCursor();
             Application.Current.Shutdown();
         }
 
@@ -61,7 +71,7 @@ namespace LVP_WPF
             }
 
             OptionWindowBox o = (OptionWindowBox)OptionListView.SelectedItem;
-            returnId = o.Id;
+            selectedId = o.Id;
             this.Close();
         }
 

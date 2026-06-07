@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LVP_WPF.Services;
 using System;
 using System.Windows;
 
@@ -7,7 +8,7 @@ namespace LVP_WPF
     [ObservableObject]
     public partial class InputDialog : Window
     {
-        private static string tmdbUrl;
+        private string tmdbUrl;
 
         public static bool Show(string caption, string message, TvShow tvShow = null, int currSeason = 0)
         {
@@ -26,7 +27,7 @@ namespace LVP_WPF
                 }
                 else
                 {
-                    tmdbUrl = $"https://www.themoviedb.org/tv/{tvShow.Id}/season/{currSeason - 1}";
+                    dialog.tmdbUrl = $"https://www.themoviedb.org/tv/{tvShow.Id}/season/{currSeason - 1}";
                 }
                 dialog.ShowDialog();
                 if (dialog.DialogResult != null && (bool)dialog.DialogResult)
@@ -50,7 +51,7 @@ namespace LVP_WPF
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
-            GuiModel.RestoreSystemCursor();
+            CursorManager.RestoreSystemCursor();
             Environment.Exit(0);
         }
 

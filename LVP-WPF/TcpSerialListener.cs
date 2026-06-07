@@ -1,8 +1,6 @@
-﻿using LVP_WPF.Windows;
-using Serilog;
+﻿using LVP_WPF.Services;
+using LVP_WPF.Windows;
 using System;
-using System.Configuration;
-using System.IO.Ports;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
@@ -21,33 +19,31 @@ namespace LVP_WPF
         private string esp8266ServerIp;
         private int esp8266ServerPort;
         private bool esp8266Enabled;
-        private int joystickX;
-        private int joystickY;
         private bool workerThreadRunning;
 
         internal GuiModel gui;
         public static LayoutPoint layoutPoint;
         private static System.Timers.Timer pollingTimer;
-        private static Thread dispatcher;
+        private static Thread dispatcherThread;
+        private static Dispatcher featureDispatcher;
 
-        private SerialPort serialPort;
-        public bool serialPortEnabled;
-        private int serialPortExCount = 20;
         private TcpClient tcpClient;
         private Thread workerThread;
+        private IrSerialReader serialReader;
 
         public TcpSerialListener(GuiModel g)
         {
-            dispatcher = null;
+            dispatcherThread = null;
+            featureDispatcher = null;
             gui = g;
             connectionEstablished = false;
             workerThreadRunning = false;
-            esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
-            esp8266ServerPort = Int32.Parse(ConfigurationManager.AppSettings["Esp8266Port"]);
-            esp8266Enabled = bool.Parse(ConfigurationManager.AppSettings["Esp8226Enabled"]);
-            serialPortEnabled = bool.Parse(ConfigurationManager.AppSettings["SerialPortEnabled"]);
+            esp8266ServerIp = AppConfig.Esp8266Ip;
+            esp8266ServerPort = AppConfig.Esp8266Port;
+            esp8266Enabled = AppConfig.Esp8266Enabled;
+            serialReader = new IrSerialReader(g);
             layoutPoint = new LayoutPoint(g);
-            if (GuiModel.hideCursor)
+            if (CursorConfig.HideCursor)
             {
                 Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
             }
@@ -55,9 +51,9 @@ namespace LVP_WPF
 
         public void StartThread()
         {
-            if (serialPortEnabled)
+            if (serialReader.Enabled)
             {
-                InitializeSerialPort();
+                serialReader.Initialize();
             }
             try
             {
@@ -103,7 +99,7 @@ namespace LVP_WPF
 
         private void StartListener()
         {
-            while (workerThreadRunning && (esp8266Enabled || serialPortEnabled))
+            while (workerThreadRunning && (esp8266Enabled || serialReader.Enabled))
             {
                 PollConnections();
             }
@@ -146,7 +142,7 @@ namespace LVP_WPF
                     }
                 }
                 ComInterop.CloseTeamViewerDialog();
-                CheckSerialConnection();
+                serialReader.CheckConnection();
             }
 
             pingSender.Dispose();
@@ -164,9 +160,9 @@ namespace LVP_WPF
                 result = tcpClient.BeginConnect(esp8266ServerIp, esp8266ServerPort, null, null);
                 success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(2));
 
-                while (!success)
+                if (!success)
                 {
-                    DebugLog("Cannot connect to server. Trying again");
+                    DebugLog("Cannot connect to server");
                     return;
                 }
 
@@ -187,10 +183,11 @@ namespace LVP_WPF
                 DebugLog("Sent init");
                 StartTimer();
 
-                while (true)
-                {
-                    RunServerWorker(stream, result, data);
-                }
+                // RunServerWorker reads the stream until EOF, then closes
+                // both the stream and the tcpClient. The old `while (true)`
+                // here was a no-op in practice: a second call would Read
+                // from a closed stream, throw, and bail to the outer catch.
+                RunServerWorker(stream, result, data);
             }
             catch (Exception e)
             {
@@ -220,7 +217,7 @@ namespace LVP_WPF
                 if (buffer.Contains("initack"))
                 {
                     DebugLog("initack received");
-                    ComInterop.SetCursorPos(GuiModel.hideCursorX, GuiModel.hideCursorY);
+                    ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
                     DoMouseClick();
                     StopTimer();
                     StartTimer();
@@ -236,7 +233,7 @@ namespace LVP_WPF
                     StartTimer();
                 }
 
-                if (!buffer.Contains("ok") && !buffer.Contains("ka") && !buffer.Contains("initack"))
+                if (!IsControlMessage(buffer))
                 {
                     ParseTcpDataIn(buffer);
                 }
@@ -252,261 +249,111 @@ namespace LVP_WPF
 
         private void ParseTcpDataIn(string data)
         {
-            if (GuiModel.hideCursor)
+            if (CursorConfig.HideCursor)
             {
                 Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.Arrow; }));
             }
 
-            string[] dataSplit = data.Split(',');
-            if (dataSplit.Length > 6)
+            JoystickReading? reading = JoystickReading.TryParse(data);
+            if (reading == null)
             {
                 DebugLog($"Error. Message incorrect format: {data}");
                 return;
             }
+            JoystickReading r = reading.Value;
 
-            joystickX = Int32.Parse(dataSplit[0]);
-            joystickY = Int32.Parse(dataSplit[1]);
-            int joystickBtnState = Int32.Parse(dataSplit[2]);
-            int scrollBtnState = Int32.Parse(dataSplit[4].Replace("\r\n", ""));
-            int clickBtnState = Int32.Parse(dataSplit[3].Replace("\r\n", ""));
-
-            if (scrollBtnState == 0 && clickBtnState == 0)
+            // Easter egg: holding scroll + click at the same time pops Task Manager.
+            if (r.ScrollButton && r.ClickButton)
             {
                 System.Diagnostics.Process.Start("taskmgr.exe");
             }
 
-            if (joystickBtnState == 0 || clickBtnState == 0)
+            if (r.JoystickButton || r.ClickButton)
             {
                 DoMouseClick();
                 return;
             }
 
-            if (scrollBtnState == 0)
+            if (r.ScrollButton)
             {
-                joystickY = joystickY * 4;
-                ComInterop.mouse_event(ComInterop.MOUSEEVENTF_WHEEL, 0, 0, (uint)joystickY, 0);
+                // Mouse-wheel mode: send vertical scroll, magnitude scaled up 4x.
+                ComInterop.mouse_event(ComInterop.MOUSEEVENTF_WHEEL, 0, 0, (uint)(r.Y * 4), 0);
             }
             else
             {
-                DoMouseMove();
+                DoMouseMove(r.X, r.Y);
             }
         }
 
-        async void DoMouseMove()
+        // The joystick reports magnitude as an analog value; we divide it
+        // down to a per-tick pixel delta. Larger divisor = slower cursor:
+        // tiny deflections (|x| < 150) get the slowest, mid deflections
+        // get medium, and full-deflection runs at the highest speed.
+        async void DoMouseMove(int x, int y)
         {
-            //joystickX = -joystickX;
-            joystickY = -joystickY;
-            int divisor = 20;
-            if ((joystickX > 0 && joystickX < 150) || (joystickX < 0 && joystickX > -150))
-            {
-                divisor = 60;
-            }
-            else if ((joystickX > 150 && joystickX < 400) || (joystickX < -150 && joystickX > -400))
-            {
-                divisor = 40;
-            }
+            y = -y;
+            int absX = Math.Abs(x);
+            int divisor = absX < 150 ? 60
+                        : absX < 400 ? 40
+                        : 20;
 
             for (int i = 0; i < 15; i++)
             {
-                ComInterop.POINT currPos;
-                ComInterop.GetCursorPos(out currPos);
-                uint X = (uint)currPos.X;
-                uint Y = (uint)currPos.Y;
-                ComInterop.SetCursorPos((int)currPos.X + joystickX / divisor, (int)currPos.Y + joystickY / divisor);
+                ComInterop.GetCursorPos(out ComInterop.POINT currPos);
+                ComInterop.SetCursorPos(currPos.X + x / divisor, currPos.Y + y / divisor);
                 await Task.Delay(1);
             }
-
         }
 
-        static public void DoMouseClick()
+        public static void DoMouseClick()
+            => SendMouseEventAtCursor(ComInterop.MOUSEEVENTF_LEFTDOWN | ComInterop.MOUSEEVENTF_LEFTUP);
+
+        public static void DoMouseRightClick()
+            => SendMouseEventAtCursor(ComInterop.MOUSEEVENTF_RIGHTDOWN | ComInterop.MOUSEEVENTF_RIGHTUP);
+
+        private static void SendMouseEventAtCursor(uint flags)
         {
-            ComInterop.POINT currPos;
-            ComInterop.GetCursorPos(out currPos);
-            uint X = (uint)currPos.X;
-            uint Y = (uint)currPos.Y;
-            ComInterop.mouse_event(ComInterop.MOUSEEVENTF_LEFTDOWN | ComInterop.MOUSEEVENTF_LEFTUP, X, Y, 0, 0);
+            ComInterop.GetCursorPos(out ComInterop.POINT pos);
+            ComInterop.mouse_event(flags, (uint)pos.X, (uint)pos.Y, 0, 0);
         }
 
-        static public void DoMouseRightClick()
-        {
-            ComInterop.POINT currPos;
-            ComInterop.GetCursorPos(out currPos);
-            uint X = (uint)currPos.X;
-            uint Y = (uint)currPos.Y;
-            ComInterop.mouse_event(ComInterop.MOUSEEVENTF_RIGHTDOWN | ComInterop.MOUSEEVENTF_RIGHTUP, X, Y, 0, 0);
-        }
-
-        public void InitializeSerialPort()
-        {
-            string portNumber = ConfigurationManager.AppSettings["SerialPort"];
-            serialPort = new SerialPort
-            {
-                PortName = $"COM{portNumber}",
-                BaudRate = 9600,
-                DataBits = 8,
-                Parity = Parity.None,
-                StopBits = StopBits.One,
-                Handshake = Handshake.None
-            };
-            serialPort.DataReceived += SerialPort_DataReceived;
-            if (serialPortEnabled)
-            {
-                try
-                {
-                    serialPort.Open();
-                    Log.Information("Serial port connected");
-                }
-                catch
-                {
-                    serialPortExCount--;
-                    if (serialPortExCount < 0)
-                    {
-                        serialPortEnabled = false;
-                    }
-                    Log.Warning("No device connected to serial port");
-                }
-            }
-        }
-
-        private void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
-        {
-            SerialPort serialPort = (SerialPort)sender;
-            if (e.EventType == SerialData.Chars)
-            {
-                string msg = serialPort.ReadLine();
-                msg = msg.Replace("\r", "");
-                Log.Information(msg);
-                if (GuiModel.hideCursor)
-                {
-                    Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
-                }
-                switch (msg)
-                {
-                    case "left":
-                        layoutPoint.Move(layoutPoint.left);
-                        break;
-                    case "right":
-                        layoutPoint.Move(layoutPoint.right);
-                        break;
-                    case "up":
-                        layoutPoint.Move(layoutPoint.up);
-                        break;
-                    case "down":
-                        layoutPoint.Move(layoutPoint.down);
-                        break;
-                    case "enter":
-                        if (layoutPoint.playerWindowActive)
-                        {
-                            gui.playerWindow.TcpSerialListener_PlayPause();
-                        }
-                        else if (layoutPoint.mainWindowActive)
-                        {
-                            DoMouseClick();
-                        }
-                        else
-                        {
-                            DoMouseClick();
-                            if (!layoutPoint.seasonWindowActive)
-                            {
-                                layoutPoint.Select(String.Empty);
-                            }
-                        }
-                        break;
-                    case "return":
-                        layoutPoint.CloseCurrWindow();
-                        break;
-                    case "play":
-                    case "pause":
-                        gui.playerWindow.TcpSerialListener_PlayPause();
-                        break;
-                    case "stop":
-                        gui.playerWindow.TcpSerialListener_PlayPause();
-                        break;
-                    case "fastforward":
-                        gui.playerWindow.TcpSerialListener_Seek(false);
-                        break;
-                    case "rewind":
-                        gui.playerWindow.TcpSerialListener_Seek(true);
-                        break;
-                    case "forward":
-                        gui.playerWindow.TcpSerialListerner_BeginEnd(false);
-                        break;
-                    case "backward":
-                        gui.playerWindow.TcpSerialListerner_BeginEnd(true);
-                        break;
-                    case "cartoons":
-                        StaThreadWrapper(() =>
-                        {
-                            TvShowWindow.PlayRandomCartoons();
-                        });
-                        break;
-                    case "history-play":
-                        StaThreadWrapper(() =>
-                        {
-                            TvShowWindow.PlayHistoryList();
-                        });
-                        break;
-                }
-            }
-        }
-
+        /// <summary>
+        /// Spins up an STA thread that runs <paramref name="action"/> and then
+        /// pumps a WPF Dispatcher (so the action can own modal windows like
+        /// PlayerWindow from outside the main UI thread). Use EndFeature to
+        /// shut it down cleanly.
+        /// </summary>
         internal static void StaThreadWrapper(Action action)
         {
-            dispatcher = new Thread(o =>
+            ManualResetEventSlim ready = new ManualResetEventSlim(false);
+            dispatcherThread = new Thread(() =>
             {
+                // Capture the Dispatcher for *this* thread so EndFeature can
+                // call InvokeShutdown from elsewhere to break the pump cleanly.
+                featureDispatcher = Dispatcher.CurrentDispatcher;
+                ready.Set();
                 action();
                 Dispatcher.Run();
             });
-            dispatcher.SetApartmentState(ApartmentState.STA);
-            dispatcher.IsBackground = true;
-            dispatcher.Start();
+            dispatcherThread.SetApartmentState(ApartmentState.STA);
+            dispatcherThread.IsBackground = true;
+            dispatcherThread.Start();
+            ready.Wait();
         }
 
+        /// <summary>
+        /// Stops the feature thread started by StaThreadWrapper. Uses
+        /// Dispatcher.InvokeShutdown - the .NET-6+ replacement for the
+        /// Thread.Abort pattern this code used to use (which throws
+        /// PlatformNotSupportedException at runtime).
+        /// </summary>
         internal static void EndFeature()
         {
-            if (dispatcher != null)
-            {
-                try
-                {
-#pragma warning disable SYSLIB0006 // Type or member is obsolete
-                    dispatcher.Abort();
-                }
-                catch (ThreadAbortException)
-                {
-                    Thread.ResetAbort();
-#pragma warning restore SYSLIB0006 // Type or member is obsolete
-                }
-
-                dispatcher.Join();
-                dispatcher = null;
-            }
-        }
-
-        private void CheckSerialConnection()
-        {
-            if (serialPortEnabled)
-            {
-                if (serialPort != null)
-                {
-                    if (!serialPort.IsOpen)
-                    {
-                        try
-                        {
-                            serialPort.Open();
-                            Log.Information("Serial port connected");
-                        }
-                        catch
-                        {
-                            serialPortExCount--;
-                            if (serialPortExCount < 0)
-                            {
-                                serialPortEnabled = false;
-                            }
-                            //Log.Information("No device connected");
-                        }
-                    }
-                }
-            }
+            if (dispatcherThread == null) return;
+            featureDispatcher?.InvokeShutdown();
+            dispatcherThread.Join();
+            dispatcherThread = null;
+            featureDispatcher = null;
         }
 
         private void StartTimer()
@@ -523,9 +370,15 @@ namespace LVP_WPF
 
         private void StopTimer()
         {
+            if (pollingTimer == null) return;
             pollingTimer.Enabled = false;
             pollingTimer.Stop();
         }
+
+        // ESP8266 protocol messages we shouldn't try to parse as a joystick
+        // reading: "ok" / "ka" (keepalives) / "initack" (handshake response).
+        private static bool IsControlMessage(string buffer)
+            => buffer.Contains("ok") || buffer.Contains("ka") || buffer.Contains("initack");
 
         private void PollingTimer_Tick(Object source, System.Timers.ElapsedEventArgs e)
         {

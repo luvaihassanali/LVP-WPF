@@ -1,4 +1,7 @@
-﻿using System;
+﻿using LVP_WPF.Models;
+using LVP_WPF.Services;
+using LVP_WPF.Util;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -29,7 +32,7 @@ namespace LVP_WPF.Windows
                 seasonBoxes[i] = new SeasonWindowBox
                 {
                     Id = tvShow.Seasons[i].Id,
-                    Image = Cache.LoadImage(img, 200)
+                    Image = ImageLoader.Load(img, 200)
                 };
             }
             seasons = seasonBoxes;
@@ -48,10 +51,30 @@ namespace LVP_WPF.Windows
 
         private void SeasonListView_Click(object sender, RoutedEventArgs e)
         {
-            TcpSerialListener.layoutPoint.Select(String.Empty);
             SeasonWindowBox item = (SeasonWindowBox)(sender as ListView).SelectedItem;
+            if (item == null) return;
             seasonIndex = item.Id;
-            this.Close();
+            // Defer BOTH the layout-state cleanup AND the window Close to
+            // after the WPF click chain completes. The handler is wired to
+            // PreviewMouseLeftButtonUp (tunneling phase); WPF still has the
+            // bubbling MouseLeftButtonUp + ListView's internal MouseUp
+            // processing to run on the same event. Closing the window
+            // synchronously here destroys the HWND mid-chain and downstream
+            // handlers in PresentationCore throw Win32Exception "Invalid
+            // window handle".
+            //
+            // Critically, Select("") must also be deferred and run in the
+            // SAME dispatcher item as Close. If Select runs immediately,
+            // layoutpoint flips to "tvShow active" while the SeasonWindow is
+            // still visually open and the modal pump is still active - any
+            // IR-remote / joystick input during that window routes to the
+            // wrong nav target and the app gets confused (the "layout point
+            // goes back to tv form while season form still open" symptom).
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                TcpSerialListener.layoutPoint.Select(String.Empty);
+                Close();
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private void SeasonWindow_Loaded(object sender, RoutedEventArgs e)
@@ -60,10 +83,10 @@ namespace LVP_WPF.Windows
             for (int j = 0; j < seasons.Length; j++)
             {
                 ListViewItem container = (ListViewItem)generator.ContainerFromItem(seasons[j]);
-                Image img = GuiModel.GetChildrenByType(container, typeof(Image), "seasonImage") as Image;
+                Image img = WpfTreeHelpers.GetChildrenByType(container, typeof(Image), "seasonImage") as Image;
                 TcpSerialListener.layoutPoint.seasonControlList.Add(img);
             }
-            scrollViewer = (ScrollViewer)GuiModel.GetScrollViewer(SeasonListView);
+            scrollViewer = (ScrollViewer)WpfTreeHelpers.GetScrollViewer(SeasonListView);
             scrollViewer.ScrollChanged += ScrollViewer_ScrollChanged;
             MainWindow.gui.seasonScrollViewer = scrollViewer;
             TcpSerialListener.layoutPoint.seasonIndex = seasonIndex;
@@ -73,26 +96,11 @@ namespace LVP_WPF.Windows
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             scrollViewerOffset = e.VerticalOffset;
-            if (MainWindow.gui.scrollViewerAdjust)
-            {
-                MainWindow.gui.scrollViewerAdjust = false;
-                double offsetPadding = e.VerticalChange > 0 ? 300 : -300;
-                scrollViewer.ScrollToVerticalOffset(e.VerticalOffset + offsetPadding);
-            }
+            ScrollHelper.ApplyAdjust(scrollViewer, e);
         }
 
         private void Window_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
-        {
-            if (e.Delta > 0)
-            {
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset - 300);
-            }
-            else
-            {
-
-                scrollViewer.ScrollToVerticalOffset(scrollViewerOffset + 300);
-            }
-        }
+            => ScrollHelper.StepFromWheel(scrollViewer, scrollViewerOffset, e);
 
         private void SeasonListView_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
