@@ -135,21 +135,33 @@ namespace LVP_WPF
         internal bool CheckForUpdates()
         {
             Log("Check for updates start...");
+
+            // TEMP instrumentation - throwaway, remove after profiling.
+            // Splits CheckForUpdates into its three sub-phases so we can see
+            // which one dominates startup time on a real library.
+            Stopwatch sw = Stopwatch.StartNew();
             MainModel? prevMedia = _repository.Load();
+            Log($"  Load: {sw.ElapsedMilliseconds}ms");
 
             if (prevMedia == null)
             {
                 return true;
             }
 
+            sw.Restart();
             bool result = !MainWindow.model.Compare(prevMedia);
+            Log($"  Compare: {sw.ElapsedMilliseconds}ms (changed={result})");
+
+            sw.Restart();
             if (!result)
             {
                 MainWindow.model = prevMedia;
+                Log($"  Swap: {sw.ElapsedMilliseconds}ms");
             }
             else
             {
                 MainWindow.model.Ingest(prevMedia);
+                Log($"  Ingest: {sw.ElapsedMilliseconds}ms");
             }
             Log("Check for updates end");
             return result;
