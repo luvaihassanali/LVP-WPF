@@ -3,21 +3,172 @@ using System.IO;
 
 namespace MediaIndexUtil
 {
+    /// <summary>
+    /// MediaHub - WinForms utility for managing the local media library's
+    /// "NN % EpisodeName.ext" filename convention.
+    ///
+    /// Layout (3 panels via splitContainer1 / splitContainer2):
+    ///   Left   (treeView1)  - folder tree, browse-able via Browse button
+    ///   Middle (listView1)  - selected folder's contents (subdirs + files)
+    ///   Right  (listView2)  - rename queue + action panel (panel1)
+    ///
+    /// Workflows:
+    ///   Default Rename - click files in the middle list to queue them,
+    ///     type a starting index, click Rename. Queued files get renumbered
+    ///     "NN % name" starting from that index, +1 per file.
+    ///
+    ///   SRT checkbox   - rename mode: pair every 2 consecutive sorted files
+    ///                    (video + .srt) in the current folder, rename the
+    ///                    .srt to match the video's base name.
+    ///
+    ///   LANG checkbox  - rename mode: mirror current "\en\" folder's
+    ///                    filenames to the sibling "\it\" folder (kept in
+    ///                    sync for multi-language shows).
+    ///
+    ///   COPY checkbox  - same as LANG but the user picks the target folder
+    ///                    via a FolderBrowserDialog instead of the hardcoded
+    ///                    "\en\" -> "\it\" swap.
+    ///
+    ///   Tree button    - create a shadow directory tree at the current
+    ///                    folder's name with empty .txt/.srt placeholders
+    ///                    (for sharing folder structure without files).
+    ///                    KNOWN BUG: CreateTreeV2 does filename.Split(".")
+    ///                    and keeps [0] only, so any name with an internal
+    ///                    period gets truncated. This is the bug that turned
+    ///                    "Goku vs. Vegeta.mp4" into "Goku vs.txt".
+    ///
+    ///   Compare button - diff the current folder against a user-picked
+    ///                    folder; writes per-season mismatch report to
+    ///                    log.txt and opens it in Notepad.
+    /// </summary>
     public partial class Form1 : Form
     {
         private List<string[]> indexRenameList = new List<string[]>();
         private TreeNode rootNode = null;
         private string currentFolder = String.Empty;
         private string log = String.Empty;
+        // Promoted from a local in SetupToolTips so MouseEnter/MouseLeave
+        // handlers (used to force-show tooltips on controls where WinForms'
+        // automatic hover detection doesn't fire, notably TextBox) can
+        // reference the same ToolTip instance.
+        private ToolTip _toolTip;
 
         public Form1()
         {
             string path = MediaHub.Properties.Settings.Default.path;
             if (path.Equals(String.Empty) || !Directory.Exists(path)) path = "..\\.";
             InitializeComponent();
+            SetupToolTips();
             PopulateTreeView(path);
             TreeView1_NodeMouseClick(null, null);
             treeView1.ExpandAll();
+        }
+
+        /// <summary>
+        /// Wires hover tooltips onto every interactive control. Added
+        /// programmatically (rather than via the WinForms Designer) so the
+        /// Designer.cs regen doesn't drop them if the form is reopened.
+        /// </summary>
+        private void SetupToolTips()
+        {
+            _toolTip = new ToolTip
+            {
+                AutoPopDelay = 15000,    // tooltip stays for 15s once shown
+                InitialDelay = 400,
+                ReshowDelay = 300,
+                ShowAlways = true,
+            };
+            ToolTip t = _toolTip;
+
+            t.SetToolTip(treeView1,
+                "FOLDER TREE\n" +
+                "Click a folder to load its contents in the middle pane. The\n" +
+                "selected folder becomes the 'current folder' that Rename /\n" +
+                "Compare / Tree / Browse operations target.");
+
+            t.SetToolTip(OpenFolder_Button,
+                "BROWSE\n" +
+                "Pick a new root folder for the tree. The last-used path is\n" +
+                "remembered across sessions (saved on form close).");
+
+            t.SetToolTip(listView1,
+                "CURRENT FOLDER CONTENTS\n" +
+                "Subdirs + files of the folder selected in the tree.\n" +
+                "Click any file to add it to the rename queue on the right.\n" +
+                "The filename is split on '%' to extract its '{index} % {name}'\n" +
+                "parts.");
+
+            t.SetToolTip(listView2,
+                "RENAME QUEUE\n" +
+                "Files clicked in the middle pane land here. Click an entry to\n" +
+                "remove it from the queue. Hit Rename to commit the renumbering.");
+
+            // TextBox uses the native Edit control under the hood and tends
+            // to swallow WM_MOUSEHOVER, so ToolTip's automatic display
+            // doesn't fire. Force it via MouseEnter/MouseLeave instead.
+            string textBoxTip =
+                "STARTING INDEX\n" +
+                "Number the first queued file should be renamed to. Subsequent\n" +
+                "files get +1, +2, ... in queue order. Values < 10 are zero-\n" +
+                "padded ('01', '02', ...).";
+            t.SetToolTip(textBox1, textBoxTip);  // still set for accessibility
+            textBox1.MouseEnter += (s, e) =>
+                _toolTip.Show(textBoxTip, textBox1, 0, textBox1.Height + 2, _toolTip.AutoPopDelay);
+            textBox1.MouseLeave += (s, e) => _toolTip.Hide(textBox1);
+
+            t.SetToolTip(Rename_Button,
+                "RENAME\n" +
+                "Default behavior (no checkbox below): renumber every queued file\n" +
+                "as '{index} % {original-name-after-%}' starting from the text\n" +
+                "box value.\n" +
+                "If exactly one of SRT / LANG / COPY is checked, runs that mode\n" +
+                "instead (mutually exclusive - checking more than one shows an\n" +
+                "error). The rename queue / textbox are ignored in those modes.");
+
+            t.SetToolTip(checkBox1,
+                "SRT MODE (when Rename clicked)\n" +
+                "Pair every 2 consecutive sorted files in the current folder\n" +
+                "(assumed to be video + .srt) and rename the .srt to match the\n" +
+                "video's base name. Use after dropping new subtitles into a\n" +
+                "season folder where the filenames don't already match.\n" +
+                "Mutually exclusive with LANG and COPY.");
+
+            t.SetToolTip(checkBox2,
+                "LANG MODE (when Rename clicked)\n" +
+                "Mirror the current '\\en\\' folder's filenames to the sibling\n" +
+                "'\\it\\' folder (sorted, position-by-position). Used to keep\n" +
+                "the Italian-track files renamed in sync with the English ones\n" +
+                "after rebatching. Requires the current folder path to contain\n" +
+                "'\\en\\'. Mutually exclusive with SRT and COPY.");
+
+            t.SetToolTip(checkBox3,
+                "COPY MODE (when Rename clicked)\n" +
+                "Like LANG, but instead of the '\\en\\' -> '\\it\\' swap you\n" +
+                "pick the target folder via a FolderBrowserDialog. Use when\n" +
+                "the two folders aren't related by the en/it convention.\n" +
+                "Mutually exclusive with SRT and LANG.");
+
+            t.SetToolTip(Tree_Button,
+                "TREE\n" +
+                "Build a shadow directory tree at the current folder's name\n" +
+                "(in MediaHub's working dir), mirroring the folder structure\n" +
+                "but with empty .txt / .srt placeholders instead of the real\n" +
+                "media files. Used to share library structure without the\n" +
+                "files themselves.\n" +
+                "KNOWN BUG: CreateTreeV2 does filename.Split('.') and keeps\n" +
+                "only [0], so any filename containing an internal period gets\n" +
+                "truncated at that period (e.g. 'Goku vs. Vegeta.mp4' becomes\n" +
+                "'Goku vs.txt'). This is the source of the truncation we have\n" +
+                "the dev-workstation MatchAfterCopyArtifacts workaround for.");
+
+            t.SetToolTip(Compare_Button,
+                "COMPARE\n" +
+                "Diff the current folder's structure against another folder\n" +
+                "(picked via dialog). Walks season subdirs, sorts files inside\n" +
+                "each by their NN index, and reports any filename mismatches +\n" +
+                "file count differences. Writes the full report to log.txt and\n" +
+                "opens it in Notepad. Useful for verifying a new library mirror\n" +
+                "lines up with the canonical one.");
         }
 
         private void PopulateTreeView(string path)

@@ -1,10 +1,12 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.1.32328.378
+# Visual Studio Version 18
+VisualStudioVersion = 18.6.11819.183 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LVP-WPF", "LVP-WPF\LVP-WPF.csproj", "{3C195739-6C14-44C6-88B7-6BBE71F424B2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MouseHub", "LVP-WPF\Hubs\MouseHub\MouseHub\MouseHub.csproj", "{A793F4E4-31A9-486C-B5F8-A86F04159161}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaHub", "LVP-WPF\Hubs\MediaHub\MediaHub.csproj", "{DC14E91E-6F0C-1D4E-0A74-DAC90AFB9FCF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,6 +22,10 @@ Global
 		{A793F4E4-31A9-486C-B5F8-A86F04159161}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A793F4E4-31A9-486C-B5F8-A86F04159161}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A793F4E4-31A9-486C-B5F8-A86F04159161}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC14E91E-6F0C-1D4E-0A74-DAC90AFB9FCF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC14E91E-6F0C-1D4E-0A74-DAC90AFB9FCF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC14E91E-6F0C-1D4E-0A74-DAC90AFB9FCF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC14E91E-6F0C-1D4E-0A74-DAC90AFB9FCF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
