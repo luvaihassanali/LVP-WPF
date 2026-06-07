@@ -23,20 +23,97 @@ namespace LVP_WPF
 
         internal bool Compare(MainModel prevMedia)
         {
-            Array.Sort(this.Movies, Movie.SortMoviesAlphabetically());
-            Array.Sort(this.TvShows, TvShow.SortTvShowsAlphabetically());
-
             if (this.Movies.Length != prevMedia.Movies.Length) return false;
             if (this.TvShows.Length != prevMedia.TvShows.Length) return false;
 
-            for (int i = 0; i < this.Movies.Length; i++)
+            // Match by Path (case-insensitive). Array order isn't reliable here:
+            // this.Movies[i].Name is filename-derived (what the scanner just saw),
+            // prevMedia.Movies[i].Name is TMDB-derived (what we wrote on the last
+            // save), so the two arrays may sort to different orders under the
+            // same Name comparer. Path is the canonical join key, and
+            // OrdinalIgnoreCase tolerates drive/folder case drift across boots
+            // (e.g. E_media vs E_Media on the same NTFS volume).
+            Dictionary<string, Movie> prevMoviesByPath =
+                prevMedia.Movies.ToDictionary(m => m.Path, StringComparer.OrdinalIgnoreCase);
+            foreach (Movie curr in this.Movies)
             {
-                if (!this.Movies[i].Compare(prevMedia.Movies[i])) return false;
+                if (!prevMoviesByPath.TryGetValue(curr.Path, out Movie? prev))
+                {
+                    Serilog.Log.Warning("Compare miss: curr.Path = {Path}", curr.Path);
+                    Serilog.Log.Warning("  Length={Len}, ends with: '{Tail}'",
+                        curr.Path.Length, curr.Path.Length >= 20 ? curr.Path[^20..] : curr.Path);
+
+                    // Find closest key by common prefix and show where they diverge.
+                    string? best = null;
+                    int bestPrefix = -1;
+                    foreach (string key in prevMoviesByPath.Keys)
+                    {
+                        int p = 0;
+                        int maxP = Math.Min(key.Length, curr.Path.Length);
+                        while (p < maxP && char.ToLowerInvariant(key[p]) == char.ToLowerInvariant(curr.Path[p])) p++;
+                        if (p > bestPrefix) { bestPrefix = p; best = key; }
+                    }
+                    if (best != null)
+                    {
+                        Serilog.Log.Warning("  Closest prev key: {Key}", best);
+                        Serilog.Log.Warning("  Common prefix length: {N} (curr.Len={C}, prev.Len={P})",
+                            bestPrefix, curr.Path.Length, best.Length);
+                        if (bestPrefix < curr.Path.Length)
+                            Serilog.Log.Warning("  curr diverges at idx {I}: '{C}' (U+{Cx:X4})",
+                                bestPrefix, curr.Path[bestPrefix], (int)curr.Path[bestPrefix]);
+                        if (bestPrefix < best.Length)
+                            Serilog.Log.Warning("  prev diverges at idx {I}: '{C}' (U+{Cx:X4})",
+                                bestPrefix, best[bestPrefix], (int)best[bestPrefix]);
+                    }
+                    else
+                    {
+                        Serilog.Log.Warning("  prevMoviesByPath is EMPTY");
+                    }
+                    return false;
+                }
+                if (!curr.Compare(prev)) return false;
             }
 
-            for (int i = 0; i < this.TvShows.Length; i++)
+            Dictionary<string, TvShow> prevShowsByPath =
+                prevMedia.TvShows.ToDictionary(t => t.Path, StringComparer.OrdinalIgnoreCase);
+            foreach (TvShow curr in this.TvShows)
             {
-                if (!this.TvShows[i].Compare(prevMedia.TvShows[i])) return false;
+                if (!prevShowsByPath.TryGetValue(curr.Path, out TvShow? prev))
+                {
+                    Serilog.Log.Warning("Compare miss: curr.Path = {Path}", curr.Path);
+                    Serilog.Log.Warning("  Length={Len}, ends with: '{Tail}'",
+                        curr.Path.Length, curr.Path.Length >= 20 ? curr.Path[^20..] : curr.Path);
+
+                    // Find closest key by common prefix and show where they diverge.
+                    string? best = null;
+                    int bestPrefix = -1;
+                    foreach (string key in prevShowsByPath.Keys)
+                    {
+                        int p = 0;
+                        int maxP = Math.Min(key.Length, curr.Path.Length);
+                        while (p < maxP && char.ToLowerInvariant(key[p]) == char.ToLowerInvariant(curr.Path[p])) p++;
+                        if (p > bestPrefix) { bestPrefix = p; best = key; }
+                    }
+                    if (best != null)
+                    {
+                        Serilog.Log.Warning("  Closest prev key: {Key}", best);
+                        Serilog.Log.Warning("  Common prefix length: {N} (curr.Len={C}, prev.Len={P})",
+                            bestPrefix, curr.Path.Length, best.Length);
+                        if (bestPrefix < curr.Path.Length)
+                            Serilog.Log.Warning("  curr diverges at idx {I}: '{C}' (U+{Cx:X4})",
+                                bestPrefix, curr.Path[bestPrefix], (int)curr.Path[bestPrefix]);
+                        if (bestPrefix < best.Length)
+                            Serilog.Log.Warning("  prev diverges at idx {I}: '{C}' (U+{Cx:X4})",
+                                bestPrefix, best[bestPrefix], (int)best[bestPrefix]);
+                    }
+                    else
+                    {
+                        Serilog.Log.Warning("  prevShowsByPath is EMPTY");
+                    }
+                    return false;
+                }
+                if (!curr.Compare(prev)) 
+                    return false;
             }
 
             return true;
@@ -55,7 +132,7 @@ namespace LVP_WPF
 
         internal void Ingest(MainModel prevMedia)
         {
-            Dictionary<string, Movie> prevMoviesByPath = prevMedia.Movies.ToDictionary(m => m.Path);
+            Dictionary<string, Movie> prevMoviesByPath = prevMedia.Movies.ToDictionary(m => m.Path, StringComparer.OrdinalIgnoreCase);
             foreach (Movie curr in this.Movies)
             {
                 if (prevMoviesByPath.TryGetValue(curr.Path, out Movie? prev))
@@ -64,7 +141,7 @@ namespace LVP_WPF
                 }
             }
 
-            Dictionary<string, TvShow> prevShowsByPath = prevMedia.TvShows.ToDictionary(t => t.Path);
+            Dictionary<string, TvShow> prevShowsByPath = prevMedia.TvShows.ToDictionary(t => t.Path, StringComparer.OrdinalIgnoreCase);
             foreach (TvShow curr in this.TvShows)
             {
                 if (!prevShowsByPath.TryGetValue(curr.Path, out TvShow? prev))
@@ -123,7 +200,139 @@ namespace LVP_WPF
         }
 
         private static bool EpisodeFileNamesMatch(string currPath, string prevPath)
-            => System.IO.Path.GetFileName(currPath).Equals(System.IO.Path.GetFileName(prevPath));
+            => System.IO.Path.GetFileName(currPath).Equals(System.IO.Path.GetFileName(prevPath), StringComparison.OrdinalIgnoreCase);
+
+        // Truncation-aware path equality used by Compare paths.
+        //
+        // Release builds: strict case-insensitive ordinal compare.
+        //
+        // DEBUG builds: also accept the "period-truncation" symptom where a
+        // file copy from the media server chopped names at an internal
+        // period (e.g. "Goku vs. Vegeta.mp4" landed as "Goku vs.mp4").
+        // Accept the pair when the directories + extensions are equal AND
+        // one filename body is a prefix of the other AND the next char in
+        // the longer one is '.', i.e. the divergence is exactly at a
+        // period (the actual truncation signature, not arbitrary shared
+        // prefix). Centralized so Episode.Compare and CompareSeasonsByPath
+        // stay in lockstep; deleting the #if DEBUG block restores strict
+        // matching everywhere in one place.
+        internal static bool PathsMatch(string a, string b)
+        {
+            if (a.Equals(b, StringComparison.OrdinalIgnoreCase)) return true;
+#if DEBUG
+            string aDir = System.IO.Path.GetDirectoryName(a) ?? "";
+            string bDir = System.IO.Path.GetDirectoryName(b) ?? "";
+            if (!aDir.Equals(bDir, StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            string aExt = System.IO.Path.GetExtension(a);
+            string bExt = System.IO.Path.GetExtension(b);
+
+#if !DEBUG
+            if (!aExt.Equals(bExt, StringComparison.OrdinalIgnoreCase))
+                return false;
+#endif
+
+            string aName = System.IO.Path.GetFileNameWithoutExtension(a);
+            string bName = System.IO.Path.GetFileNameWithoutExtension(b);
+            string shorter = aName.Length <= bName.Length ? aName : bName;
+            string longer = aName.Length <= bName.Length ? bName : aName;
+
+            /*bool res = shorter.Length > 0
+                && longer.Length > shorter.Length
+                && longer.StartsWith(shorter, StringComparison.OrdinalIgnoreCase)
+                && longer[shorter.Length] == '.';*/
+
+            bool res = MatchAfterCopyArtifacts(shorter, longer);
+            if (!res)
+            {
+                Serilog.Log.Information("HERE");
+            }
+
+            return res;
+#else
+            return false;
+#endif
+        }
+
+        // Loose match used only on the dev workstation where a file copy from
+        // the media server (a) truncated some names at an internal period
+        // (treating '.' as an extension delimiter), and (b) stripped certain
+        // symbols mid-name (commas, apostrophes, etc.). 'shorter' is the copy
+        // result; 'longer' is the original from the server's persisted JSON.
+        // Returns true when shorter could plausibly have been derived from
+        // longer by either artifact.
+        private static bool MatchAfterCopyArtifacts(string shorter, string longer)
+        {
+#if DEBUG
+            if (shorter.Length == 0) return LogFail("empty shorter", shorter, longer, -1, -1);
+
+            int i = 0;
+            string failReason = "";
+
+            foreach (char c in longer)
+            {
+                if (i >= shorter.Length)
+                {
+                    if (c == '.') return true;
+                    return LogFail($"shorter exhausted; longer[{i}]=U+{(int)c:X4} not '.'",
+                        shorter, longer, i, (int)c);
+                }
+
+                char sc = shorter[i];
+
+                // 1. Exact match (case-insensitive).
+                if (char.ToLowerInvariant(c) == char.ToLowerInvariant(sc))
+                {
+                    i++;
+                    continue;
+                }
+
+                // 2. Both non-alphanumeric at the same position - treat as equivalent.
+                //    Covers "comma replaced with space" and friends, where the copy
+                //    tool substituted one punctuation/whitespace for another.
+                if (!char.IsLetterOrDigit(c) && !char.IsLetterOrDigit(sc))
+                {
+                    i++;
+                    continue;
+                }
+
+                // 3. longer has an extra non-alphanumeric the copy dropped from shorter.
+                if (!char.IsLetterOrDigit(c))
+                {
+                    continue;  // skip the longer char, do NOT advance i
+                }
+
+                // 4. letter/digit divergence: real difference, bail.
+                return LogFail(
+                    $"letter/digit mismatch: longer has U+{(int)c:X4} ('{c}'), shorter[{i}]=U+{(int)sc:X4} ('{sc}')",
+                    shorter, longer, i, (int)c);
+            }
+
+            if (i == shorter.Length) return true;
+            failReason = $"ran out of longer with i={i} still < shorter.Length={shorter.Length}";
+            return LogFail(failReason, shorter, longer, i, -1);
+#else
+    bool res = shorter.Length > 0
+        && longer.StartsWith(shorter, StringComparison.OrdinalIgnoreCase)
+        && (longer.Length == shorter.Length || longer[shorter.Length] == '.');
+    return res;
+#endif
+        }
+
+#if DEBUG
+        private static bool LogFail(string reason, string shorter, string longer, int i, int badChar)
+        {
+            Serilog.Log.Information("MatchAfterCopyArtifacts FAIL: {Reason}", reason);
+            Serilog.Log.Information("  shorter='{S}' (len {SL})", shorter, shorter.Length);
+            Serilog.Log.Information("  longer ='{L}' (len {LL})", longer, longer.Length);
+            Serilog.Log.Information("  shorter codepoints: {Hex}",
+                string.Join(" ", shorter.Select(ch => ((int)ch).ToString("X4"))));
+            Serilog.Log.Information("  longer  codepoints: {Hex}",
+                string.Join(" ", longer.Select(ch => ((int)ch).ToString("X4"))));
+            return false;
+        }
+#endif
     }
 
     public class Media
@@ -148,9 +357,7 @@ namespace LVP_WPF
         public int RunningTime { get; set; }
 
         internal bool Compare(Movie localMovie)
-        {
-            return this.Path.Equals(localMovie.Path);
-        }
+            => this.Path.Equals(localMovie.Path, StringComparison.OrdinalIgnoreCase);
 
         /// <summary>Copy the TMDB-enrichment fields from <paramref name="other"/> onto this Movie.</summary>
         internal void CopyFrom(Movie other)
@@ -320,7 +527,8 @@ namespace LVP_WPF
 
         internal bool Compare(TvShow localShow)
         {
-            if (!this.Path.Equals(localShow.Path)) return false;
+            if (!this.Path.Equals(localShow.Path, StringComparison.OrdinalIgnoreCase))
+                return false;
 
             if (this.MultiLang)
             {
@@ -335,15 +543,18 @@ namespace LVP_WPF
         // and matching season/episode counts + episode paths across all langs.
         private bool CompareMultiLang(TvShow localShow)
         {
-            if (this.MultiLangName.Count != localShow.MultiLangName.Count) return false;
+            if (this.MultiLangName.Count != localShow.MultiLangName.Count) 
+                return false;
             for (int i = 0; i < this.MultiLangName.Count; i++)
             {
                 string a = this.MultiLangName[i].Split(" (")[0];
                 string b = localShow.MultiLangName[i].Split(" (")[0];
-                if (!a.Equals(b)) return false;
+                if (!a.Equals(b)) 
+                    return false;
             }
 
-            if (this.MultiLangSeasons.Count != localShow.MultiLangSeasons.Count) return false;
+            if (this.MultiLangSeasons.Count != localShow.MultiLangSeasons.Count) 
+                return false;
             for (int i = 0; i < this.MultiLangSeasons.Count; i++)
             {
                 if (!CompareSeasonsByPath(this.MultiLangSeasons[i], localShow.MultiLangSeasons[i]))
@@ -358,25 +569,33 @@ namespace LVP_WPF
         // compares episode paths as the structural key.
         private static bool CompareSeasons(Season[] a, Season[] b)
         {
-            if (a.Length != b.Length) return false;
+            if (a.Length != b.Length) 
+                return false;
             for (int i = 0; i < a.Length; i++)
             {
-                if (!a[i].Compare(b[i])) return false;
+                if (!a[i].Compare(b[i])) 
+                    return false;
             }
             return true;
         }
 
         // Lighter version used by the multi-lang compare path: matches
-        // episode count and Path only, no metadata fields.
+        // episode count and Path only, no metadata fields. Path equality
+        // goes through MainModel.PathsMatch so the DEBUG truncation
+        // workaround applies here too.
         private static bool CompareSeasonsByPath(Season[] a, Season[] b)
         {
-            if (a.Length != b.Length) return false;
+            if (a.Length != b.Length) 
+                return false;
             for (int j = 0; j < a.Length; j++)
             {
-                if (a[j].Episodes.Length != b[j].Episodes.Length) return false;
+                if (a[j].Episodes.Length != b[j].Episodes.Length)
+                    return false;
+
                 for (int k = 0; k < a[j].Episodes.Length; k++)
                 {
-                    if (!a[j].Episodes[k].Path.Equals(b[j].Episodes[k].Path)) return false;
+                    if (!MainModel.PathsMatch(a[j].Episodes[k].Path, b[j].Episodes[k].Path)) 
+                        return false;
                 }
             }
             return true;
@@ -408,6 +627,11 @@ namespace LVP_WPF
 
         internal bool Compare(Season localSeason)
         {
+            if (this.Id.Equals(localSeason.Id) && this.Id.Equals(-1))
+            {
+                return true;
+            }
+
             if (this.Episodes.Length != localSeason.Episodes.Length)
             {
                 return false;
@@ -445,9 +669,7 @@ namespace LVP_WPF
         public bool MultiEpisode { get; set; }
 
         internal bool Compare(Episode otherEpisode)
-        {
-            return this.Path.Equals(otherEpisode.Path);
-        }
+            => MainModel.PathsMatch(this.Path, otherEpisode.Path);
 
         /// <summary>
         /// Copy episode metadata + playback state. Translated is opt-in

@@ -22,13 +22,19 @@ namespace LVP_WPF
                 Directory.CreateDirectory(logPath);
             }
 
+            // .WriteTo.Debug() routes through System.Diagnostics.Debug.WriteLine,
+            // which appears in Visual Studio's Output window under the "Debug"
+            // pane (View > Output, "Show output from: Debug") when launched
+            // with F5. Make sure that pane is selected and that
+            // Tools > Options > Debugging > General >
+            // "Redirect All Output Window Text to the Immediate Window" is OFF.
             Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Debug()
-            .WriteTo.File(path: $"{logPath}LVP-WPF-.log",
-            rollingInterval: RollingInterval.Month,
-            rollOnFileSizeLimit: true)
-            .CreateLogger();
+                .MinimumLevel.Debug()
+                .WriteTo.Debug()
+                .WriteTo.File(path: $"{logPath}LVP-WPF-.log",
+                    rollingInterval: RollingInterval.Month,
+                    rollOnFileSizeLimit: true)
+                .CreateLogger();
         }
 
         private void GlobalKeyUp(object sender, KeyEventArgs e)

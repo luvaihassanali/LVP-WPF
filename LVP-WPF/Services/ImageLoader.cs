@@ -44,14 +44,36 @@ namespace LVP_WPF.Services
                 filename = AppDomain.CurrentDomain.BaseDirectory + filename;
             }
 
-            BitmapImage image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.UriSource = new Uri(filename);
-            image.DecodePixelWidth = pixelWidth;
-            image.EndInit();
-            image.Freeze();
-            return image;
+            try
+            {
+                BitmapImage image = new BitmapImage();
+                image.BeginInit();
+                image.CacheOption = BitmapCacheOption.OnLoad;
+                image.UriSource = new Uri(filename);
+                image.DecodePixelWidth = pixelWidth;
+                image.EndInit();
+                image.Freeze();
+                return image;
+            }
+            catch (Exception ex)
+            {
+                // BitmapImage throws NotSupportedException (with COMException
+                // 0x88982F50 underneath) when the file is missing, corrupt,
+                // or in an unsupported format. SeasonWindow.Show in particular
+                // hits this when a show has more seasons than there are
+                // no-preview-seasons\{n}.png placeholders, or when a season's
+                // cached Poster path no longer resolves. Fall back to the
+                // default poster so the window can still open.
+                Serilog.Log.Warning("ImageLoader.Load failed for '{File}': {Msg}", filename, ex.Message);
+
+                string defaultPath = AppDomain.CurrentDomain.BaseDirectory + DefaultPoster;
+                if (string.Equals(filename, defaultPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    // The default placeholder itself failed - real bug, surface it.
+                    throw;
+                }
+                return Load(DefaultPoster, pixelWidth);
+            }
         }
 
         /// <summary>

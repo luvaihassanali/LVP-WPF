@@ -95,7 +95,9 @@ namespace LVP_WPF.Windows
 
         public object currControl = null;
         public List<int[]> mainWindowGrid = new List<int[]>();
-        public List<Image[]> mainWindowControlGrid = new List<Image[]>();
+        // FrameworkElement instead of Image so the grid can hold both poster
+        // tiles (Image) and the new History / Shuffle header buttons (Button).
+        public List<FrameworkElement[]> mainWindowControlGrid = new List<FrameworkElement[]>();
         public Image movieBackdrop = null;
         public ComboBox movieLangComboBox = null;
         public List<ComboBoxItem> langComboBoxItems = new List<ComboBoxItem>();
@@ -107,6 +109,44 @@ namespace LVP_WPF.Windows
         public int langIndex = 0;
         public List<object> tvControlList = new List<object>();
         public List<Image> seasonControlList = new List<Image>();
+
+        // Playback-control buttons inside PlayerWindow, populated by
+        // PlayerWindow_Loaded. Ordered left-to-right as they appear in the
+        // bottom row: backward, rewind, play, fast-forward, forward.
+        // Joystick Left/Right cycles through them; Up/Down is ignored
+        // because the player has only one row of nav-targets.
+        public List<object> playerControlList = new List<object>();
+        public int playerIndex = 0;
+
+        // Named slots in playerControlList - used by IR remote dispatch so
+        // pressing "fastforward" warps the cursor to the FF button etc.
+        public const int PlayerButtonBackward    = 0;
+        public const int PlayerButtonRewind      = 1;
+        public const int PlayerButtonPlay        = 2;
+        public const int PlayerButtonFastForward = 3;
+        public const int PlayerButtonForward     = 4;
+
+        // True while the cursor is hidden / not yet positioned on a player
+        // control. EnterPlayerNav sets it true on player open; the first
+        // arrow press flips it false (and reveals the cursor at play
+        // without applying a delta) so subsequent arrows step from there.
+        // FocusPlayerControl also flips it false because that path warps
+        // the cursor to a specific button explicitly.
+        private bool playerCursorParked = true;
+
+        // Warp the cursor to a specific button in the player overlay,
+        // update currPoint/currControl, and mark the cursor as no longer
+        // parked. Used by the IR remote transport keys to give visual
+        // feedback ("you just pressed fast-forward -> look at the FF
+        // button highlighting").
+        internal void FocusPlayerControl(int index)
+        {
+            if (index < 0 || index >= playerControlList.Count) return;
+            currPoint = (index, 0);
+            currControl = playerControlList[index];
+            playerCursorParked = false;
+            CenterMouseOverControl(currControl, index, scrollViewer: null);
+        }
 
         /// <summary>
         /// Capture each item container in <paramref name="comboBox"/> into
@@ -142,14 +182,50 @@ namespace LVP_WPF.Windows
             BuildMainWindowGrid();
             ComInterop.SetCursorPos(20, 20);
             TcpSerialListener.DoMouseClick();
-            currControl = mainWindowControlGrid.Count != 0 ? mainWindowControlGrid[0][0] : gui.mainCloseButton;
-            CenterMouseOverControl(currControl, 0);
+
+            // Default focus: first poster tile (matches the original behavior
+            // before the History / Shuffle pseudo-rows existed). Walk forward
+            // skipping pseudo-rows whose [0] holds a Button. Fall back to
+            // (0,0) if there are no posters at all (empty library), and to
+            // mainCloseButton if the grid itself is empty.
+            if (mainWindowControlGrid.Count == 0)
+            {
+                currControl = gui.mainCloseButton;
+                CenterMouseOverControl(currControl, 0);
+                return;
+            }
+            int initialRow = 0;
+            for (int r = 0; r < mainWindowControlGrid.Count; r++)
+            {
+                if (mainWindowControlGrid[r][0] is Image)
+                {
+                    initialRow = r;
+                    break;
+                }
+            }
+            currPoint = (initialRow, 0);
+            currControl = mainWindowControlGrid[initialRow][0];
+            CenterMouseOverControl(currControl, initialRow);
         }
 
         public void Move((int x, int y) pos)
         {
             if (playerWindowActive)
             {
+                // Player has a single horizontal row of buttons. Left/Right
+                // walks the row via MovePlayerPoint (which itself wakes the
+                // overlay). Up/Down has no nav target but still wakes the
+                // overlay so the user gets visible feedback that input was
+                // received. pos.y carries the horizontal delta in this
+                // codebase (see `left`/`right` tuples at the top of the class).
+                if (pos.y != 0)
+                {
+                    MovePlayerPoint(pos.y);
+                }
+                else
+                {
+                    gui.playerWindow?.WakeOverlay();
+                }
                 return;
             }
 
@@ -224,6 +300,7 @@ namespace LVP_WPF.Windows
                 if (controlName.Equals("PlayerWindow"))
                 {
                     playerWindowActive = true;
+                    EnterPlayerNav();
                 }
             }
             else if (movieWindowActive)
@@ -232,6 +309,7 @@ namespace LVP_WPF.Windows
                 if (controlName.Equals("PlayerWindow"))
                 {
                     playerWindowActive = true;
+                    EnterPlayerNav();
                 }
             }
         }
@@ -414,6 +492,45 @@ namespace LVP_WPF.Windows
         private void MoveTvPoint(int x) =>
             MoveAlong1D(x, tvControlList, MainWindow.gui.episodeScrollViewer);
 
+        // Walks playerControlList left/right. No scrollViewer because the
+        // player has a single fixed-position row of buttons; nothing to
+        // scroll into view. WakeOverlay() makes the overlayGrid visible so
+        // the user can see which button they just focused (it would otherwise
+        // still be hidden from a prior pollingTimer fire).
+        private void MovePlayerPoint(int delta)
+        {
+            gui.playerWindow?.WakeOverlay();
+
+            // First arrow press after entering the player just reveals the
+            // cursor at the play button - no delta applied. Subsequent presses
+            // step from there. Without this, currPoint.x is already 2 (play)
+            // and the first LEFT would land on rewind without the user ever
+            // seeing the cursor at play - which makes orientation confusing.
+            if (playerCursorParked)
+            {
+                playerCursorParked = false;
+                CenterMouseOverControl(currControl, currPoint.x, scrollViewer: null);
+                return;
+            }
+            MoveAlong1D(delta, playerControlList, scrollViewer: null);
+        }
+
+        // Reset currPoint to the play button (middle of the 5-button row) on
+        // each player open. Without this, currPoint carries whatever index
+        // the previous window (TvShowWindow / MovieWindow) left it at, which
+        // could be 0 (locking Left out immediately) or out of range.
+        // Doesn't warp the cursor - PlayerWindow_Loaded explicitly hides it
+        // until the user's first arrow press reveals it (see MovePlayerPoint).
+        private void EnterPlayerNav()
+        {
+            if (playerControlList.Count == 0) return;
+            int defaultIdx = playerControlList.Count / 2;  // play button
+            currPoint = (defaultIdx, 0);
+            currControl = playerControlList[defaultIdx];
+            playerIndex = defaultIdx;
+            playerCursorParked = true;
+        }
+
         private void MoveLangPoint(int x) =>
             MoveAlong1D(x, langComboBoxItems, MainWindow.gui.langScrollViewer);
 
@@ -458,7 +575,8 @@ namespace LVP_WPF.Windows
         // below; MovePoint and MoveSeasonPoint are now one-liners that just bind
         // the per-grid config (columns, wrap behavior, scroll viewer).
 
-        private void MoveInGrid((int x, int y) move, List<int[]> grid, List<Image[]> controls, int columns, ScrollViewer scrollViewer, bool wrapVertically)
+        private void MoveInGrid<T>((int x, int y) move, List<int[]> grid, List<T[]> controls, int columns, ScrollViewer scrollViewer, bool wrapVertically)
+            where T : class
         {
             (int x, int y) newPoint = (currPoint.x + move.x, currPoint.y + move.y);
             if (wrapVertically)
@@ -499,7 +617,8 @@ namespace LVP_WPF.Windows
         // sentinel (-1, -1)). Skipping over empty cells matters for the
         // sparse last-row case: a row with only the first two slots filled
         // shouldn't trap the cursor when the user navigates right.
-        private static (int x, int y) NextOccupied((int x, int y) current, (int x, int y) move, List<int[]> grid, List<Image[]> controls, int columns)
+        private static (int x, int y) NextOccupied<T>((int x, int y) current, (int x, int y) move, List<int[]> grid, List<T[]> controls, int columns)
+            where T : class
         {
             (int x, int y) next = (current.x + move.x, current.y + move.y);
             if (IsOutOfRange(next, grid, columns)) return (-1, -1);
@@ -513,7 +632,8 @@ namespace LVP_WPF.Windows
         // From `point`, search left and right within the same row for the
         // nearest occupied cell. Returns sentinel (-1, -1) if the entire
         // row is empty (shouldn't happen in practice).
-        private static (int x, int y) ClosestOccupied((int x, int y) point, List<Image[]> controls, int columns)
+        private static (int x, int y) ClosestOccupied<T>((int x, int y) point, List<T[]> controls, int columns)
+            where T : class
         {
             int low = point.y - 1;
             int high = point.y + 1;
@@ -559,14 +679,29 @@ namespace LVP_WPF.Windows
         // cartoons, movies), each chunked into rows of 6. Each section
         // begins on a fresh row even if the previous section's last row
         // was only partially full.
+        //
+        // The layout also inserts two single-cell pseudo-rows that hold the
+        // History (above TV) and Shuffle (between TV and Cartoons) marathon
+        // buttons - so joystick / IR-remote nav lands on them naturally.
         private void BuildMainWindowGrid()
         {
-            int[] sectionSizes = { gui.TvShows.Count, gui.Cartoons.Count, gui.Movies.Count };
-            foreach (int sectionSize in sectionSizes)
-            {
-                AppendMainGridSection(sectionSize, columnsPerRow: 6);
-            }
+            AddButtonPseudoRow();                                      // Row 0: History
+            AppendMainGridSection(gui.TvShows.Count, columnsPerRow: 6);
+            AddButtonPseudoRow();                                      // between TV and Cartoons: Shuffle
+            AppendMainGridSection(gui.Cartoons.Count, columnsPerRow: 6);
+            AppendMainGridSection(gui.Movies.Count, columnsPerRow: 6);
             BuildMainWindowControlGrid();
+        }
+
+        // Append a row where only column 0 is occupied (1) and cols 1..N-1
+        // are sentinels (0). Used to give the History / Shuffle buttons a
+        // dedicated navigable cell in the otherwise poster-only grid.
+        private void AddButtonPseudoRow()
+        {
+            int[] row = new int[MainGridColumns];
+            row[0] = 1;
+            mainWindowGrid.Add(row);
+            mainWindowControlGrid.Add(new FrameworkElement[MainGridColumns]);
         }
 
         private void AppendMainGridSection(int itemCount, int columnsPerRow)
@@ -579,7 +714,7 @@ namespace LVP_WPF.Windows
                 {
                     currGridRow = new int[columnsPerRow];
                     mainWindowGrid.Add(currGridRow);
-                    mainWindowControlGrid.Add(new Image[columnsPerRow]);
+                    mainWindowControlGrid.Add(new FrameworkElement[columnsPerRow]);
                 }
                 currGridRow[col] = 1;
             }
@@ -589,18 +724,30 @@ namespace LVP_WPF.Windows
 
         private void BuildMainWindowControlGrid()
         {
-            // The ListView indexes into mainGrid.Children correspond to:
-            //   [6] -> Movies row, [2] -> TvShows row, [4] -> Cartoons row
-            // and the parallel collections are the bindings on each.
-            // So mainWindowControlList ends up as [Movies..., TvShows..., Cartoons...].
-            // The grid consumes them in a different order (TvShows+Cartoons section first,
-            // then Movies), hence the index jumps below.
-            ListView[] lists =
+            // Look up the three poster ListViews by Name. Originally indexed
+            // into mainGrid.Children with hardcoded slots [6, 2, 4], but those
+            // shifted the moment History / Shuffle buttons were added as
+            // siblings - and would shift again next time anyone touches the
+            // XAML. Name-based lookup survives reordering.
+            //
+            // Walking them in [Movies, TvShows, Cartoons] order gives
+            // mainWindowControlList as [Movies..., TvShows..., Cartoons...];
+            // the grid below consumes them in a different order (TvShows first,
+            // then Cartoons, then Movies), so controlIndex jumps explicitly.
+            ListView tvList = null, cartoonsList = null, movieList = null;
+            foreach (UIElement child in gui.mainGrid.Children)
             {
-                (ListView)gui.mainGrid.Children[6],
-                (ListView)gui.mainGrid.Children[2],
-                (ListView)gui.mainGrid.Children[4]
-            };
+                if (child is ListView lv)
+                {
+                    switch (lv.Name)
+                    {
+                        case "TvShowListView":   tvList = lv; break;
+                        case "CartoonsListView": cartoonsList = lv; break;
+                        case "MovieListView":    movieList = lv; break;
+                    }
+                }
+            }
+            ListView[] lists = { movieList, tvList, cartoonsList };
             ObservableCollection<MainWindowBox>[] collections = { gui.Movies, gui.TvShows, gui.Cartoons };
 
             List<Image> mainWindowControlList = new List<Image>();
@@ -615,43 +762,52 @@ namespace LVP_WPF.Windows
                 }
             }
 
-            int col = 0;
-            int rowIndex = 0;
-            int controlIndex = gui.Movies.Count;
-            int totalTvShows = gui.TvShows.Count + gui.Cartoons.Count;
+            // Row layout produced by BuildMainWindowGrid:
+            //   row 0:                          History pseudo-row
+            //   rows 1..1+ceil(TV/6):           TV posters
+            //   row M:                          Shuffle pseudo-row
+            //   rows M+1..:                     Cartoon posters
+            //   rows ...:                       Movie posters
 
-            // Section 1: TvShows + Cartoons. Forcing col to MainGridColumns
-            // at the section boundary makes Cartoons start on a fresh row.
-            for (int i = 0; i < totalTvShows; i++)
-            {
-                if (i == totalTvShows - gui.Cartoons.Count) col = MainGridColumns;
-                if (col == MainGridColumns)
-                {
-                    rowIndex++;
-                    if (rowIndex >= mainWindowGrid.Count) return;
-                    col = 0;
-                }
-                AssignTileOrSentinel(rowIndex, col, mainWindowControlList, ref controlIndex);
-                col++;
-            }
+            int row = 0;
+            int controlIndex = gui.Movies.Count;  // start at TvShows in source list
 
-            // Section 2: Movies. Reset both source-position and column;
-            // the next row index is right after the last TvShows/Cartoons row.
-            col = 0;
+            // History pseudo-row.
+            if (row < mainWindowGrid.Count) mainWindowControlGrid[row][0] = gui.historyButton;
+            row++;
+
+            // TV poster rows.
+            row = FillSectionRows(gui.TvShows.Count, row, mainWindowControlList, ref controlIndex);
+
+            // Shuffle pseudo-row.
+            if (row < mainWindowGrid.Count) mainWindowControlGrid[row][0] = gui.shuffleButton;
+            row++;
+
+            // Cartoon poster rows.
+            row = FillSectionRows(gui.Cartoons.Count, row, mainWindowControlList, ref controlIndex);
+
+            // Movie poster rows. controlIndex resets because Movies live at the
+            // start of mainWindowControlList.
             controlIndex = 0;
-            if (totalTvShows != 0) rowIndex++;
+            FillSectionRows(gui.Movies.Count, row, mainWindowControlList, ref controlIndex);
+        }
 
-            for (int i = 0; i < gui.Movies.Count; i++)
+        // Fills mainWindowControlGrid[row..row+ceil(itemCount/6)] from `source`
+        // starting at `controlIndex`. Returns the row index just past the last
+        // filled row, so the caller can drop in the next section / pseudo-row.
+        private int FillSectionRows(int itemCount, int startRow, List<Image> source, ref int controlIndex)
+        {
+            int rowsNeeded = (itemCount + MainGridColumns - 1) / MainGridColumns;
+            int row = startRow;
+            for (int r = 0; r < rowsNeeded; r++, row++)
             {
-                if (col == MainGridColumns)
+                if (row >= mainWindowGrid.Count) break;
+                for (int c = 0; c < MainGridColumns; c++)
                 {
-                    rowIndex++;
-                    if (rowIndex >= mainWindowGrid.Count) return;
-                    col = 0;
+                    AssignTileOrSentinel(row, c, source, ref controlIndex);
                 }
-                AssignTileOrSentinel(rowIndex, col, mainWindowControlList, ref controlIndex);
-                col++;
             }
+            return row;
         }
 
         // mainWindowGrid[r][c] encodes whether that cell is filled (1) or a
@@ -691,6 +847,16 @@ namespace LVP_WPF.Windows
                         break;
                     case Image img:
                         CenterMouseOverImage(img, row, scrollViewer);
+                        break;
+                    case Button btn when scrollViewer != null:
+                        // Buttons embedded in the main nav grid (History /
+                        // Shuffle pseudo-rows) need the same scroll-row-into-
+                        // view treatment as poster Images do.
+                        btn.Dispatcher.Invoke(() =>
+                        {
+                            ScrollGridRowIntoView(scrollViewer, row, btn);
+                            WarpCursorToCenter(btn);
+                        });
                         break;
                     case FrameworkElement fe:
                         CenterMouseOverElement(fe);
@@ -736,12 +902,33 @@ namespace LVP_WPF.Windows
         // the control's top-left in screen coords, add half its rendered
         // size, SetCursorPos. The caller is responsible for Dispatcher
         // marshalling because the rules differ per call site.
+        //
+        // Guards: PointToScreen requires the element to be connected to a
+        // live PresentationSource (i.e., hosted in a Window with a valid
+        // HWND). When a window has just been closed or hasn't finished
+        // initializing, PointToScreen throws Win32Exception "Invalid window
+        // handle" - which used to bubble up through SeasonWindow.ShowDialog
+        // / TvShowWindow callbacks and crash the app. Skip the warp in
+        // those cases; the user just doesn't see a cursor move.
         private static void WarpCursorToCenter(FrameworkElement element)
         {
-            Point target = element.PointToScreen(new Point(0, 0));
-            target.X += element.ActualWidth / 2;
-            target.Y += element.ActualHeight / 2;
-            ComInterop.SetCursorPos((int)target.X, (int)target.Y);
+            if (element == null) return;
+            if (PresentationSource.FromVisual(element) == null) return;
+            try
+            {
+                Point target = element.PointToScreen(new Point(0, 0));
+                target.X += element.ActualWidth / 2;
+                target.Y += element.ActualHeight / 2;
+                ComInterop.SetCursorPos((int)target.X, (int)target.Y);
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                Log.Warning("WarpCursorToCenter skipped: {Msg} (element {Type})", ex.Message, element.GetType().Name);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Log.Warning("WarpCursorToCenter skipped: {Msg} (element {Type})", ex.Message, element.GetType().Name);
+            }
         }
 
         // Grid (image-tile) variant of the scroll dispatcher: row==0 goes

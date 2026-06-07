@@ -26,6 +26,12 @@ namespace LVP_WPF.Windows
         private bool skipClosing = false;
         private bool sliderMouseDown = false;
         private double prevSliderValue;
+        // Environment.TickCount of the most recent programmatic seek
+        // (SeekRelative / JumpToEdge). Used by Slider_ValueChanged to
+        // distinguish "user clicked the slider track" (a real seek intent)
+        // from "TimeChanged echoed our own seek back at the binding" (a
+        // recursive call that deadlocks LibVLC when playing).
+        private int lastProgrammaticSeekTick = 0;
         private System.Windows.Media.SolidColorBrush playHoverBackground = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#FF26A0DA");
         private System.Windows.Media.SolidColorBrush playHoverBorderBrush = (System.Windows.Media.SolidColorBrush)new System.Windows.Media.BrushConverter().ConvertFrom("#3c7fb1");
 
@@ -108,8 +114,53 @@ namespace LVP_WPF.Windows
 
             MainWindow.gui.playerWindow = this;
             MainWindow.gui.playerCloseButton = this.closeButton;
+
+            // Register the playback row's buttons (left-to-right) so LayoutPoint's
+            // joystick / IR remote Left/Right walks through them. The IR remote's
+            // dedicated "fastforward"/"rewind"/"forward"/"backward" commands still
+            // work in parallel - this just adds a navigable cursor surface.
+            TcpSerialListener.layoutPoint.playerControlList.Clear();
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.backwardButton);
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.rewindButton);
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.playButton);
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.fastForwardButton);
+            TcpSerialListener.layoutPoint.playerControlList.Add(this.forwardButton);
+
             TcpSerialListener.layoutPoint.Select("PlayerWindow");
             ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
+
+            // overlayGrid starts Visible (XAML default) so the user gets brief
+            // visual confirmation the controls exist. Start the polling timer
+            // here so it auto-hides after a few seconds; without this the
+            // overlay would stay pinned forever until some other input fired.
+            pollingTimer.Start();
+        }
+
+        // Used by LayoutPoint and the IR remote dispatch when any input arrives
+        // while the player is open. Forces the timeline / button overlay back
+        // on so the user gets visual feedback. The auto-hide timer only rearms
+        // when actually playing - when paused we want the controls to stay
+        // pinned indefinitely (same convention as TogglePlayPause's pause path).
+        //
+        // The Start() is scheduled at Background priority because callers
+        // often warp the cursor onto a button right after (FocusPlayerControl /
+        // MovePlayerPoint -> CenterMouseOverControl), which fires the OS
+        // MouseEnter event synchronously - and Control_MouseEnter stops the
+        // polling timer. Without the deferred Start, the auto-hide we just
+        // armed would be cancelled the moment the cursor lands on its target,
+        // leaving the overlay pinned indefinitely.
+        internal void WakeOverlay()
+        {
+            Dispatcher.Invoke(() => overlayGrid.Visibility = Visibility.Visible);
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
+            {
+                if (pollingTimer == null) return;
+                pollingTimer.Stop();
+                if (mediaPlayer != null && mediaPlayer.IsPlaying)
+                {
+                    pollingTimer.Start();
+                }
+            });
         }
 
         private void PlayerWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -343,6 +394,15 @@ namespace LVP_WPF.Windows
             TcpSerialListener.layoutPoint.NotifyWindowClosedFromUI();
         }
 
+        // Mouse-clickable mirrors of the IR remote's "backward" / "rewind" /
+        // "fastforward" / "forward" commands. Same underlying SeekRelative /
+        // JumpToEdge methods; the IR-remote dispatch in IrSerialReader and
+        // these handlers route through the same place.
+        private void BackwardButton_Click(object sender, RoutedEventArgs e) => JumpToEdge(toStart: true);
+        private void RewindButton_Click(object sender, RoutedEventArgs e) => SeekRelative(rewind: true);
+        private void FastForwardButton_Click(object sender, RoutedEventArgs e) => SeekRelative(rewind: false);
+        private void ForwardButton_Click(object sender, RoutedEventArgs e) => JumpToEdge(toStart: false);
+
         private void PlayButton_Click(object sender, RoutedEventArgs e)
         {
             if (mediaPlayer.IsPlaying)
@@ -403,6 +463,19 @@ namespace LVP_WPF.Windows
 
                     if (Math.Abs(SliderValue - prevSliderValue) > 3000 && prevSliderValue != 0)
                     {
+                        // Distinguish "user clicked the slider track" (real seek
+                        // intent, big delta) from "TimeChanged echoed our own
+                        // SeekRelative/JumpToEdge back at the binding" (same big
+                        // delta, but recursive). The recursive case calls SeekTo
+                        // again on the UI thread while LibVLC is still processing
+                        // the first seek - deadlocks when playing.
+                        int sinceProgrammatic = Environment.TickCount - lastProgrammaticSeekTick;
+                        if (sinceProgrammatic >= 0 && sinceProgrammatic < 2000)
+                        {
+                            // Echo: just refresh prev and return.
+                            prevSliderValue = SliderValue;
+                            return;
+                        }
                         sliderMouseDown = true;
                         TimeSpan seekTime = TimeSpan.FromMilliseconds(SliderValue);
                         mediaPlayer.SeekTo(seekTime);
@@ -420,6 +493,14 @@ namespace LVP_WPF.Windows
         {
             if (mediaPlayer == null) return;
 
+            // The previous version ended each branch with DoMouseClick() +
+            // SetCursorPos(). Those were defensive cursor-parking calls from
+            // before joystick nav existed. They now actively misfire: after
+            // the IR-remote dispatch's FocusPlayerControl warps the cursor
+            // onto the play button, DoMouseClick fires PlayButton_Click as
+            // a SECOND click on the same press - toggling state back and
+            // leaving the user stuck. Cursor positioning is now owned by
+            // LayoutPoint.FocusPlayerControl; both side effects are gone.
             if (mediaPlayer.IsPlaying)
             {
                 playButton.Dispatcher.Invoke(() =>
@@ -429,8 +510,6 @@ namespace LVP_WPF.Windows
                 });
                 mediaPlayer.Pause();
                 pollingTimer.Stop();
-                TcpSerialListener.DoMouseClick();
-                ComInterop.SetCursorPos(50, 1030);
             }
             else
             {
@@ -441,14 +520,13 @@ namespace LVP_WPF.Windows
                 });
                 mediaPlayer.Play();
                 pollingTimer.Start();
-                ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
-                TcpSerialListener.DoMouseClick();
             }
         }
 
         internal void JumpToEdge(bool toStart)
         {
             if (mediaPlayer == null) return;
+            lastProgrammaticSeekTick = Environment.TickCount;
             long target = toStart ? 0 : mediaPlayer.Length - 1;
             mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(target));
         }
@@ -456,6 +534,7 @@ namespace LVP_WPF.Windows
         internal void SeekRelative(bool rewind)
         {
             if (mediaPlayer == null) return;
+            lastProgrammaticSeekTick = Environment.TickCount;
 
             const int seekStepMs = 30 * 1000;
             long current = mediaPlayer.Time;

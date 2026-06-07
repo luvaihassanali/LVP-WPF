@@ -25,6 +25,39 @@
                     </TextBlock>
                 </Grid>
                 <Grid Name="overlayGrid" Visibility="Visible">
+                    <Grid.Resources>
+                        <Style x:Key="SeekButton" TargetType="{x:Type Button}">
+                            <Setter Property="Width" Value="60"/>
+                            <Setter Property="Height" Value="60"/>
+                            <Setter Property="FontSize" Value="28"/>
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Margin" Value="5,0,5,0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type Button}">
+                                        <!-- CornerRadius + Effect set directly on the Border. Applying
+                                             Effect to the Button itself drew a rectangular drop shadow
+                                             (the Button's bounding box is square) - showing as the
+                                             "inner square" inside the circle. Putting it on the rounded
+                                             Border makes the shadow follow the circle, matching playButton. -->
+                                        <Border x:Name="Border" CornerRadius="60" Background="{TemplateBinding Background}" BorderThickness="3" BorderBrush="White">
+                                            <Border.Effect>
+                                                <DropShadowEffect ShadowDepth="4" Direction="330" Color="Black" Opacity="0.5" BlurRadius="4"/>
+                                            </Border.Effect>
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#FF26A0DA" TargetName="Border"/>
+                                                <Setter Property="BorderBrush" Value="#3c7fb1" TargetName="Border"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Grid.Resources>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
@@ -35,12 +68,21 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Name="closeButton" Grid.Column="1" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="CloseButton_Click" Foreground="White" 
+                    <Button Name="closeButton" Grid.Column="1" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="CloseButton_Click" Foreground="White"
                         FontSize="28" Width="50" Height="50" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,20,20,0" Style="{StaticResource CloseButton}">
                         <TextBlock Text="✖" Margin="0,-3,1,0"/>
                     </Button>
-                    <Button Name="playButton" FontSize="30" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="PlayButton_Click" Grid.Row="2" Foreground="White" 
-                        Width="60" Height="60" HorizontalAlignment="Left" Margin="10,0,0,20">
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,20">
+                        <Button Name="backwardButton" Style="{StaticResource SeekButton}"
+                                MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="BackwardButton_Click">
+                            <TextBlock Text="|◀" Margin="0,-4,0,0" FontSize="20"/>
+                        </Button>
+                        <Button Name="rewindButton" Style="{StaticResource SeekButton}"
+                                MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="RewindButton_Click">
+                            <TextBlock Text="◀◀" Margin="0,-4,0,0" FontSize="20"/>
+                        </Button>
+                    <Button Name="playButton" FontSize="30" MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="PlayButton_Click" Foreground="White"
+                        Width="60" Height="60" Margin="5,0,5,0">
                         <TextBlock Name="buttonText" Text="▶️" Margin="6,-4,0,0" />
                         <Button.Resources>
                             <Style TargetType="Border">
@@ -73,7 +115,16 @@
                             </Style>
                         </Button.Style>
                     </Button>
-                    <Border Grid.Row="2" Margin="85,20,10,0">
+                        <Button Name="fastForwardButton" Style="{StaticResource SeekButton}"
+                                MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="FastForwardButton_Click">
+                            <TextBlock Text="▶▶" Margin="0,-4,0,0" FontSize="20"/>
+                        </Button>
+                        <Button Name="forwardButton" Style="{StaticResource SeekButton}"
+                                MouseEnter="Control_MouseEnter" MouseLeave="Control_MouseLeave" Click="ForwardButton_Click">
+                            <TextBlock Text="▶|" Margin="0,-4,0,0" FontSize="20"/>
+                        </Button>
+                    </StackPanel>
+                    <Border Grid.Row="2" Margin="370,20,10,0">
                         <Border.Effect>
                             <DropShadowEffect ShadowDepth="4" Direction="330" Color="Black" Opacity="0.5" BlurRadius="4"/>
                         </Border.Effect>

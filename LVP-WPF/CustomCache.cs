@@ -90,9 +90,7 @@ namespace LVP_WPF
 
                     if (!episode.Name.MatchesLoosely(titles[index]))
                     {
-#if !DEBUG
                         throw new Exception($"Episode name does not match, season {season.Id} episode: {episode.Name}. Should be {titles[index]}");
-#endif
                     }
 
                     episode.Id = ids[index];

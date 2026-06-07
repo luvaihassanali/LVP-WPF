@@ -66,6 +66,8 @@ namespace LVP_WPF
                 gui.mainCloseButton = this.closeButton;
                 gui.mainScrollViewer = this.scrollViewer;
                 gui.mainGrid = this.mainGrid;
+                gui.historyButton = this.historyButton;
+                gui.shuffleButton = this.shuffleButton;
                 tcpWorker = new TcpSerialListener(gui);
                 tcpWorker.StartThread();
             });
@@ -185,9 +187,18 @@ namespace LVP_WPF
             await Task.Delay(1);
         }
 
-        private void CartoonsHeader_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void ShuffleButton_Click(object sender, RoutedEventArgs e)
         {
-            TvShowWindow.PlayRandomCartoons();
+            // Same dispatch shape as the IR remote's "cartoons" command and the
+            // S hotkey in App.GlobalKeyUp - run the marathon on an STA pump
+            // thread so its modal PlayerWindow can own the message loop.
+            TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayRandomCartoons());
+        }
+
+        private void HistoryButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (gui == null || model == null || model.HistoryList.Count == 0) return;
+            TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayHistoryList());
         }
 
         private void Coffee_Gif_Ended(object sender, EventArgs e)

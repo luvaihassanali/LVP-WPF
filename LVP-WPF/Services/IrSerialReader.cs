@@ -1,6 +1,7 @@
 using LVP_WPF.Windows;
 using Serilog;
 using System;
+using System.Collections.Generic;
 using System.IO.Ports;
 using System.Windows;
 using System.Windows.Input;
@@ -19,6 +20,24 @@ namespace LVP_WPF.Services
     internal sealed class IrSerialReader
     {
         private const int OpenRetryBudget = 20;
+
+        // Some IR remotes emit a single button press as 2+ serial lines (held
+        // button repeat code, or hardware-level bounce). For arrow keys that's
+        // a feature - the user wants to scroll. For one-shot actions like
+        // ENTER, transport keys, etc., it produces phantom double-clicks:
+        // first "enter" opens SeasonWindow, second "enter" lands on whatever
+        // the cursor was warped to (a tile) and closes it again. Track the
+        // last action command + tick; ignore a repeat within the window.
+        private const int ActionDebounceMs = 300;
+        private static readonly HashSet<string> DebouncedCommands = new HashSet<string>
+        {
+            "enter", "return",
+            "play", "pause", "stop",
+            "fastforward", "rewind", "forward", "backward",
+            "cartoons", "history-play"
+        };
+        private string _lastActionCmd = "";
+        private int _lastActionTick = 0;
 
         private readonly GuiModel _gui;
         private SerialPort _serialPort;
@@ -98,6 +117,22 @@ namespace LVP_WPF.Services
             string msg = port.ReadLine().Replace("\r", "");
             Log.Information(msg);
 
+            // Drop duplicate "action" commands inside the debounce window
+            // (see field comment above). Arrow keys fall through unchanged
+            // so the user can still hold them to scroll.
+            if (DebouncedCommands.Contains(msg))
+            {
+                int now = Environment.TickCount;
+                if (msg == _lastActionCmd && (now - _lastActionTick) < ActionDebounceMs)
+                {
+                    Log.Debug("IR debounce: dropped duplicate '{Cmd}' ({Ms}ms since last)",
+                        msg, now - _lastActionTick);
+                    return;
+                }
+                _lastActionCmd = msg;
+                _lastActionTick = now;
+            }
+
             if (CursorConfig.HideCursor)
             {
                 Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
@@ -119,11 +154,15 @@ namespace LVP_WPF.Services
                     layoutPoint.Move(layoutPoint.down);
                     break;
                 case "enter":
-                    if (layoutPoint.playerWindowActive)
-                    {
-                        _gui.playerWindow.TogglePlayPause();
-                    }
-                    else if (layoutPoint.mainWindowActive)
+                    // ENTER activates whichever control the cursor is currently
+                    // over - same model as the main / tv-show / season windows
+                    // and as the joystick's physical click button. The player
+                    // previously special-cased this to call TogglePlayPause
+                    // unconditionally, but that broke joystick nav onto the
+                    // new seek buttons (the click never reached them). The IR
+                    // remote's dedicated "play"/"pause"/"stop" keys below
+                    // still toggle play/pause without needing cursor position.
+                    if (layoutPoint.mainWindowActive || layoutPoint.playerWindowActive)
                     {
                         TcpSerialListener.DoMouseClick();
                     }
@@ -139,22 +178,39 @@ namespace LVP_WPF.Services
                 case "return":
                     layoutPoint.CloseCurrWindow();
                     break;
+                // All transport commands wake the overlay AND warp the joystick
+                // cursor onto the corresponding button so the user gets visual
+                // feedback ("you just hit fast-forward -> look at the FF button
+                // glow"). WakeOverlay runs after the action so it overrides
+                // TogglePlayPause's play-branch hide. FocusPlayerControl warps
+                // the cursor and updates LayoutPoint's currPoint so a subsequent
+                // arrow press steps from this button, not from somewhere stale.
                 case "play":
                 case "pause":
                 case "stop":
                     _gui.playerWindow.TogglePlayPause();
+                    _gui.playerWindow.WakeOverlay();
+                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonPlay);
                     break;
                 case "fastforward":
                     _gui.playerWindow.SeekRelative(false);
+                    _gui.playerWindow.WakeOverlay();
+                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonFastForward);
                     break;
                 case "rewind":
                     _gui.playerWindow.SeekRelative(true);
+                    _gui.playerWindow.WakeOverlay();
+                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonRewind);
                     break;
                 case "forward":
                     _gui.playerWindow.JumpToEdge(false);
+                    _gui.playerWindow.WakeOverlay();
+                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonForward);
                     break;
                 case "backward":
                     _gui.playerWindow.JumpToEdge(true);
+                    _gui.playerWindow.WakeOverlay();
+                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonBackward);
                     break;
                 case "cartoons":
                     TcpSerialListener.StaThreadWrapper(() =>

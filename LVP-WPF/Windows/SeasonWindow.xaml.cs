@@ -51,10 +51,30 @@ namespace LVP_WPF.Windows
 
         private void SeasonListView_Click(object sender, RoutedEventArgs e)
         {
-            TcpSerialListener.layoutPoint.Select(String.Empty);
             SeasonWindowBox item = (SeasonWindowBox)(sender as ListView).SelectedItem;
+            if (item == null) return;
             seasonIndex = item.Id;
-            this.Close();
+            // Defer BOTH the layout-state cleanup AND the window Close to
+            // after the WPF click chain completes. The handler is wired to
+            // PreviewMouseLeftButtonUp (tunneling phase); WPF still has the
+            // bubbling MouseLeftButtonUp + ListView's internal MouseUp
+            // processing to run on the same event. Closing the window
+            // synchronously here destroys the HWND mid-chain and downstream
+            // handlers in PresentationCore throw Win32Exception "Invalid
+            // window handle".
+            //
+            // Critically, Select("") must also be deferred and run in the
+            // SAME dispatcher item as Close. If Select runs immediately,
+            // layoutpoint flips to "tvShow active" while the SeasonWindow is
+            // still visually open and the modal pump is still active - any
+            // IR-remote / joystick input during that window routes to the
+            // wrong nav target and the app gets confused (the "layout point
+            // goes back to tv form while season form still open" symptom).
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                TcpSerialListener.layoutPoint.Select(String.Empty);
+                Close();
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
 
         private void SeasonWindow_Loaded(object sender, RoutedEventArgs e)

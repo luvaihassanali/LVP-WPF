@@ -21,10 +21,38 @@
                     <RowDefinition Height="Auto"></RowDefinition>
                     <RowDefinition Height="Auto"></RowDefinition>
                 </Grid.RowDefinitions>
+                <Grid.Resources>
+                    <Style x:Key="HeaderActionButton" TargetType="{x:Type Button}">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="White"/>
+                        <Setter Property="FontSize" Value="22"/>
+                        <Setter Property="FontFamily" Value="Segoe UI Black"/>
+                        <Setter Property="Height" Value="50"/>
+                        <Setter Property="MinWidth" Value="180"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type Button}">
+                                    <Border x:Name="Border" Background="{TemplateBinding Background}" BorderThickness="1" BorderBrush="White" Padding="20,0,20,0">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#FF26A0DA" TargetName="Border"/>
+                                            <Setter Property="BorderBrush" Value="#3c7fb1" TargetName="Border"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Grid.Resources>
                 <Button Name="closeButton" Panel.ZIndex="2" Click="CloseButton_Click" Foreground="White" Width="50" Height="50" HorizontalAlignment="Right" Margin="0,0,20,10" Style="{StaticResource CloseButton}">
                     <TextBlock Text="✖" Margin="0,-3,1,0" FontSize="28" FontFamily="Segoe UI"/>
                 </Button>
                 <Label Name="tvHeader" Content="TV" Foreground="White"/>
+                <Button Name="historyButton" Click="HistoryButton_Click" Style="{StaticResource HeaderActionButton}"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,90,0"
+                        Content="▶ History" Focusable="False"/>
                 <ListView ItemContainerStyle="{StaticResource MainGridListItem}" PreviewMouseLeftButtonUp="ListView_Click" Grid.Row="1" ItemsSource="{Binding TvShows}" Name="TvShowListView" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -32,10 +60,10 @@
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ListView>
-                <!--<Expander Grid.Row="2" Header="Cartoons" Foreground="White">
-                    <Label Content="Cartoons" Foreground="White" ></Label>
-                </Expander>-->
-                <Label Name="cartoonsHeader" PreviewMouseDown="CartoonsHeader_Click" Grid.Row="2" Content="Cartoons" Foreground="White"></Label>
+                <Label Name="cartoonsHeader" Grid.Row="2" Content="Cartoons" Foreground="White"/>
+                <Button Name="shuffleButton" Grid.Row="2" Click="ShuffleButton_Click" Style="{StaticResource HeaderActionButton}"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,90,0"
+                        Content="▶ Shuffle" Focusable="False"/>
                 <ListView ItemContainerStyle="{StaticResource MainGridListItem}" PreviewMouseLeftButtonUp="ListView_Click" ItemsSource="{Binding Cartoons}" Grid.Row="3" Name="CartoonsListView" Background="Black" BorderBrush="Black">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>

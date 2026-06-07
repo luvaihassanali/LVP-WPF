@@ -138,10 +138,14 @@ namespace LVP_WPF
 
             // TEMP instrumentation - throwaway, remove after profiling.
             // Splits CheckForUpdates into its three sub-phases so we can see
-            // which one dominates startup time on a real library.
+            // which one dominates startup time on a real library. Routed
+            // through Serilog so the numbers land in the file log even when
+            // the load-screen TextBox isn't visible (no rebuild needed).
             Stopwatch sw = Stopwatch.StartNew();
             MainModel? prevMedia = _repository.Load();
-            Log($"  Load: {sw.ElapsedMilliseconds}ms");
+            long loadMs = sw.ElapsedMilliseconds;
+            Serilog.Log.Information("CheckForUpdates Load: {Ms}ms", loadMs);
+            Log($"  Load: {loadMs}ms");
 
             if (prevMedia == null)
             {
@@ -150,19 +154,23 @@ namespace LVP_WPF
 
             sw.Restart();
             bool result = !MainWindow.model.Compare(prevMedia);
-            Log($"  Compare: {sw.ElapsedMilliseconds}ms (changed={result})");
+            long compareMs = sw.ElapsedMilliseconds;
+            Serilog.Log.Information("CheckForUpdates Compare: {Ms}ms changed={Changed}", compareMs, result);
+            Log($"  Compare: {compareMs}ms (changed={result})");
 
             sw.Restart();
             if (!result)
             {
                 MainWindow.model = prevMedia;
-                Log($"  Swap: {sw.ElapsedMilliseconds}ms");
             }
             else
             {
                 MainWindow.model.Ingest(prevMedia);
-                Log($"  Ingest: {sw.ElapsedMilliseconds}ms");
             }
+            long tailMs = sw.ElapsedMilliseconds;
+            Serilog.Log.Information("CheckForUpdates {Phase}: {Ms}ms", result ? "Ingest" : "Swap", tailMs);
+            Log($"  {(result ? "Ingest" : "Swap")}: {tailMs}ms");
+
             Log("Check for updates end");
             return result;
         }
