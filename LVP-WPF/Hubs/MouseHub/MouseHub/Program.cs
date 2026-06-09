@@ -4,6 +4,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO.Ports;
+using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -123,6 +124,26 @@ namespace MouseMoverClient
             pollingTimer.AutoReset = false;
 
             Task.Run(() => { ConsoleHelper.StartMatrix(); });
+
+            // Self-test path: `MouseHub.exe --test-banner` (or -t) skips the
+            // serial setup and just verifies the launch banner visually.
+            // Lets the matrix render for 2 seconds so you see what it looks
+            // like in steady state, then triggers ShowLaunchingBanner so
+            // you can confirm the transition (matrix -> red flood -> banner)
+            // is noticeable without needing the IR remote / ESP / serial
+            // port hooked up. Press any key to exit.
+            //
+            // Use this on dev workstations before deploying changes to the
+            // media server box. Keeps you from chasing "did it work?" cycles
+            // through the real hardware path.
+            if (args.Any(a => a == "--test-banner" || a == "-t"))
+            {
+                System.Threading.Thread.Sleep(2000);
+                ConsoleHelper.ShowLaunchingBanner("TEST MODE - press any key to exit");
+                Console.ReadKey(intercept: true);
+                return;
+            }
+
             InitializeSerialPort();
             StartListener();
 
@@ -458,11 +479,13 @@ namespace MouseMoverClient
                             p.StartInfo.FileName = path;
                             p.StartInfo.WorkingDirectory = path.Replace("LVP-WPF.exe", "");
                             p.Start();
-                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
-                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
-                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
-                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
-                            Console.WriteLine(" ------------------------------------------------------ LAUNCHING ------------------------------------------------------ ");
+                            // Stops the matrix loop, flood-fills the console
+                            // with a red background, and draws a centered
+                            // "LAUNCHING" box-banner + audio beep. The 5
+                            // dashed WriteLines used to live here but the
+                            // matrix Task.Run repainted them within ~50ms,
+                            // so the user often missed the confirmation.
+                            ConsoleHelper.ShowLaunchingBanner();
                             launched = true;
                         }
                         break;
@@ -709,12 +732,61 @@ namespace MouseMoverClient
         private static int yPad = 2;
         private static int yPad1 = 2;
 
+        // Cooperative stop flag - the matrix loop runs in a Task.Run on the
+        // thread pool with no native cancellation. Setting this from another
+        // thread makes the loop exit on its next iteration. volatile so the
+        // matrix thread sees the change without needing a memory barrier.
+        private static volatile bool _matrixStopRequested;
+
+        // Short-term pause flag - used by ShowLaunchingBanner to suspend the
+        // matrix loop just long enough to paint the banner without racing
+        // against the matrix's Console.ForegroundColor writes. The matrix
+        // and the banner painter both touch Console.ForegroundColor as
+        // shared state; without a pause, the matrix flips FG to DarkBlue
+        // between our "FG=White" and our Write call, which renders the
+        // banner text DarkBlue-on-DarkBlue (invisible). Once painting is
+        // done and the guard rect is in place, the pause is released and
+        // the matrix resumes (now skipping banner cells via the guard).
+        private static volatile bool _matrixPaused;
+
+        // Guard rectangle - matrix paint sites skip cells in this region so
+        // a banner overlay can stay visible while the matrix keeps flowing
+        // around it. _guardActive is checked first; only when true do the
+        // _guardX1..Y2 ints matter, so the bounds writes don't need to be
+        // atomic - they're guaranteed to be fully written before the
+        // volatile flag goes true.
+        private static volatile bool _guardActive;
+        private static int _guardX1, _guardY1, _guardX2, _guardY2;
+
+        private static bool IsGuarded(int x, int y) =>
+            _guardActive && x >= _guardX1 && x <= _guardX2 && y >= _guardY1 && y <= _guardY2;
+
+        // Inlined-friendly replacement for Console.SetCursorPosition + Write.
+        // Skips the call entirely when the target cell is inside the active
+        // guard region. The ForegroundColor / BackgroundColor state set by
+        // the matrix before calling this still gets set even if we skip -
+        // that's fine, those property writes don't paint anything until the
+        // next actual Write.
+        private static void Paint(int x, int y, char ch)
+        {
+            if (IsGuarded(x, y)) return;
+            Console.SetCursorPosition(x, y);
+            Console.Write(ch);
+        }
+
         internal static void StartMatrix()
         {
             //Console.CursorVisible = false;
             Initialize(out int width, out int height, out int[] y);
-            while (true)
+            while (!_matrixStopRequested)
             {
+                if (_matrixPaused)
+                {
+                    // Banner painter is mid-paint; back off for a tick so
+                    // we don't fight it over Console.ForegroundColor.
+                    System.Threading.Thread.Sleep(20);
+                    continue;
+                }
                 matrixCounter++;
                 if (matrixCounter == 50)
                 {
@@ -726,6 +798,134 @@ namespace MouseMoverClient
                     matrixCounter = 0;
                 }
             }
+        }
+
+        internal static void StopMatrix() => _matrixStopRequested = true;
+
+        // Confirmation banner shown when the "power" serial command is
+        // received. Stays visible while the matrix KEEPS flowing around it.
+        //
+        // Mechanism:
+        //   1. Compute the banner's outer rectangle.
+        //   2. Set _guardX1..Y2 to that rectangle, then set _guardActive
+        //      true. From this moment, the matrix's Paint() helper skips
+        //      any cell inside the rectangle - matrix continues advancing
+        //      its column trails internally, but their paints "tunnel
+        //      under" the banner without overwriting it.
+        //   3. Sleep briefly so any in-flight ColumnUpdate iteration that
+        //      started before _guardActive flipped has time to finish
+        //      (otherwise stale paints from that iteration could land on
+        //      banner cells we're about to paint).
+        //   4. Paint the box border + title/subtitle text strips. The
+        //      cells inside the box (not painted by us) keep whatever
+        //      glyphs the matrix left there before the guard activated -
+        //      "frozen matrix" behind the banner.
+        //   5. Restore BackgroundColor to Black so subsequent matrix paints
+        //      keep using a black backdrop instead of inheriting our
+        //      DarkBlue, which would patch DarkBlue rectangles into the
+        //      flowing matrix outside the banner.
+        //
+        // True transparency isn't possible in conhost (each cell has one
+        // opaque bg color), but guard-skipping the banner region gets the
+        // same visual effect: the matrix appears to flow around a static
+        // overlay rather than blanking the whole screen.
+        internal static void ShowLaunchingBanner(string subtitle = "Starting LVP-WPF...")
+        {
+            int w = Console.WindowWidth;
+            int h = Console.WindowHeight;
+
+            string title = "L A U N C H I N G";
+            int innerW   = Math.Max(title.Length, subtitle.Length) + 14;
+            int boxW     = innerW + 2;
+            int boxH     = 7;
+
+            int startCol = Math.Max(0, (w - boxW) / 2);
+            int startRow = Math.Max(0, (h - boxH) / 2);
+            int endCol   = startCol + boxW - 1;
+            int endRow   = startRow + boxH - 1;
+
+            // Set bounds first, then flip the volatile flag - that way the
+            // matrix loop never sees half-written bounds.
+            _guardX1 = startCol; _guardY1 = startRow;
+            _guardX2 = endCol;   _guardY2 = endRow;
+            _guardActive = true;
+
+            // Pause the matrix entirely while we paint. The guard rectangle
+            // alone isn't enough: the matrix and banner painter both write
+            // to Console.ForegroundColor (and BackgroundColor), so without
+            // the pause our "FG=White" can be clobbered by the matrix's
+            // "FG=DarkBlue" mid-paint, rendering our text invisible
+            // (DarkBlue-on-DarkBlue). 100 ms is comfortably longer than a
+            // ColumnUpdate iteration; once we release the pause at the end
+            // the guard rect keeps the matrix off banner cells permanently.
+            _matrixPaused = true;
+            System.Threading.Thread.Sleep(100);
+
+            try
+            {
+                Console.BackgroundColor = ConsoleColor.DarkBlue;
+                Console.ForegroundColor = ConsoleColor.White;
+                // NO Console.Clear() - we deliberately leave the rest of
+                // the screen alone so the matrix keeps flowing through it.
+
+                // Build each row as a full string from '║' to '║' with the
+                // interior filled with spaces (or centered text). Painting
+                // each cell explicitly gives the interior a solid DarkBlue
+                // wash instead of leaking frozen-matrix glyphs through
+                // unpainted gaps. The matrix continues to flow OUTSIDE
+                // the box (where the guard rect doesn't apply); inside
+                // is now uniformly DarkBlue.
+                string horiz    = new string('═', innerW);
+                string emptyMid = new string(' ', innerW);
+                string[] lines  = new[] {
+                    "╔" + horiz + "╗",
+                    "║" + emptyMid + "║",
+                    "║" + CenterIn(title,    innerW) + "║",
+                    "║" + emptyMid + "║",
+                    "║" + CenterIn(subtitle, innerW) + "║",
+                    "║" + emptyMid + "║",
+                    "╚" + horiz + "╝",
+                };
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    Console.SetCursorPosition(startCol, startRow + i);
+                    Console.Write(lines[i]);
+                }
+
+                // Restore BG to Black so the matrix's continuing paints
+                // outside the guard rect land on a black backdrop instead
+                // of inheriting DarkBlue (which would patch DarkBlue
+                // rectangles into the flowing matrix - very visible).
+                // Foreground gets reset by ColumnUpdate every iteration
+                // so we don't need to touch it.
+                Console.BackgroundColor = ConsoleColor.Black;
+            }
+            catch
+            {
+                // Console operations can fail if the window was closed
+                // mid-paint. Swallow - the user doesn't need a stack
+                // trace for a cosmetic banner.
+            }
+            finally
+            {
+                // Release the pause regardless of outcome - even on failure
+                // we don't want to leave the matrix permanently paused.
+                // The guard rect is still active so the matrix's resumed
+                // iterations will skip the banner cells.
+                _matrixPaused = false;
+            }
+        }
+
+        // Returns `text` centered within a `width`-wide column, padded on
+        // either side with spaces. If the text is longer than the column,
+        // truncates from the right (shouldn't happen in normal banner use -
+        // innerW is sized off the longest of {title, subtitle} + padding).
+        private static string CenterIn(string text, int width)
+        {
+            if (text.Length >= width) return text.Substring(0, width);
+            int left  = (width - text.Length) / 2;
+            int right = width - text.Length - left;
+            return new string(' ', left) + text + new string(' ', right);
         }
 
         private static int YPositionFields(int yPosition, int height)
@@ -754,39 +954,27 @@ namespace MouseMoverClient
 
         private static void ColumnUpdate(int width, int height, int[] y)
         {
+            // Every paint goes through Paint(x, y, ch) - it short-circuits
+            // when the cell is inside the active guard rectangle so a
+            // banner overlay (ShowLaunchingBanner) can stay visible while
+            // this loop keeps animating everywhere else. y[x] still
+            // advances even when the paint is skipped, so the matrix's
+            // column trails "tunnel under" the banner and resume on the
+            // other side.
             int x;
             if (matrixCounter < flowSpeed)
             {
                 for (x = 0; x < width; ++x)
                 {
-                    if (x % divisor == 1)
-                    {
-                        Console.ForegroundColor = fadedColor;
-                    }
-                    else
-                    {
-                        Console.ForegroundColor = baseColor;
-                    }
+                    if (x % divisor == 1) Console.ForegroundColor = fadedColor;
+                    else                  Console.ForegroundColor = baseColor;
+                    Paint(x, y[x], Asciicharacters);
 
-                    Console.SetCursorPosition(x, y[x]);
-                    Console.Write(Asciicharacters);
+                    if (x % divisor == modVal) Console.ForegroundColor = fadedColor;
+                    else                       Console.ForegroundColor = baseColor;
+                    Paint(x, YPositionFields(y[x] - yPad,  height), Asciicharacters);
+                    Paint(x, YPositionFields(y[x] - yPad1, height), ' ');
 
-                    if (x % divisor == modVal)
-                    {
-                        Console.ForegroundColor = fadedColor;
-                    }
-                    else
-                    {
-                        Console.ForegroundColor = baseColor;
-                    }
-
-                    int temp = y[x] - yPad;
-                    Console.SetCursorPosition(x, YPositionFields(temp, height));
-                    Console.Write(Asciicharacters);
-
-                    int temp1 = y[x] - yPad1;
-                    Console.SetCursorPosition(x, YPositionFields(temp1, height));
-                    Console.Write(' ');
                     y[x] = YPositionFields(y[x] + 1, height);
                 }
             }
@@ -794,48 +982,24 @@ namespace MouseMoverClient
             {
                 for (x = 0; x < width; ++x)
                 {
-                    Console.SetCursorPosition(x, y[x]);
-                    if (x % divisor == modVal)
-                    {
-                        Console.ForegroundColor = fadedColor;
-                    }
-                    else
-                    {
-                        Console.ForegroundColor = baseColor;
-                    }
-
-                    Console.Write(Asciicharacters);
-
+                    if (x % divisor == modVal) Console.ForegroundColor = fadedColor;
+                    else                       Console.ForegroundColor = baseColor;
+                    Paint(x, y[x], Asciicharacters);
                     y[x] = YPositionFields(y[x] + 1, height);
-
                 }
             }
             else if (matrixCounter > fastFlow)
             {
                 for (x = 0; x < width; ++x)
                 {
-                    Console.SetCursorPosition(x, y[x]);
-                    Console.Write(' ');
-
-                    int temp1 = y[x] - yPad1;
-                    Console.SetCursorPosition(x, YPositionFields(temp1, height));
-                    Console.Write(' ');
+                    Paint(x, y[x],                                  ' ');
+                    Paint(x, YPositionFields(y[x] - yPad1, height), ' ');
 
                     if (matrixCounter > fastFlow && matrixCounter < textFlow)
                     {
-                        if (x % divisor == modVal)
-                        {
-                            Console.ForegroundColor = fadedColor;
-                        }
-                        else
-                        {
-                            Console.ForegroundColor = baseColor;
-                        }
-
-                        int temp = y[x] - yPad;
-                        Console.SetCursorPosition(x, YPositionFields(temp, height));
-                        Console.Write(Asciicharacters);
-
+                        if (x % divisor == modVal) Console.ForegroundColor = fadedColor;
+                        else                       Console.ForegroundColor = baseColor;
+                        Paint(x, YPositionFields(y[x] - yPad, height), Asciicharacters);
                     }
                     Console.SetCursorPosition(width / 2, height / 2);
                     y[x] = YPositionFields(y[x] + 1, height);
