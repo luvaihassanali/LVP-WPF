@@ -33,7 +33,14 @@ namespace MouseMoverClient
             esp8266ServerIp = ConfigurationManager.AppSettings["Esp8266Ip"];
             esp8266ServerPort = Int32.Parse(ConfigurationManager.AppSettings["Esp8266Port"]);
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
-            ConsoleHelper.SetCurrentFont("Segoe Mono Boot", 38);
+            // Font height in pixels. The visible window is roughly
+            // (cols * fontSize/2) wide x (rows * fontSize) tall, so this is
+            // the dominant knob for "how big is the window on screen". At
+            // 38 (the original hardcoded value), 76x31 cells ~= 1444x1178 px.
+            // Defaulted to 20; bump it up via App.config if you want
+            // chunkier text, down if you want a smaller window.
+            short fontSize = (short)Int32.Parse(ConfigurationManager.AppSettings["ConsoleFontSize"] ?? "20");
+            ConsoleHelper.SetCurrentFont("Segoe Mono Boot", fontSize);
             Console.Title = "";
             //Console.ForegroundColor = ConsoleColor.White;
             Console.BackgroundColor = ConsoleColor.Black;
@@ -102,7 +109,13 @@ namespace MouseMoverClient
             ConsoleHelper.SetWindowPosition(winLeft, winTop);
             int opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
             ConsoleHelper.SetWindowTransparency(opacity); // /256
-            ConsoleHelper.HideTitleBar();
+            // Title bar (caption + min/max/close + system menu) intentionally
+            // left enabled. Removed the HideTitleBar() call here so the
+            // window behaves like a regular console - you can drag, minimize,
+            // and close it from the chrome instead of having to kill the
+            // process. NB: if you ever re-enable HideTitleBar, the
+            // ConsoleWindowTop coord in App.config needs to drop ~30px to
+            // compensate for the missing caption height.
             ConsoleHelper.DisableQuickEditMode();
 
             pollingTimer = new System.Timers.Timer(6000); // esp timeout is 5s
@@ -175,7 +188,6 @@ namespace MouseMoverClient
                             cursorPos = 49;
                         }
                     }
-                    ConsoleHelper.StartBlink();
                     ConsoleHelper.CloseTeamViewerDialog();
                     CheckSerialConnection();
                 }
@@ -479,11 +491,58 @@ namespace MouseMoverClient
         internal static extern IntPtr GetStdHandle(int nStdHandle);
 
         // > Set window position x=600,y=680
+        //
+        // Coords are the desired location of the visible CONTENT (client
+        // area), not the outer window box. The function compensates for
+        // whatever non-client chrome the OS gave the window: caption +
+        // borders when the title bar is enabled, or just borders when it
+        // isn't. That way the App.config values keep their meaning if you
+        // ever toggle HideTitleBar - no need to hand-tune the Y coord by
+        // SM_CYCAPTION pixels.
+        //
+        // The offset is computed at runtime instead of hardcoded so it
+        // tracks Windows version, DPI scaling, and theme correctly:
+        // GetWindowRect gives the outer-window rect in screen coords,
+        // ClientToScreen(0,0) gives the screen coord of the client's
+        // top-left, the deltas are exactly the chrome thicknesses.
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT { public int left, top, right, bottom; }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT { public int x, y; }
+
+        [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+        [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
 
         private const int SWP_NOSIZE = 0x0001;
         internal static void SetWindowPosition(int x, int y)
         {
-            SetWindowPos(MyConsole, 0, x, y, 0, 0, SWP_NOSIZE);
+            int adjX = x;
+            int adjY = y;
+            try
+            {
+                if (GetWindowRect(MyConsole, out RECT wr))
+                {
+                    POINT cp = new POINT { x = 0, y = 0 };
+                    if (ClientToScreen(MyConsole, ref cp))
+                    {
+                        // Non-client offset = how far below/right the client
+                        // area starts vs the outer window's top-left edge.
+                        // Subtract from the requested coords so the client
+                        // lands exactly at (x, y).
+                        adjX = x - (cp.x - wr.left);
+                        adjY = y - (cp.y - wr.top);
+                    }
+                }
+            }
+            catch
+            {
+                // Win32 query failed for some reason - fall back to the
+                // original "outer window at (x, y)" behavior rather than
+                // refusing to place the window at all.
+            }
+            SetWindowPos(MyConsole, 0, adjX, adjY, 0, 0, SWP_NOSIZE);
         }
 
         // > Transparency
@@ -921,22 +980,12 @@ namespace MouseMoverClient
 
         // Keep on top
 
-        [DllImport("user32.dll")]
-        internal static extern IntPtr GetForegroundWindow();
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        internal static void StartBlink()
-        {
-            IntPtr hwnd = Process.GetCurrentProcess().MainWindowHandle;
-            if (hwnd == GetForegroundWindow())
-            {
-                return;
-            }
-            SetForegroundWindow(hwnd);
-        }
+        // Previously: GetForegroundWindow + SetForegroundWindow + FlashWindowEx
+        // were declared here to power a "draw attention on disconnect" hook
+        // (ConsoleHelper.StartBlink). The whole feature got removed - it
+        // was stealing focus from LVP-WPF on every failed ESP ping, and the
+        // taskbar-flash replacement was still distracting. The connection
+        // state is visible in the console output, that's enough.
     }
     #endregion
 }

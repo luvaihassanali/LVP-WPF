@@ -49,6 +49,11 @@ namespace LVP_WPF
                     restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information,
                     rollingInterval: RollingInterval.Month,
                     rollOnFileSizeLimit: true)
+                // Load-screen TextBox sink. Information+ so per-directory
+                // Debug noise from the scanner doesn't drown the load screen.
+                // WpfLoadProgress drains the queue on a 100ms DispatcherTimer.
+                .WriteTo.Sink(new LVP_WPF.Services.LoadScreenSink(),
+                    restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information)
                 .CreateLogger();
         }
 

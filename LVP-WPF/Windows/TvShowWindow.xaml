@@ -82,7 +82,15 @@
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
-                                            <TextBlock Margin="10,0,10,0" Foreground="White" FontWeight="Bold" FontSize="18" Text="{Binding Name}" MaxWidth="830"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <!-- Episode number label: greyed so it doesn't compete with the
+                                                     title, fixed Width so titles still line up across tiles when
+                                                     numbers go from "E09" to "E10" (the label gets a consistent
+                                                     left-alignment column). Empty string for Extras / pre-enrichment
+                                                     so they just render no label. -->
+                                                <TextBlock Margin="10,0,0,0" Width="44" Foreground="#888888" FontWeight="Bold" FontSize="18" Text="{Binding Label}"/>
+                                                <TextBlock Margin="6,0,10,0" Foreground="White" FontWeight="Bold" FontSize="18" Text="{Binding Name}" MaxWidth="786"/>
+                                            </StackPanel>
                                             <TextBlock Grid.Row="1" Margin="10,0,10,0" Foreground="White" FontSize="18" Text="{Binding Description}" TextWrapping="Wrap" MaxWidth="830"/>
                                         </Grid>
                                     </Grid>

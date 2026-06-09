@@ -19,9 +19,13 @@ namespace LVP_WPF.Services
         /// <summary>
         /// Modal informational/warning popup with Continue and Exit buttons.
         /// When <paramref name="tvShow"/> is supplied, also offers a "Go to
-        /// TMDB" link. Backed by InputDialog in the WPF implementation.
+        /// TMDB" link. When <paramref name="episodePath"/> is supplied, also
+        /// offers a "Folder" button that opens File Explorer with that file
+        /// highlighted - useful for jumping to the offending file when the
+        /// dialog is reporting a name mismatch. Backed by InputDialog in the
+        /// WPF implementation.
         /// </summary>
-        void ShowNotice(string caption, string message, TvShow? tvShow = null, int currSeason = 0);
+        void ShowNotice(string caption, string message, TvShow? tvShow = null, int currSeason = 0, string? episodePath = null);
 
         /// <summary>
         /// Modal multi-choice picker for TMDB disambiguation. Returns the

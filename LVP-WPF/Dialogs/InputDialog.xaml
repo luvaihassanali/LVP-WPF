@@ -19,7 +19,14 @@
             </Grid.RowDefinitions>
             <TextBlock Margin="10,0,0,0" Text="{Binding Caption}" FontSize="48" Foreground="LightBlue"/>
             <TextBlock Grid.Row="1" Margin="10,0,10,0" FontSize="28" Foreground="White" Text="{Binding Message}" TextWrapping="Wrap"/>
-            <Button Name="tmdbBtn" FontSize="22" Foreground="White" Background="Black" Content="TMDB" HorizontalAlignment="Left" Margin="10,10,10,10" Grid.Row="2" Height="40" Width="120" Click="TmdbButton_Click"/>
+            <!-- Left side: TMDB + Folder. Both are hidden when their backing
+                 data isn't supplied (no tvShow -> no TMDB; no episodePath ->
+                 no Folder). Stacked horizontally so they line up; right
+                 buttons stay anchored to the right with explicit margins. -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Grid.Row="2" Margin="10,10,10,10">
+                <Button Name="tmdbBtn" FontSize="22" Foreground="White" Background="Black" Content="TMDB" Height="40" Width="120" Click="TmdbButton_Click"/>
+                <Button Name="folderBtn" FontSize="22" Foreground="White" Background="Black" Content="Folder" Margin="10,0,0,0" Height="40" Width="120" Click="FolderButton_Click"/>
+            </StackPanel>
             <Button FontSize="24" Foreground="White" Background="Black" Content="Continue" HorizontalAlignment="Right" Margin="10,10,140,10" Grid.Row="2" Height="40" Width="120" Click="ContinueButton_Click"/>
             <Button FontSize="24" Foreground="White" Background="Black" Content="Exit" HorizontalAlignment="Right" Margin="10,10,10,10" Grid.Row="2" Height="40" Width="120" Click="ExitButton_Click"/>
         </Grid>

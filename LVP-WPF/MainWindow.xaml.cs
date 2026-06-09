@@ -35,6 +35,43 @@ namespace LVP_WPF
             this.WindowStyle = WindowStyle.SingleBorderWindow;
             this.AllowsTransparency = false;
 #endif
+
+            // Kill any running MouseHub BEFORE the window's Loaded handler
+            // gets a chance to spin up TcpSerialListener and try to open the
+            // serial port. Both processes share the same COM port; if
+            // MouseHub still has it when LVP's listener starts, we get a
+            // duplicate-open failure. Originally this lived in the ctor
+            // (commit 6c3011e), then "update mouse hub" (29c3ce9) moved it
+            // into Window_ContentRendered alongside the cursor-positioning -
+            // but ContentRendered fires AFTER Loaded starts and races with
+            // TcpSerialListener.StartThread(). Synchronous kill here, before
+            // Loaded ever runs.
+            //
+            // WaitForExit gives Windows a beat to release the COM port
+            // handle - Kill() returns immediately but the handle table
+            // cleanup is asynchronous in the kernel. 2s is far more than
+            // enough; failures fall through to the warning below.
+            try
+            {
+                foreach (Process p in Process.GetProcessesByName("MouseHub"))
+                {
+                    p.Kill();
+                    if (!p.WaitForExit(2000))
+                    {
+                        Log.Warning("MouseHub did not exit within 2s after Kill()");
+                    }
+                    mouseHubKilled = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Process can exit between GetProcessesByName and Kill;
+                // also fails with Win32 access-denied if MouseHub was
+                // started elevated. Either way, continue startup - if the
+                // port really is held, TcpSerialListener will surface that
+                // separately.
+                Log.Warning("Failed to kill MouseHub: {Message}", ex.Message);
+            }
         }
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -59,7 +96,8 @@ namespace LVP_WPF
 
             long beforeInit = mwSw.ElapsedMilliseconds;
             library = new MediaLibrary(new MediaRepository("media.json"));
-            await library.Initialize(new WpfLoadProgress(progressBar));
+            WpfLoadProgress loadProgress = new WpfLoadProgress(progressBar, logTxtBox);
+            await library.Initialize(loadProgress);
             Serilog.Log.Information("MW.Loaded: library.Initialize await done at {Ms}ms (took {InitMs}ms)",
                 mwSw.ElapsedMilliseconds, mwSw.ElapsedMilliseconds - beforeInit);
             if (model == null)
@@ -103,6 +141,10 @@ namespace LVP_WPF
             inactivityTimer.Inactivity += InactivityDetected;
             PlayerWindow.InitializeLibVlcCore();
             MainWindow_Fade(1.0);
+            // Final drain + stop the timer before the load grid disappears.
+            // Any dialog-auto-log lines that fired late will still land in
+            // the TextBox before it gets hidden.
+            loadProgress.StopLogDrain();
             loadGrid.Visibility = Visibility.Hidden;
             if (AppConfig.ShowSnow)
             {
@@ -112,25 +154,16 @@ namespace LVP_WPF
 
         private void Window_ContentRendered(object sender, EventArgs e)
         {
+            // Cursor positioning lives here (not in the ctor) because we
+            // need the window to actually be on screen first - SetCursorPos
+            // before paint can land the cursor at the old window position.
+            // MouseHub kill USED to be here too but moved back to the ctor;
+            // see ctor comment for the race condition that fixed.
             _ = Task.Run(() =>
             {
                 // Top-right corner of coffeeGif, computed from screen-center + gif half-dims.
                 // coffee.gif is 498x431 native; rendered 1:1 centered in the loadGrid.
                 ComInterop.SetCursorPos(CursorConfig.CenterX + 249, CursorConfig.CenterY - 216);
-
-                Process[] mouseHubProcess = Process.GetProcessesByName("MouseHub");
-                if (mouseHubProcess.Length == 0) return;
-                try
-                {
-                    mouseHubProcess[0].Kill();
-                    mouseHubKilled = true;
-                }
-                catch (Exception ex)
-                {
-                    // Process can exit between GetProcessesByName and Kill;
-                    // also fails with Win32 access-denied if MouseHub was started elevated.
-                    Log.Warning("Failed to kill MouseHub: {Message}", ex.Message);
-                }
             });
         }
 

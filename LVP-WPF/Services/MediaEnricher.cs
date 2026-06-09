@@ -1,6 +1,7 @@
 using LVP_WPF.Util;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -242,57 +243,91 @@ namespace LVP_WPF.Services
                 }
 
                 JArray jEpisodes = (JArray)seasonObject["episodes"];
-                jEpisodes = new JArray(jEpisodes.OrderBy(obj => (int)obj["episode_number"]));
+
+                // Index TMDB episodes by episode_number so disk files map to
+                // TMDB by the number encoded in their filename, NOT by array
+                // position. The previous positional walk silently misaligned
+                // whenever disk had missing episodes - e.g. SNL S08 with E18
+                // missing left the disk file numbered "19%..." at position 17,
+                // and the old code handed it TMDB's E18 record. Dictionary
+                // lookup makes the mapping intent-driven: disk says E19, we
+                // fetch TMDB E19; we cleanly skip the TMDB-only E18.
+                Dictionary<int, JObject> jByNum = new Dictionary<int, JObject>(jEpisodes.Count);
+                foreach (JToken t in jEpisodes)
+                {
+                    jByNum[(int)t["episode_number"]] = (JObject)t;
+                }
 
                 Episode[] episodes = season.Episodes;
-                int jEpIndex = 0;
-
                 for (int k = 0; k < episodes.Length; k++)
                 {
-                    if (episodes[k].Id != 0)
-                    {
-                        jEpIndex++;
-                        continue;
-                    }
-                    if (k > jEpisodes.Count - 1)
-                    {
-                        _prompts.ShowError($"Error: {tvShow.Name}",
-                            $"Episode index out of TMDB episodes range S{seasonIndex}E{jEpIndex}");
-                    }
+                    // Already enriched on a previous run (loaded from
+                    // media.json with Id stamped from TMDB episode_number).
+                    if (episodes[k].Id != 0) continue;
+
                     Episode episode = episodes[k];
-
-                    if (episode.Name.Contains('#'))
-                    {
-                        jEpIndex = await EnrichMultiEpisode(tvShow, season, episode, jEpisodes, jEpIndex);
-                        // Original did not tick progress on multi-episode advance; preserve.
-                        continue;
-                    }
-
-                    JObject jEpisode = null;
+                    int diskEpNum;
                     try
                     {
-                        jEpisode = (JObject)jEpisodes[jEpIndex];
+                        diskEpNum = ExtractDiskEpisodeNumber(episode.Path);
                     }
                     catch
                     {
                         _prompts.ShowError($"Error: {tvShow.Name}",
-                            $"Episode index out of TMDB episodes range S{seasonIndex}E{k + 1}");
+                            $"Could not parse episode number from filename '{Path.GetFileName(episode.Path)}' (Season {seasonIndex}).");
+                        continue;
+                    }
+
+                    if (episode.Name.Contains('#'))
+                    {
+                        await EnrichMultiEpisode(tvShow, season, episode, jByNum, diskEpNum, seasonIndex);
+                        // Match prior behavior: no progress tick on the
+                        // multi-episode advance.
+                        continue;
+                    }
+
+                    if (!jByNum.TryGetValue(diskEpNum, out JObject jEpisode))
+                    {
+                        _prompts.ShowError($"Error: {tvShow.Name}",
+                            $"Disk episode E{diskEpNum:D2} has no match on TMDB (Season {seasonIndex} has {jByNum.Count} episodes).");
+                        continue;
                     }
 
                     await EnrichSingleEpisode(tvShow, season, episode, jEpisode);
-                    jEpIndex++;
                     _onItemEnriched?.Invoke();
                 }
                 seasonIndex++;
             }
         }
 
+        // Mirrors LibraryScanner.ExtractEpisodeIndex - parses the episode
+        // number prefix from a "N%Title.ext" or "N#suffix%Title.ext" path.
+        // Inlined here (not exposed from the scanner) because it's only the
+        // enricher that needs it and we don't want to widen the scanner's
+        // public surface for one caller. Throws FormatException on a bad
+        // prefix; the caller is expected to catch and show a UI error.
+        private static int ExtractDiskEpisodeNumber(string path)
+        {
+            string prefix = Path.GetFileName(path).Split('%')[0];
+            int hash = prefix.IndexOf('#');
+            if (hash >= 0) prefix = prefix.Substring(0, hash);
+            return int.Parse(prefix);
+        }
+
         // Enrich a "two-parter" episode (local name contains '#' joining
-        // multiple TMDB episode names, e.g. "PilotA#PilotB.mkv"). Walks the
-        // TMDB JSON entries jEpIndex..jEpIndex+numEps-1, handles per-part
-        // renames, and stamps the merged Overview onto the local episode.
-        // Returns the new jEpIndex (advanced past the parts consumed).
-        private async Task<int> EnrichMultiEpisode(TvShow tvShow, Season season, Episode episode, JArray jEpisodes, int jEpIndex)
+        // multiple TMDB episode names, e.g. "PilotA#PilotB.mkv"). Looks up
+        // each part by consecutive episode_number starting at the disk
+        // file's parsed prefix, handles per-part renames, and stamps the
+        // merged Overview onto the local episode.
+        //
+        // Pre-refactor this took (JArray jEpisodes, int jEpIndex) and
+        // returned the new jEpIndex - that positional contract is gone now
+        // that BuildSeasonCache uses dictionary lookup. The dictionary +
+        // start-number form is positionless: a multi-part on disk numbered
+        // "12#13%..." asks for tmdb[12] and tmdb[13] directly, even if
+        // either is missing or out of order elsewhere in the season.
+        private async Task EnrichMultiEpisode(TvShow tvShow, Season season, Episode episode,
+            Dictionary<int, JObject> jByNum, int startEpNum, int seasonIndex)
         {
             string[] multiEpNames = episode.Name.Split('#');
             int numEps = multiEpNames.Length;
@@ -301,16 +336,22 @@ namespace LVP_WPF.Services
 
             for (int l = 0; l < numEps; l++)
             {
-                jEpisodesMulti[l] = (JObject)jEpisodes[jEpIndex + l];
-                string jName = (string)jEpisodesMulti[l]["name"];
-                string jOverview = (string)jEpisodesMulti[l]["overview"];
+                if (!jByNum.TryGetValue(startEpNum + l, out JObject jEp))
+                {
+                    _prompts.ShowError($"Error: {tvShow.Name}",
+                        $"Multi-episode part E{startEpNum + l:D2} not on TMDB (Season {seasonIndex}). Bailing on this part-set; metadata not stamped.");
+                    return;
+                }
+                jEpisodesMulti[l] = jEp;
+                string jName = (string)jEp["name"];
+                string jOverview = (string)jEp["overview"];
                 string localName = multiEpNames[l];
 
                 if (!localName.MatchesLoosely(jName.FixBrokenQuotes()))
                 {
                     _prompts.ShowNotice($"Warning: {tvShow.Name}",
                         $"Multi episode name does not match retrieved data: Renaming file: '{localName}', to: '{jName.FixBrokenQuotes()}' (Season {season.Id}).",
-                        tvShow, season.Id + 1);
+                        tvShow, season.Id + 1, episode.Path);
 
                     string oldPath = episode.Path;
                     string newPath = oldPath.Replace(localName, jName.FixBrokenQuotes());
@@ -333,7 +374,6 @@ namespace LVP_WPF.Services
             {
                 episode.Backdrop = await _tmdb.DownloadImageAsync(episode.Backdrop, false, tvShow.Name);
             }
-            return jEpIndex + numEps;
         }
 
         // Enrich a normal one-to-one episode against its matching TMDB entry.
@@ -346,7 +386,7 @@ namespace LVP_WPF.Services
             {
                 _prompts.ShowNotice($"Warning: {tvShow.Name}",
                     $"Local episode name does not match retrieved data. Renaming file '{episode.Name}' to '{jName.FixBrokenQuotes()}' (Season {season.Id}).",
-                    tvShow, season.Id + 1);
+                    tvShow, season.Id + 1, episode.Path);
 
                 string oldPath = episode.Path;
                 string newPath = ReplaceLastOccurrence(oldPath, episode.Name, jName.FixBrokenQuotes());
@@ -372,7 +412,7 @@ namespace LVP_WPF.Services
             if (!movie.Name.Replace(":", "").MatchesLoosely(((string)movieObject["title"]).Replace(":", "").FixBrokenQuotes()))
             {
                 string message = $"Local movie name does not match retrieved data. Renaming file '{movie.Name.Replace(":", "")}' to '{((string)movieObject["title"]).Replace(":", "")}'.";
-                _prompts.ShowNotice("Warning", message);
+                _prompts.ShowNotice("Warning", message, null, 0, movie.Path);
                 string oldPath = movie.Path;
                 string dir = Path.GetDirectoryName(oldPath) ?? "";
                 string extension = Path.GetExtension(oldPath); // includes leading "."
@@ -459,7 +499,7 @@ namespace LVP_WPF.Services
             {
                 string newSrtPath = Path.ChangeExtension(newPath, ".srt");
                 string subMsg = $"Renaming subtitle file {Path.GetFileName(oldSrtPath)} to {Path.GetFileName(newSrtPath)} (Season {season.Id}).";
-                _prompts.ShowNotice($"Warning: {tvShow.Name}", subMsg, tvShow, season.Id + 1);
+                _prompts.ShowNotice($"Warning: {tvShow.Name}", subMsg, tvShow, season.Id + 1, oldSrtPath);
                 File.Move(oldSrtPath, newSrtPath);
             }
             else if (!oldPath.Contains("\\en\\"))

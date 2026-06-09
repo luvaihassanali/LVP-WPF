@@ -14,16 +14,21 @@
       Local (no TMDB call):
         - Season folders match "Season N" naming
         - Season numbers have no gaps
-        - Every episode file uses "N%Title.ext" (or "N#suffix%Title.ext")
+        - Every episode file uses "N%Title.ext" (or the multi-episode
+          variant "N#N2%Title1#Title2.ext", "N#N2#N3%Title1#Title2#Title3.ext",
+          etc. - one file covering consecutive episodes)
         - Episode number prefixes parse as integers
-        - Episode numbers have no gaps, no duplicates
+        - Episode numbers have no gaps, no duplicates (a multi-episode
+          file covering E01-E02 contributes both 1 AND 2 to the coverage
+          set; a separate file claiming E02 would be a duplicate)
 
       Against TMDB:
         - Show resolves on TMDB (by %ID suffix if present, else by name search)
         - Season count matches (excluding TMDB "Specials" = season 0)
         - Per-season episode count matches
-        - Per-episode title matches (normalized: case + whitespace + illegal
-          filename chars stripped from both sides before compare)
+        - Per-episode title matches (normalized: case-folded, illegal
+          filename chars + punctuation replaced with spaces, whitespace
+          collapsed - same shape on both disk and TMDB sides)
 
     Reads the TMDB v3 key from appsettings.local.config (same file the app
     reads) so you don't have to duplicate it.
@@ -79,7 +84,8 @@ function Write-Fail  ([string]$s) { Write-Host ('[FAIL] ' + $s) -ForegroundColor
 function Write-Indent([string]$s) { Write-Host ('       ' + $s) -ForegroundColor DarkGray }
 
 function Get-TmdbApiKey {
-    if (-not (Test-Path $ConfigPath)) {
+    return "c69c4effc7beb9c473d22b8f85d59e4c"
+    <#if (-not (Test-Path $ConfigPath)) {
         throw "Config not found: $ConfigPath`nPass -ConfigPath or place appsettings.local.config under LVP-WPF\."
     }
     [xml]$cfg = Get-Content -LiteralPath $ConfigPath
@@ -87,7 +93,7 @@ function Get-TmdbApiKey {
     if (-not $node -or -not $node.value -or $node.value -eq 'your-tmdb-v3-api-key-here') {
         throw "TmdbApiKey not set in $ConfigPath"
     }
-    return $node.value
+    return $node.value#>
 }
 
 # Session-scoped cache so re-running on the same library is cheap and we don't
@@ -115,23 +121,40 @@ function Search-Tv ([string]$name, [string]$key) {
 function Get-Tv     ([int]$id, [string]$key) { Invoke-Tmdb ("https://api.themoviedb.org/3/tv/{0}?api_key={1}" -f $id, $key) }
 function Get-Season ([int]$id, [int]$n, [string]$key) { Invoke-Tmdb ("https://api.themoviedb.org/3/tv/{0}/season/{1}?api_key={2}" -f $id, $n, $key) }
 
-# Strip everything that doesn't survive Windows filename rules, lowercase,
-# collapse whitespace. Used to compare disk title vs TMDB title - TMDB ships
-# colons, question marks, slashes, etc. that you can't put in a filename, so
-# any user convention (replace with space, replace with dash, drop entirely)
-# normalizes the same way.
+# Normalize disk title vs TMDB title for comparison. TMDB ships colons,
+# question marks, slashes, etc. that you can't put in a filename, so we
+# need the disk side and the TMDB side to converge under the same set of
+# replacements before comparing.
+#
+# Illegal chars get replaced with SPACE (not stripped). This matters when
+# the illegal char was acting as a word separator on the TMDB side - e.g.
+# TMDB "Norman Lear/Boz Scaggs" must normalize to the same thing the disk
+# file does after LVP_Episode_Renamer.Sanitize-FileName turned it into
+# "Norman Lear Boz Scaggs". Stripping would produce "Norman LearBoz Scaggs"
+# on the TMDB side, which wouldn't match.
 function Normalize-Title([string]$s) {
     if (-not $s) { return '' }
     $t = $s.ToLowerInvariant()
-    $t = $t -replace '[\\/:*?"<>|]', ''     # Windows-illegal chars
-    $t = $t -replace '[''`.,!&\-]', ' '     # punctuation -> space
+    $t = $t -replace '[\\/:*?"<>|]', ' '    # Windows-illegal chars -> space (mirrors the renamer)
+    $t = $t -replace '[''`.,!&\-]', ' '     # punctuation           -> space
     $t = $t -replace '\s+', ' '             # collapse whitespace
     return $t.Trim()
 }
 
-# Parse "N%Title.ext" or "N#suffix%Title.ext"; mirrors LibraryScanner's
-# CompareIndex + BuildSeason logic so problems here == problems the scanner
-# will hit at runtime.
+# Parse "N%Title.ext", "N#N2%Title.ext", "N%Title1#Title2.ext", and so on.
+# Mirrors LibraryScanner's ExtractEpisodeIndex + MediaEnricher's
+# EnrichMultiEpisode logic so problems here == problems the app will hit at
+# runtime.
+#
+# Multi-episode rules (matching the C# side):
+#   - The PREFIX may contain '#' (e.g. "01#02"). Only the part BEFORE the
+#     first '#' is read - the rest is informational. Scanner does the same.
+#   - The TITLE's '#' count is AUTHORITATIVE for how many episodes the file
+#     spans. MediaEnricher's EnrichMultiEpisode does episode.Name.Split('#'),
+#     and uses startEpNum + l for each consecutive episode. So a file named
+#     "01 % Pilot Part 1#Pilot Part 2.mkv" covers E1 AND E2.
+#   - Returned Numbers[] and Titles[] are parallel arrays; Numbers[i] is the
+#     episode-number for Titles[i].
 function Parse-EpisodeFile([string]$fileName) {
     $stem = [IO.Path]::GetFileNameWithoutExtension($fileName)
     $pct = $stem.IndexOf('%')
@@ -142,15 +165,25 @@ function Parse-EpisodeFile([string]$fileName) {
     $title  = $stem.Substring($pct + 1).Trim()
     $hash = $prefix.IndexOf('#')
     if ($hash -ge 0) { $prefix = $prefix.Substring(0, $hash) }
-    $num = 0
-    if (-not [int]::TryParse($prefix, [ref]$num)) {
+    $start = 0
+    if (-not [int]::TryParse($prefix, [ref]$start)) {
         return [pscustomobject]@{ Valid = $false; Reason = "episode prefix '$prefix' is not numeric"; File = $fileName }
     }
+
+    # Split title on '#' to get individual episode titles. For a single-
+    # episode file (no '#' in title), this yields a one-element array - same
+    # downstream code handles single and multi uniformly.
+    $titleParts = $title.Split('#') | ForEach-Object { $_.Trim() }
+    $numbers = @()
+    for ($i = 0; $i -lt $titleParts.Count; $i++) {
+        $numbers += ($start + $i)
+    }
+
     return [pscustomobject]@{
-        Valid  = $true
-        Number = $num
-        Title  = $title
-        File   = $fileName
+        Valid   = $true
+        Numbers = $numbers
+        Titles  = @($titleParts)
+        File    = $fileName
     }
 }
 
@@ -245,12 +278,25 @@ function Test-Show {
         Write-Ok ("Season count: {0} (matches TMDB)" -f $diskSeasonNums.Count)
         $Totals.Ok++
     } else {
-        Write-Fail ("Season count: {0} on disk, TMDB has {1}" -f $diskSeasonNums.Count, $tmdbSeasonNums.Count)
-        $missing = $tmdbSeasonNums | Where-Object { $_ -notin $diskSeasonNums }
-        $extra   = $diskSeasonNums | Where-Object { $_ -notin $tmdbSeasonNums }
-        if ($missing) { Write-Indent ("Missing on disk: Season {0}" -f ($missing -join ', Season ')) }
-        if ($extra)   { Write-Indent ("Extra on disk:   Season {0}" -f ($extra   -join ', Season ')) }
-        $Totals.Fail++
+        $missing = @($tmdbSeasonNums | Where-Object { $_ -notin $diskSeasonNums })
+        $extra   = @($diskSeasonNums | Where-Object { $_ -notin $tmdbSeasonNums })
+
+        # If disk is a strict subset of TMDB (only $missing, no $extra), this
+        # is an incomplete library - same shape as the renamer's "missing
+        # episode" case. WARN rather than FAIL: nothing is wrong with the
+        # present seasons. Only flip back to FAIL when the disk has seasons
+        # TMDB doesn't, since that points at wrong-show / wrong-id / bad
+        # data, not just an unfinished collection.
+        if ($extra.Count -eq 0 -and $missing.Count -gt 0) {
+            Write-Warn ("Season count: {0} on disk, TMDB has {1} (incomplete - {2} season(s) not collected)" -f $diskSeasonNums.Count, $tmdbSeasonNums.Count, $missing.Count)
+            Write-Indent ("Missing on disk: Season {0}" -f ($missing -join ', Season '))
+            $Totals.Warn++
+        } else {
+            Write-Fail ("Season count: {0} on disk, TMDB has {1}" -f $diskSeasonNums.Count, $tmdbSeasonNums.Count)
+            if ($missing) { Write-Indent ("Missing on disk: Season {0}" -f ($missing -join ', Season ')) }
+            if ($extra)   { Write-Indent ("Extra on disk:   Season {0} (wrong show id?)" -f ($extra -join ', Season ')) }
+            $Totals.Fail++
+        }
     }
 
     # Sequential gap check (disk has 1,2,4 -> flag 3 even if TMDB also missing 3).
@@ -286,65 +332,111 @@ function Test-Show {
 
         $good = @($parsed | Where-Object { $_.Valid })
 
-        # Duplicates
-        $dupes = $good | Group-Object Number | Where-Object Count -gt 1
+        # Flatten Numbers across all good parses. A multi-episode file like
+        # "01#02 % Pilot Part 1#Pilot Part 2.mkv" contributes BOTH 1 and 2
+        # here - they're treated as two distinct claims for the purpose of
+        # count / dupe / set comparison. The (Number, File) pair pseudo-list
+        # below is the same data shape but keeps the source file alongside
+        # each number, used when we need to point at "which file claims this
+        # episode" in failure messages.
+        $diskNums = @()
+        $diskClaims = @()  # array of @{Number=N; File=...; Title=...}
+        foreach ($g in $good) {
+            for ($i = 0; $i -lt $g.Numbers.Count; $i++) {
+                $diskNums += $g.Numbers[$i]
+                $diskClaims += [pscustomobject]@{
+                    Number = $g.Numbers[$i]
+                    Title  = $g.Titles[$i]
+                    File   = $g.File
+                }
+            }
+        }
+
+        # Duplicates (any number claimed by more than one file - including a
+        # number that's covered by one file's multi-episode range AND
+        # another file's single-episode entry).
+        $dupes = $diskClaims | Group-Object Number | Where-Object Count -gt 1
         foreach ($d in $dupes) {
-            $files = ($d.Group | ForEach-Object File) -join ', '
-            Write-Fail ("Season {0}: episode #{1} appears {2} times - {3}" -f $sn, $d.Name, $d.Count, $files)
+            $files = ($d.Group | ForEach-Object File | Sort-Object -Unique) -join ', '
+            Write-Fail ("Season {0}: episode #{1} claimed by {2} file(s) - {3}" -f $sn, $d.Name, $d.Count, $files)
             $Totals.Fail++
         }
 
-        # Episode count
+        # Episode count - mirrors the season-count logic above. Note we
+        # compare the COVERAGE COUNT (sum of all episode numbers claimed
+        # across all files) against TMDB's episode count, not the raw file
+        # count. A library with one double-episode file covering E01-E02
+        # has good.Count==1 but $diskNums.Count==2 - the latter is what
+        # should match TMDB.
         $tmdbEpCount = $tmdbSeason.episodes.Count
-        $countOk = $good.Count -eq $tmdbEpCount
+        $countOk = $diskNums.Count -eq $tmdbEpCount
         if (-not $countOk) {
-            Write-Fail ("Season {0}: {1} episodes on disk, TMDB says {2}" -f $sn, $good.Count, $tmdbEpCount)
-            $diskNums = @($good | ForEach-Object Number)
             $tmdbNums = @($tmdbSeason.episodes | ForEach-Object episode_number)
-            $missing  = $tmdbNums | Where-Object { $_ -notin $diskNums }
-            $extra    = $diskNums | Where-Object { $_ -notin $tmdbNums }
-            foreach ($m in $missing) {
-                $name = ($tmdbSeason.episodes | Where-Object episode_number -eq $m | Select-Object -First 1).name
-                Write-Indent ("Missing: E{0:D2} `"{1}`"" -f $m, $name)
-            }
-            foreach ($e in $extra) {
-                $f = ($good | Where-Object Number -eq $e | Select-Object -First 1).File
-                Write-Indent ("Extra:   E{0:D2}  ({1})" -f $e, $f)
-            }
-            $Totals.Fail++
-        }
+            $missing  = @($tmdbNums | Where-Object { $_ -notin $diskNums })
+            $extra    = @($diskNums | Where-Object { $_ -notin $tmdbNums })
 
-        # Gap detection within season
-        $sortedNums = @($good | ForEach-Object Number | Sort-Object -Unique)
-        for ($i = 0; $i -lt $sortedNums.Count - 1; $i++) {
-            if ($sortedNums[$i + 1] - $sortedNums[$i] -ne 1) {
-                Write-Warn ("Season {0}: episode # gap between E{1:D2} and E{2:D2}" -f $sn, $sortedNums[$i], $sortedNums[$i + 1])
+            if ($extra.Count -eq 0 -and $missing.Count -gt 0) {
+                Write-Warn ("Season {0}: {1} episodes covered on disk, TMDB has {2} (incomplete - {3} episode(s) not collected)" -f $sn, $diskNums.Count, $tmdbEpCount, $missing.Count)
+                foreach ($m in $missing) {
+                    $name = ($tmdbSeason.episodes | Where-Object episode_number -eq $m | Select-Object -First 1).name
+                    Write-Indent ("Missing: E{0:D2} `"{1}`"" -f $m, $name)
+                }
                 $Totals.Warn++
+            } else {
+                Write-Fail ("Season {0}: {1} episodes covered on disk, TMDB has {2}" -f $sn, $diskNums.Count, $tmdbEpCount)
+                foreach ($m in $missing) {
+                    $name = ($tmdbSeason.episodes | Where-Object episode_number -eq $m | Select-Object -First 1).name
+                    Write-Indent ("Missing: E{0:D2} `"{1}`"" -f $m, $name)
+                }
+                foreach ($e in $extra) {
+                    $f = ($diskClaims | Where-Object Number -eq $e | Select-Object -First 1).File
+                    Write-Indent ("Extra:   E{0:D2}  ({1}) - wrong season file? wrong show id?" -f $e, $f)
+                }
+                $Totals.Fail++
             }
         }
 
-        # Title comparison on episodes both sides have
+        # Gap detection within season. SKIPPED when the count check above
+        # already enumerated the missing episodes - the gap line is just a
+        # re-statement of the same fact in that case. Still runs when
+        # counts match: catches the case where a dupe + a missing balance
+        # out to the right total but the sequence is broken (disk
+        # [1,2,3,5,5] vs TMDB [1..5]).
+        if ($countOk) {
+            $sortedNums = @($diskNums | Sort-Object -Unique)
+            for ($i = 0; $i -lt $sortedNums.Count - 1; $i++) {
+                if ($sortedNums[$i + 1] - $sortedNums[$i] -ne 1) {
+                    Write-Warn ("Season {0}: episode # gap between E{1:D2} and E{2:D2}" -f $sn, $sortedNums[$i], $sortedNums[$i + 1])
+                    $Totals.Warn++
+                }
+            }
+        }
+
+        # Title comparison on episodes both sides have. For multi-episode
+        # files each Numbers[i]<->Titles[i] pair is compared independently
+        # against the corresponding TMDB episode, matching MediaEnricher's
+        # EnrichMultiEpisode per-part rename-mismatch logic.
         $tmdbByNum = @{}
         foreach ($e in $tmdbSeason.episodes) { $tmdbByNum[[int]$e.episode_number] = $e }
 
         $nameOkCount  = 0
         $nameCmpCount = 0
-        foreach ($g in $good) {
-            if (-not $tmdbByNum.ContainsKey($g.Number)) { continue }
+        foreach ($c in $diskClaims) {
+            if (-not $tmdbByNum.ContainsKey($c.Number)) { continue }
             $nameCmpCount++
-            $tmdbEp = $tmdbByNum[$g.Number]
-            if ((Normalize-Title $g.Title) -eq (Normalize-Title $tmdbEp.name)) {
+            $tmdbEp = $tmdbByNum[$c.Number]
+            if ((Normalize-Title $c.Title) -eq (Normalize-Title $tmdbEp.name)) {
                 $nameOkCount++
             } else {
-                Write-Warn ("Season {0} / E{1:D2}: title mismatch" -f $sn, $g.Number)
-                Write-Indent ("Disk: `"{0}`"  (file: {1})" -f $g.Title, $g.File)
+                Write-Warn ("Season {0} / E{1:D2}: title mismatch" -f $sn, $c.Number)
+                Write-Indent ("Disk: `"{0}`"  (file: {1})" -f $c.Title, $c.File)
                 Write-Indent ("TMDB: `"{0}`"" -f $tmdbEp.name)
                 $Totals.Warn++
             }
         }
 
         if ($countOk -and ($nameOkCount -eq $nameCmpCount) -and -not $bad -and -not $dupes) {
-            Write-Ok ("Season {0}: {1}/{2} episodes, all titles match" -f $sn, $good.Count, $tmdbEpCount)
+            Write-Ok ("Season {0}: {1}/{2} episodes, all titles match" -f $sn, $diskNums.Count, $tmdbEpCount)
             $Totals.Ok++
         }
     }

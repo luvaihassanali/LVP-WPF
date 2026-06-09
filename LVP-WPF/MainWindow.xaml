@@ -113,6 +113,24 @@
                    Visibility="Visible" />
             <ProgressBar Name="progressBar" Value="{Binding ProgressBarValue}" Maximum="{Binding ProgressBarMax}" Width="498" Height= "10" IsIndeterminate="False"
                          HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,428,0,0" Background="#FF9CCAC4" Foreground="#FF068494" BorderBrush="#FF9CCAC4" Visibility="Hidden"/>
+            <!-- Load-screen log. Drained by WpfLoadProgress.DrainTick from
+                 LoadScreenSink's queue (~10x per second). Anchored to the
+                 bottom of the loadGrid, stretched across the full width
+                 minus 20px gutters on either side. No wrap (long lines
+                 just clip at the right edge - they're info-only) and no
+                 scrollbars - the drain timer calls ScrollToEnd anyway so
+                 the latest lines stay visible. IsReadOnly + IsTabStop +
+                 Focusable=False so it can't steal focus from the LVP
+                 IR/keyboard nav. -->
+            <TextBox Name="logTxtBox"
+                     HorizontalAlignment="Stretch" VerticalAlignment="Bottom"
+                     Height="240" Margin="20,0,20,20"
+                     FontSize="14" Foreground="White" FontFamily="Consolas" BorderThickness="0"
+                     TextWrapping="NoWrap" Background="Transparent" AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Hidden"
+                     HorizontalScrollBarVisibility="Hidden"
+                     IsReadOnly="True" IsTabStop="False" Focusable="False"
+                     Visibility="Visible" />
         </Grid>
     </Grid>
 </Window>
