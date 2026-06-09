@@ -144,6 +144,41 @@ namespace MouseMoverClient
                 return;
             }
 
+            // Dev key listener - press 'm' to manually fire the launch banner
+            // without going through the real "power" serial command. Useful
+            // when the release build's banner doesn't look the same as the
+            // dry-run from --test-banner (different window chrome, transparency,
+            // font scaling on the dev box vs the media server, etc.) and you
+            // want to verify the visual against production conditions.
+            //
+            // Doesn't kick off the LVP-WPF Process.Start so MouseHub stays
+            // alive and the banner stays on-screen - you can press 'm' again
+            // to re-trigger if you tweak something and want to retest.
+            //
+            // try/catch keeps the task alive across spurious ReadKey errors
+            // (e.g. console buffer in a weird state right after a banner
+            // repaint); without it one exception would silently kill the
+            // listener task and the 'm' shortcut would stop working with no
+            // obvious cause.
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        ConsoleKeyInfo key = Console.ReadKey(intercept: true);
+                        if (key.KeyChar == 'm' || key.KeyChar == 'M')
+                        {
+                            ConsoleHelper.ShowLaunchingBanner("Press M to re-trigger");
+                        }
+                    }
+                    catch
+                    {
+                        System.Threading.Thread.Sleep(50);
+                    }
+                }
+            });
+
             InitializeSerialPort();
             StartListener();
 
@@ -868,23 +903,29 @@ namespace MouseMoverClient
                 // NO Console.Clear() - we deliberately leave the rest of
                 // the screen alone so the matrix keeps flowing through it.
 
-                // Build each row as a full string from '║' to '║' with the
-                // interior filled with spaces (or centered text). Painting
-                // each cell explicitly gives the interior a solid DarkBlue
-                // wash instead of leaking frozen-matrix glyphs through
-                // unpainted gaps. The matrix continues to flow OUTSIDE
-                // the box (where the guard rect doesn't apply); inside
-                // is now uniformly DarkBlue.
-                string horiz    = new string('═', innerW);
+                // Build each row as a full string from edge to edge with
+                // the interior filled with spaces (or centered text).
+                // Painting each cell explicitly gives the interior a solid
+                // DarkBlue wash; the matrix flows OUTSIDE the box (the
+                // guard rect doesn't apply there).
+                //
+                // ASCII border chars (+, =, |) instead of Unicode
+                // box-drawing (╔═╗║║╚═╝) for portability: the prod media
+                // server's font fell back to one without glyphs in the
+                // U+2550 box-drawing block, which rendered each border cell
+                // as a "missing-glyph" white square. ASCII works on every
+                // monospace font that's ever existed, including the cheap
+                // fallback fonts.
+                string horiz    = new string('=', innerW);
                 string emptyMid = new string(' ', innerW);
                 string[] lines  = new[] {
-                    "╔" + horiz + "╗",
-                    "║" + emptyMid + "║",
-                    "║" + CenterIn(title,    innerW) + "║",
-                    "║" + emptyMid + "║",
-                    "║" + CenterIn(subtitle, innerW) + "║",
-                    "║" + emptyMid + "║",
-                    "╚" + horiz + "╝",
+                    "|" + horiz + "|",
+                    "|" + emptyMid + "|",
+                    "|" + CenterIn(title,    innerW) + "|",
+                    "|" + emptyMid + "|",
+                    "|" + CenterIn(subtitle, innerW) + "|",
+                    "|" + emptyMid + "|",
+                    "|" + horiz + "|",
                 };
                 for (int i = 0; i < lines.Length; i++)
                 {
