@@ -462,19 +462,57 @@ namespace LVP_WPF
                     if (j < season.Episodes.Length - 1)
                     {
                         // Still within this season - just step forward.
-                        return season.Episodes[j + 1];
+                        Episode next = season.Episodes[j + 1];
+                        Serilog.Log.Debug("GetNextEpisode: '{Show}' S{Sn}E{From} '{FromName}' -> E{To} '{ToName}'",
+                            Name, season.Id, current.Id, current.Name, next.Id, next.Name);
+                        return next;
                     }
 
-                    // End of this season. Bail if we're already on the
-                    // last regular season (or only Extras would follow).
+                    // End of this season. Walk forward looking for a
+                    // non-empty regular season. Three terminal cases:
+                    //   - hit end of Seasons array       -> end of show
+                    //   - hit Extras (Id == -1)          -> end of regular content
+                    //   - skip over an empty season      -> walks past it,
+                    //                                       logs a warning,
+                    //                                       keeps searching
+                    // Previously the code only checked the IMMEDIATELY next
+                    // season and would crash on Seasons[nextSeasonIdx].Episodes[0]
+                    // if that season had a folder but no episodes (empty
+                    // "Season 2" directory between Season 1 and Season 3 -
+                    // happens with incomplete downloads). Now it walks past
+                    // empty seasons cleanly.
                     int nextSeasonIdx = i + 1;
-                    if (nextSeasonIdx >= Seasons.Length) return null;
-                    if (Seasons[nextSeasonIdx].Id == -1) return null;
+                    while (nextSeasonIdx < Seasons.Length)
+                    {
+                        Season nextSeason = Seasons[nextSeasonIdx];
+                        if (nextSeason.Id == -1)
+                        {
+                            Serilog.Log.Information("GetNextEpisode: '{Show}' S{Sn}E{Ep} '{Name}' - END OF SHOW (next slot is Extras, no more regular content)",
+                                Name, season.Id, current.Id, current.Name);
+                            return null;
+                        }
+                        if (nextSeason.Episodes == null || nextSeason.Episodes.Length == 0)
+                        {
+                            Serilog.Log.Warning("GetNextEpisode: '{Show}' S{Sn} has no episodes on disk - skipping",
+                                Name, nextSeason.Id);
+                            nextSeasonIdx++;
+                            continue;
+                        }
 
-                    seasonChanged = true;
-                    return Seasons[nextSeasonIdx].Episodes[0];
+                        seasonChanged = true;
+                        Episode firstOfNext = nextSeason.Episodes[0];
+                        Serilog.Log.Information("GetNextEpisode: '{Show}' season change S{From} -> S{To}, opening '{NextName}'",
+                            Name, season.Id, nextSeason.Id, firstOfNext.Name);
+                        return firstOfNext;
+                    }
+
+                    Serilog.Log.Information("GetNextEpisode: '{Show}' S{Sn}E{Ep} '{Name}' - END OF SHOW (no more seasons - was on last regular season)",
+                        Name, season.Id, current.Id, current.Name);
+                    return null;
                 }
             }
+            Serilog.Log.Warning("GetNextEpisode: '{Show}' current ep '{Name}' not found in any season ({TotalSeasons} seasons searched) - returning null",
+                Name, current.Name, Seasons.Length);
             return null;
         }
 

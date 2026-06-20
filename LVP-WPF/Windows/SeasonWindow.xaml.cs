@@ -1,6 +1,7 @@
 ﻿using LVP_WPF.Models;
 using LVP_WPF.Services;
 using LVP_WPF.Util;
+using Serilog;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,6 +16,8 @@ namespace LVP_WPF.Windows
 
         public static int Show(TvShow tvShow)
         {
+            Log.Information("SeasonWindow.Show: '{Show}' ({Count} seasons, currSeason={CurrSeason})",
+                tvShow.Name, tvShow.Seasons.Length, tvShow.CurrSeason);
             seasonIndex = tvShow.CurrSeason == -1 ? tvShow.Seasons.Length - 1 : tvShow.CurrSeason - 1;
             SeasonWindow seasonWindow = new SeasonWindow();
             SeasonWindowBox[] seasonBoxes = new SeasonWindowBox[tvShow.Seasons.Length];
@@ -52,7 +55,12 @@ namespace LVP_WPF.Windows
         private void SeasonListView_Click(object sender, RoutedEventArgs e)
         {
             SeasonWindowBox item = (SeasonWindowBox)(sender as ListView).SelectedItem;
-            if (item == null) return;
+            if (item == null)
+            {
+                Log.Debug("SeasonWindow click: no item selected (probably an empty-list click)");
+                return;
+            }
+            Log.Information("SeasonWindow click: season Id={SeasonId} selected, deferring close+layout flip", item.Id);
             seasonIndex = item.Id;
             // Defer BOTH the layout-state cleanup AND the window Close to
             // after the WPF click chain completes. The handler is wired to

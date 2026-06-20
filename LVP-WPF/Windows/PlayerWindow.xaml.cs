@@ -25,6 +25,17 @@ namespace LVP_WPF.Windows
         InactivityTimer inactivityTimer;
         private bool skipClosing = false;
         private bool sliderMouseDown = false;
+
+        // Tracks user INTENT, not LibVLC's instantaneous state. The player
+        // starts up calling Play(), so initial intent is "playing" -> false.
+        // Flipped only by TogglePlayPause (the single user-initiated path
+        // for pause/resume). PollingTimer_Tick uses this instead of
+        // mediaPlayer.IsPlaying because IsPlaying reports false transiently
+        // after a seek (LibVLC enters Buffering/Opening state for up to a
+        // few seconds depending on file size and disk speed), which would
+        // otherwise make Tick keep the overlay visible forever after every
+        // F / R / End / Home press.
+        private bool _userPaused = false;
         private double prevSliderValue;
         // Environment.TickCount of the most recent programmatic seek
         // (SeekRelative / JumpToEdge). Used by Slider_ValueChanged to
@@ -136,35 +147,28 @@ namespace LVP_WPF.Windows
             pollingTimer.Start();
         }
 
-        // Used by LayoutPoint and the IR remote dispatch when any input arrives
-        // while the player is open. Forces the timeline / button overlay back
-        // on so the user gets visual feedback. The auto-hide timer only rearms
-        // when actually playing - when paused we want the controls to stay
-        // pinned indefinitely (same convention as TogglePlayPause's pause path).
-        //
-        // The Start() is scheduled at Background priority because callers
-        // often warp the cursor onto a button right after (FocusPlayerControl /
-        // MovePlayerPoint -> CenterMouseOverControl), which fires the OS
-        // MouseEnter event synchronously - and Control_MouseEnter stops the
-        // polling timer. Without the deferred Start, the auto-hide we just
-        // armed would be cancelled the moment the cursor lands on its target,
-        // leaving the overlay pinned indefinitely.
+        // Shows the overlay and arms the 3-second auto-hide timer. Called
+        // by LayoutPoint and the IR / keyboard transport commands so any
+        // user input refreshes the controls. Whether the Tick actually
+        // hides (vs. keeps the overlay pinned for the paused-state UX)
+        // is decided inside PollingTimer_Tick via the _userPaused flag.
         internal void WakeOverlay()
         {
-            Dispatcher.Invoke(() => overlayGrid.Visibility = Visibility.Visible);
-            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () =>
+            Dispatcher.Invoke(() =>
             {
                 if (pollingTimer == null) return;
+                overlayGrid.Visibility = Visibility.Visible;
                 pollingTimer.Stop();
-                if (mediaPlayer != null && mediaPlayer.IsPlaying)
-                {
-                    pollingTimer.Start();
-                }
+                pollingTimer.Start();
+                Log.Debug("WakeOverlay: overlay shown, auto-hide timer armed for 3s");
             });
         }
 
         private void PlayerWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            Log.Information("PlayerWindow.Closing: isHistory={History}, isCartoonShuffle={Shuffle}, skipClosing={Skip}, currTime={Time}ms",
+                PlaybackSession.IsHistoryWatch, PlaybackSession.IsCartoonShuffle, skipClosing,
+                mediaPlayer?.Time ?? -1);
             timelineSlider.ValueChanged -= Slider_ValueChanged;
             // DispatcherTimer.Stop() is a no-op when already stopped, and
             // setting IsEnabled=false after Stop() is redundant - Stop does both.
@@ -175,6 +179,7 @@ namespace LVP_WPF.Windows
             {
                 if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
                 {
+                    Log.Information("PlayerWindow.Closing: history watch reached end, resetting HistoryIndex");
                     MainWindow.model.HistoryIndex = 0;
                     MainWindow.model.HistoryEpisode = null;
                 }
@@ -194,12 +199,19 @@ namespace LVP_WPF.Windows
 
                     if (endTime > 0 && seasonId.HasValue)
                     {
+                        Log.Information("PlayerWindow.Closing: saving progress for '{Show}' S{Sn}E{Ep} '{Title}' = {Time}ms / {Length}ms",
+                            tvShow.Name, seasonId.Value, episode.Id, episode.Name, endTime, episode.Length);
                         episode.SavedTime = endTime;
                         if (seasonId.Value != -1)  // -1 means the Extras pseudo-season; don't promote that to LastEpisode
                         {
                             tvShow.CurrSeason = seasonId.Value;
                             tvShow.LastEpisode = episode;
                         }
+                    }
+                    else
+                    {
+                        Log.Debug("PlayerWindow.Closing: not saving progress (endTime={Time}, seasonId={SeasonId})",
+                            endTime, seasonId);
                     }
                     UpdateProgressBar(episode);
                 }
@@ -211,6 +223,7 @@ namespace LVP_WPF.Windows
             }
             mediaPlayer.Dispose();
             inactivityTimer.Dispose();
+            Log.Information("PlayerWindow.Closing: complete (mediaPlayer disposed, inactivityTimer disposed)");
         }
 
         private static void UpdateProgressBar(Episode episode)
@@ -245,16 +258,55 @@ namespace LVP_WPF.Windows
             });
         }
 
+        // CloseCurrWindow can NOT be called directly from this event handler -
+        // EndReached fires on a LibVLC worker thread, and the close path
+        // ultimately calls mediaPlayer.Dispose(), which BLOCKS waiting for
+        // LibVLC's worker callbacks (including the one currently firing this
+        // event) to return. Calling synchronously from here produces a
+        // deadlock cycle:
+        //   LibVLC worker (in EndReached)
+        //     -> CloseCurrWindow -> EndFeature -> featureDispatcher.Invoke(Close)
+        //       -> Closing handler -> mediaPlayer.Dispose()
+        //         -> waits for LibVLC workers to finish their callbacks
+        //           -> the EndReached worker is blocked in the Invoke above
+        // The symptom is the exact one the user reported: audio keeps playing
+        // after the visual window goes away, IR locks up, manual kill needed.
+        // Marshalling the close to the main UI dispatcher breaks the cycle:
+        // EndReached returns immediately, the LibVLC worker resumes, and the
+        // close then runs on a thread that isn't on the LibVLC callback stack.
+        private static void DeferCloseCurrWindow()
+        {
+            Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                TcpSerialListener.layoutPoint.CloseCurrWindow();
+            }));
+        }
+
         private void MediaPlayer_EndReached(object? sender, EventArgs e)
         {
+            Log.Information("MediaPlayer_EndReached: '{Media}' (isHistory={History}, isCartoonShuffle={Shuffle})",
+                (currMedia as Episode)?.Name ?? (currMedia as Movie)?.Name ?? "<unknown>",
+                PlaybackSession.IsHistoryWatch, PlaybackSession.IsCartoonShuffle);
+
             if (PlaybackSession.IsHistoryWatch)
             {
                 MainWindow.model.HistoryIndex++;
                 if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
                 {
-                    TcpSerialListener.layoutPoint.CloseCurrWindow();
+                    Log.Information("HistoryWatch: reached end of history list ({Count}), closing player",
+                        MainWindow.model.HistoryList.Count);
+                    // Bail-out return was missing here: falling through to the
+                    // HistoryList[HistoryIndex] line below would IndexOutOfRange
+                    // when Index == Count. Latent bug, never tripped because
+                    // close happens fast enough that nobody finishes a history
+                    // run, but worth fixing alongside the deadlock.
+                    DeferCloseCurrWindow();
+                    return;
                 }
                 MainWindow.model.HistoryEpisode = MainWindow.model.HistoryList[MainWindow.model.HistoryIndex];
+                Log.Information("HistoryWatch: advancing to [{Idx}/{Total}] '{Ep}'",
+                    MainWindow.model.HistoryIndex + 1, MainWindow.model.HistoryList.Count,
+                    MainWindow.model.HistoryEpisode.Name);
                 PlayMediaOnVlcThread(MainWindow.model.HistoryEpisode);
                 ShowHistoryWatchBanner(MainWindow.model.HistoryEpisode);
                 return;
@@ -265,11 +317,21 @@ namespace LVP_WPF.Windows
                 PlaybackSession.CartoonShuffleIndex++;
                 if (PlaybackSession.CartoonShuffleIndex == PlaybackSession.CartoonShuffleLimit)
                 {
+                    Log.Information("CartoonShuffle: reached limit ({Limit}), closing player",
+                        PlaybackSession.CartoonShuffleLimit);
                     skipClosing = true;
-                    TcpSerialListener.layoutPoint.CloseCurrWindow();
+                    // Same missing-return bug as history above - falling
+                    // through to CartoonShuffleQueue[CartoonShuffleIndex]
+                    // would IndexOutOfRange when Index == Limit.
+                    DeferCloseCurrWindow();
+                    return;
                 }
 
-                PlayMediaOnVlcThread(PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex]);
+                Episode nextCartoon = PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex];
+                Log.Information("CartoonShuffle: advancing to [{Idx}/{Limit}] '{Ep}'",
+                    PlaybackSession.CartoonShuffleIndex + 1, PlaybackSession.CartoonShuffleLimit,
+                    nextCartoon.Name);
+                PlayMediaOnVlcThread(nextCartoon);
                 return;
             }
 
@@ -277,8 +339,10 @@ namespace LVP_WPF.Windows
             {
                 if (episode.Id < 0)
                 {
+                    Log.Information("EndReached: Extras episode finished (Id={Id}), closing player without advance",
+                        episode.Id);
                     skipClosing = true;
-                    TcpSerialListener.layoutPoint.CloseCurrWindow();
+                    DeferCloseCurrWindow();
                     return;
                 }
 
@@ -286,32 +350,58 @@ namespace LVP_WPF.Windows
                 UpdateProgressBar(episode);
 
                 TvShow tvShow = TvShowWindow.tvShow;
+                if (tvShow == null)
+                {
+                    // Defensive: this is only nullable if the player was
+                    // opened from somewhere TvShowWindow didn't set up
+                    // (or after a window-teardown race). Without the guard
+                    // tvShow.GetNextEpisode below NREs into the unhandled-
+                    // exception sink. Log clearly and close cleanly instead.
+                    Log.Warning("EndReached: TvShowWindow.tvShow is null after episode '{Ep}', can't advance - closing player",
+                        episode.Name);
+                    skipClosing = true;
+                    DeferCloseCurrWindow();
+                    return;
+                }
+
                 Episode? nextEpisode = tvShow.GetNextEpisode(episode, out bool seasonChanged);
                 if (nextEpisode == null)
                 {
-                    // End of show (current was last episode of last non-Extras season).
+                    // GetNextEpisode already logged WHY at Information level
+                    // (end-of-show / Extras-stop / empty-seasons / not-found).
+                    // This line adds the player-side context: the player is
+                    // about to close because of that decision.
+                    Log.Information("EndReached: '{Show}' no next episode after '{Ep}' - closing player",
+                        tvShow.Name, episode.Name);
                     skipClosing = true;
-                    TcpSerialListener.layoutPoint.CloseCurrWindow();
+                    DeferCloseCurrWindow();
                     return;
                 }
 
                 if (seasonChanged)
                 {
                     int newSeasonId = tvShow.FindSeasonIdOf(nextEpisode) ?? tvShow.CurrSeason;
-                    Log.Information("{TvShowName} season change to {NewSeason}", tvShow.Name, newSeasonId);
+                    Log.Information("EndReached: '{Show}' season transition mid-playback: '{FromEp}' (S{FromSn}) -> '{ToEp}' (S{ToSn})",
+                        tvShow.Name, episode.Name, tvShow.CurrSeason, nextEpisode.Name, newSeasonId);
                     tvShow.CurrSeason = newSeasonId;
                     tvShowWindow.Dispatcher.BeginInvoke(() =>
                     {
                         tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
                     });
                 }
+                else
+                {
+                    Log.Information("EndReached: '{Show}' advancing within season: '{FromEp}' -> '{ToEp}'",
+                        tvShow.Name, episode.Name, nextEpisode.Name);
+                }
 
                 PlayMediaOnVlcThread(nextEpisode);
             }
             else //if Movie
             {
+                Log.Information("EndReached: movie finished, closing player");
                 skipClosing = true;
-                TcpSerialListener.layoutPoint.CloseCurrWindow();
+                DeferCloseCurrWindow();
             }
         }
 
@@ -377,14 +467,29 @@ namespace LVP_WPF.Windows
             return media;
         }
 
+        // Originally these stopped/started the auto-hide timer on hover so
+        // a mouse user reading the timeline wouldn't have the overlay yank
+        // out from under them. That semantic actively breaks IR / keyboard
+        // usage: every transport command (F, R, End, Home, Space, etc.)
+        // ends with FocusPlayerControl warping the cursor onto a button,
+        // which synthesizes a MouseEnter. The old Stop() then killed the
+        // auto-hide timer we'd just armed in WakeOverlay - overlay never
+        // hid. Race-fixing via dispatcher priorities turned out to be
+        // unreliable (the WPF queue/Win32-pump interleaving isn't strictly
+        // ordered the way the docs imply when both are pending), so we
+        // just drop the stop-on-hover behavior outright. Net effect: a
+        // mouse user hovering a button will see the overlay tick away
+        // after 3s, but a mouse move in the wake-zone re-shows it via
+        // VideoView_MouseMove, which is acceptable - same behavior as
+        // IR/keyboard. The handlers stay registered as no-ops because the
+        // XAML wires them; removing them from XAML too would change all
+        // five button definitions.
         private void Control_MouseEnter(object sender, EventArgs e)
         {
-            pollingTimer?.Stop();
         }
 
         private void Control_MouseLeave(object sender, EventArgs e)
         {
-            pollingTimer?.Start();
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -396,28 +501,45 @@ namespace LVP_WPF.Windows
 
         // Mouse-clickable mirrors of the IR remote's "backward" / "rewind" /
         // "fastforward" / "forward" commands. Same underlying SeekRelative /
-        // JumpToEdge methods; the IR-remote dispatch in IrSerialReader and
-        // these handlers route through the same place.
-        private void BackwardButton_Click(object sender, RoutedEventArgs e) => JumpToEdge(toStart: true);
-        private void RewindButton_Click(object sender, RoutedEventArgs e) => SeekRelative(rewind: true);
-        private void FastForwardButton_Click(object sender, RoutedEventArgs e) => SeekRelative(rewind: false);
-        private void ForwardButton_Click(object sender, RoutedEventArgs e) => JumpToEdge(toStart: false);
-
-        private void PlayButton_Click(object sender, RoutedEventArgs e)
+        // JumpToEdge methods, plus WakeOverlay() to refresh the auto-hide
+        // timer.
+        //
+        // The WakeOverlay calls weren't here before, which left the overlay
+        // visible indefinitely after a mouse click: Control_MouseEnter had
+        // stopped the timer on hover, and nothing here restarted it -
+        // cursor stayed on the button (no MouseLeave to retrigger it), so
+        // overlay never auto-hid. IR remote handlers always called
+        // WakeOverlay so the bug was mouse-click specific.
+        private void BackwardButton_Click(object sender, RoutedEventArgs e)
         {
-            if (mediaPlayer.IsPlaying)
-            {
-                ApplyPausedVisuals();
-                mediaPlayer.Pause();
-                pollingTimer.Stop();
-            }
-            else
-            {
-                ApplyPlayingVisuals();
-                mediaPlayer.Play();
-                pollingTimer.Start();
-            }
+            JumpToEdge(toStart: true);
+            WakeOverlay();
         }
+        private void RewindButton_Click(object sender, RoutedEventArgs e)
+        {
+            SeekRelative(rewind: true);
+            WakeOverlay();
+        }
+        private void FastForwardButton_Click(object sender, RoutedEventArgs e)
+        {
+            SeekRelative(rewind: false);
+            WakeOverlay();
+        }
+        private void ForwardButton_Click(object sender, RoutedEventArgs e)
+        {
+            JumpToEdge(toStart: false);
+            WakeOverlay();
+        }
+
+        // Delegate to TogglePlayPause so the GUI play button and the IR
+        // remote's play/pause/stop commands share one code path:
+        //   - mediaPlayer == null guard (prevents NRE during window close)
+        //   - Dispatcher.Invoke wrap around UI + DispatcherTimer mutations
+        //   - overlayGrid visibility sync (shown on pause, hidden on play)
+        //   - Log line for every toggle
+        // Previously this handler duplicated TogglePlayPause's logic without
+        // the null check or the overlay update, drifting out of sync over time.
+        private void PlayButton_Click(object sender, RoutedEventArgs e) => TogglePlayPause();
 
         // Paint the play button + glyph for the "currently paused" state. The
         // hover-colored background reads as "this is the button you'll click
@@ -491,7 +613,11 @@ namespace LVP_WPF.Windows
 
         internal void TogglePlayPause()
         {
-            if (mediaPlayer == null) return;
+            if (mediaPlayer == null)
+            {
+                Log.Warning("TogglePlayPause: mediaPlayer is null, ignoring");
+                return;
+            }
 
             // The previous version ended each branch with DoMouseClick() +
             // SetCursorPos(). Those were defensive cursor-parking calls from
@@ -501,52 +627,123 @@ namespace LVP_WPF.Windows
             // a SECOND click on the same press - toggling state back and
             // leaving the user stuck. Cursor positioning is now owned by
             // LayoutPoint.FocusPlayerControl; both side effects are gone.
-            if (mediaPlayer.IsPlaying)
+            //
+            // Threading: pollingTimer is a DispatcherTimer - Start/Stop
+            // requires the owning dispatcher's thread. Previously the
+            // Stop/Start calls lived OUTSIDE the Dispatcher.Invoke and
+            // threw InvalidOperationException ("calling thread cannot
+            // access this object") when fired from the IR-remote serial
+            // thread. Now everything that touches dispatcher-affine state
+            // lives inside the single Invoke; mediaPlayer methods (LibVLC,
+            // documented thread-safe) are inside too just for symmetry.
+            bool isPlaying = mediaPlayer.IsPlaying;
+            Log.Information("TogglePlayPause: {From} -> {To}",
+                isPlaying ? "playing" : "paused",
+                isPlaying ? "paused"  : "playing");
+
+            if (isPlaying)
             {
+                _userPaused = true;
                 playButton.Dispatcher.Invoke(() =>
                 {
                     ApplyPausedVisuals();
                     overlayGrid.Visibility = Visibility.Visible;
+                    mediaPlayer.Pause();
+                    pollingTimer.Stop();
                 });
-                mediaPlayer.Pause();
-                pollingTimer.Stop();
             }
             else
             {
+                _userPaused = false;
                 playButton.Dispatcher.Invoke(() =>
                 {
                     ApplyPlayingVisuals();
                     overlayGrid.Visibility = Visibility.Hidden;
+                    mediaPlayer.Play();
+                    pollingTimer.Start();
                 });
-                mediaPlayer.Play();
-                pollingTimer.Start();
             }
         }
 
         internal void JumpToEdge(bool toStart)
         {
-            if (mediaPlayer == null) return;
+            if (mediaPlayer == null)
+            {
+                Log.Warning("JumpToEdge({ToStart}): mediaPlayer is null, ignoring", toStart);
+                return;
+            }
+            // LibVLC's Length returns -1 (and Time returns -1) until media
+            // metadata has finished loading after Play() - typically tens
+            // to hundreds of milliseconds, but can spike on slow disks /
+            // big remux files. JumpToEdge(false) without this guard would
+            // compute target = -1 - 1 = -2, which crashes (or hangs) inside
+            // libvlc_media_player_set_time depending on VLC version. Bail
+            // out cleanly until length is known.
+            long length = mediaPlayer.Length;
+            if (length <= 0)
+            {
+                Log.Warning("JumpToEdge({ToStart}): length not yet known ({Length}ms), ignoring", toStart, length);
+                return;
+            }
             lastProgrammaticSeekTick = Environment.TickCount;
-            long target = toStart ? 0 : mediaPlayer.Length - 1;
+            long target = toStart ? 0 : length - 1;
+            Log.Information("JumpToEdge: toStart={ToStart}, target={Target}ms (of {Length}ms)", toStart, target, length);
             mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(target));
         }
 
         internal void SeekRelative(bool rewind)
         {
-            if (mediaPlayer == null) return;
+            if (mediaPlayer == null)
+            {
+                Log.Warning("SeekRelative({Rewind}): mediaPlayer is null, ignoring", rewind);
+                return;
+            }
+            // Same Length=-1 race as JumpToEdge. Math.Clamp(target, 0, -1)
+            // throws ArgumentException ("max (-1) is less than min (0)"),
+            // which then bubbles out as a fatal app crash when called from
+            // the rewind/FF Button click handler (no surrounding try/catch
+            // - the IR path catches it inside IrSerialReader.InvokeOnPlayer,
+            // but the GUI button click is direct). Bail before clamp.
+            long length = mediaPlayer.Length;
+            if (length <= 0)
+            {
+                Log.Warning("SeekRelative({Rewind}): length not yet known ({Length}ms), ignoring", rewind, length);
+                return;
+            }
             lastProgrammaticSeekTick = Environment.TickCount;
 
             const int seekStepMs = 30 * 1000;
             long current = mediaPlayer.Time;
-            long length = mediaPlayer.Length;
-            long target = rewind ? current - seekStepMs : current + seekStepMs;
-            target = Math.Clamp(target, 0, length);
+            long target  = rewind ? current - seekStepMs : current + seekStepMs;
+            target = Math.Clamp(target, 0L, length);
+            Log.Information("SeekRelative: rewind={Rewind}, {Current}ms -> {Target}ms (of {Length}ms)",
+                rewind, current, target, length);
             mediaPlayer.SeekTo(TimeSpan.FromMilliseconds(target));
         }
+
+        // Last known cursor position seen by VideoView_MouseMove. Used to
+        // filter out synthetic MouseMove events that fire when WPF
+        // recomputes hit-testing (e.g., when overlayGrid hides, the cursor
+        // that was over a button now hits VideoView - WPF posts a
+        // synthetic WM_MOUSEMOVE at the SAME position to re-route, and
+        // VideoView_MouseMove would otherwise immediately re-show the
+        // overlay we just hid). Tracking the position lets us skip the
+        // re-show when the cursor hasn't actually moved.
+        private Point _lastVideoViewMousePos = new Point(-1, -1);
 
         private void VideoView_MouseMove(object sender, MouseEventArgs e)
         {
             Point p = Mouse.GetPosition(this);
+
+            // Filter synthetic moves at the same position. Hit-test
+            // recompute (triggered by Visibility/IsHitTestVisible changes)
+            // posts a WM_MOUSEMOVE at the current cursor position; without
+            // this guard, hiding the overlay immediately re-shows it
+            // because the cursor happens to be parked on a button at the
+            // bottom of the screen (which is in the wake-zone).
+            if (p == _lastVideoViewMousePos) return;
+            _lastVideoViewMousePos = p;
+
             if (p.Y > this.Height - 100 || p.Y < 100)
             {
                 if (!pollingTimer.IsEnabled)
@@ -560,8 +757,35 @@ namespace LVP_WPF.Windows
 
         private void PollingTimer_Tick(object? sender, EventArgs e)
         {
-            overlayGrid.Visibility = Visibility.Hidden;
             pollingTimer.Stop();
+
+            // Pause check uses the _userPaused INTENT flag (set by
+            // TogglePlayPause), NOT mediaPlayer.IsPlaying. After a seek
+            // (F / R / End / Home), LibVLC reports IsPlaying=false for as
+            // long as it takes to fill the playback buffer at the new
+            // position - can easily exceed our 3-second auto-hide window
+            // for larger jumps on slower disks. Trusting IsPlaying here
+            // would make every seek leave the overlay pinned.
+            // _userPaused only flips when the USER actually pauses (Space /
+            // remote play button), which is what the keep-visible policy
+            // is actually trying to model.
+            if (mediaPlayer == null || _userPaused)
+            {
+                Log.Debug("PollingTimer_Tick: user-paused or no mediaPlayer - keeping overlay visible");
+                return;
+            }
+
+            Log.Debug("PollingTimer_Tick: auto-hiding overlay");
+            overlayGrid.Visibility = Visibility.Hidden;
+
+            // Capture the cursor position so the synthetic WM_MOUSEMOVE that
+            // WPF posts when hit-test recomputes (the cursor was over a
+            // button on overlayGrid that just became Hidden -> WPF re-routes
+            // to VideoView underneath) doesn't immediately re-show via
+            // VideoView_MouseMove. The dedup check in VideoView_MouseMove
+            // compares the incoming position against this captured value -
+            // identical position = synthetic move, skip the re-show.
+            _lastVideoViewMousePos = Mouse.GetPosition(this);
         }
 
         private async void InactivityDetected(object sender, EventArgs e)

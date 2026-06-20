@@ -5,6 +5,30 @@ Rebuild of [Local Video Player](https://github.com/luvaihassanali/LocalVideoPlay
 
 https://user-images.githubusercontent.com/35501080/221096811-8aea3390-9389-44d9-a633-7b54f032359d.mp4
 
+## Keyboard
+
+Every keypress is routed through the same `IrSerialReader.OnCommand`
+pipeline the IR remote uses, so keyboard input behaves identically to
+remote input - same debounce, same threading marshalling for the player,
+same log lines.
+
+| Key | IR-equivalent | Effect |
+|---|---|---|
+| Up / Down / Left / Right | up/down/left/right | navigation (arrow nav) |
+| Enter | enter | activate focused control |
+| Esc | return | back / close current window |
+| Space | play | toggle play/pause in player |
+| F | fastforward | +30s |
+| R | rewind | -30s |
+| End | forward | jump to end |
+| Home | backward | jump to start |
+
+Held arrow keys auto-repeat (matches IR held-button behavior). Held
+action keys are filtered so a held Enter doesn't fire as a stream of
+one-shots. Modifier-combos (Ctrl/Shift/Alt+key) are ignored.
+
+Active in both Debug and Release builds.
+
 ## TODO
 
 In-code `//To-do` markers (`grep -ri 'to-do' --include='*.cs'`). All four

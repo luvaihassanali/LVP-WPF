@@ -83,6 +83,11 @@ namespace LVP_WPF.Services
                 }
                 catch (Exception ex)
                 {
+                    // Previously only Trace.TraceError - which doesn't flow
+                    // to Serilog so failures were invisible in the file log.
+                    // Now logged structurally with the URL + local target so
+                    // missing posters can be traced back to a specific download.
+                    Serilog.Log.Error(ex, "TMDB image download failed: url={Url}, target={FilePath}", url, filePath);
                     Trace.TraceError(ex.ToString());
                 }
             }
@@ -92,11 +97,33 @@ namespace LVP_WPF.Services
 
         private async Task<JObject> GetJsonAsync(string url, string logPrefix)
         {
-            _log?.Invoke($"{logPrefix} {url}");
-            using HttpResponseMessage response = await _httpClient.GetAsync(url);
-            using HttpContent content = response.Content;
-            string body = await content.ReadAsStringAsync();
-            return JObject.Parse(body);
+            // Strip the api_key= query value before logging so the file log
+            // doesn't leak the TMDB key on every line.
+            string urlForLog = System.Text.RegularExpressions.Regex.Replace(url, @"api_key=[^&]+", "api_key=***");
+            _log?.Invoke($"{logPrefix} {urlForLog}");
+
+            try
+            {
+                using HttpResponseMessage response = await _httpClient.GetAsync(url);
+                using HttpContent content = response.Content;
+                string body = await content.ReadAsStringAsync();
+                if (!response.IsSuccessStatusCode)
+                {
+                    Serilog.Log.Warning("TMDB {Prefix}: HTTP {Status} for {Url}",
+                        logPrefix, (int)response.StatusCode, urlForLog);
+                }
+                return JObject.Parse(body);
+            }
+            catch (Exception ex)
+            {
+                // Without this catch, transient HTTP errors (timeout, DNS
+                // failure, TMDB 5xx) bubble all the way up to the enricher's
+                // caller as raw exceptions with no URL context. Log here so
+                // the file shows which endpoint failed; then re-throw so the
+                // caller can still decide whether to abort or fall back.
+                Serilog.Log.Error(ex, "TMDB {Prefix}: failed for {Url}", logPrefix, urlForLog);
+                throw;
+            }
         }
     }
 }

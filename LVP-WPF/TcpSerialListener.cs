@@ -1,5 +1,6 @@
 ﻿using LVP_WPF.Services;
 using LVP_WPF.Windows;
+using Serilog;
 using System;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -30,6 +31,12 @@ namespace LVP_WPF
         private TcpClient tcpClient;
         private Thread workerThread;
         private IrSerialReader serialReader;
+
+        // Exposed so GlobalKeyDown in App.xaml.cs can route keyboard input
+        // through the same OnCommand pipeline the IR remote uses - same
+        // debounce, same dispatch, same logging. Read-only; ownership stays
+        // with this class.
+        internal IrSerialReader IrReader => serialReader;
 
         public TcpSerialListener(GuiModel g)
         {
@@ -325,15 +332,54 @@ namespace LVP_WPF
         /// </summary>
         internal static void StaThreadWrapper(Action action)
         {
+            Log.Information("StaThreadWrapper: launching feature thread");
             ManualResetEventSlim ready = new ManualResetEventSlim(false);
             dispatcherThread = new Thread(() =>
             {
-                // Capture the Dispatcher for *this* thread so EndFeature can
-                // call InvokeShutdown from elsewhere to break the pump cleanly.
-                featureDispatcher = Dispatcher.CurrentDispatcher;
-                ready.Set();
-                action();
-                Dispatcher.Run();
+                try
+                {
+                    // Capture the Dispatcher for *this* thread so EndFeature can
+                    // call InvokeShutdown from elsewhere to break the pump cleanly.
+                    featureDispatcher = Dispatcher.CurrentDispatcher;
+                    ready.Set();
+                    action();
+
+                    // Common race: EndFeature is invoked from CloseCurrWindow ->
+                    // ClosePlayerWindow WHILE action() is still inside its
+                    // PlayerWindow.ShowDialog modal frame. InvokeShutdown exits
+                    // that frame AND marks the dispatcher Shutdown=true. action()
+                    // then returns normally a few ms later (any cleanup after
+                    // ShowDialog finishes). Calling Dispatcher.Run() on a
+                    // shut-down dispatcher throws InvalidOperationException
+                    // ("Cannot perform requested operation because the
+                    // Dispatcher shut down") - harmless because it's caught
+                    // below, but it clutters the log with a noisy stacktrace
+                    // that looks like a real bug.
+                    //
+                    // HasShutdownStarted covers both "shutdown queued, not
+                    // yet finished" and "shutdown finished" states - in
+                    // either case there's nothing left to pump and Run()
+                    // would just throw.
+                    if (featureDispatcher == null || featureDispatcher.HasShutdownStarted)
+                    {
+                        Log.Information("StaThreadWrapper: action returned, dispatcher already shutting down - skipping Dispatcher.Run");
+                    }
+                    else
+                    {
+                        Log.Information("StaThreadWrapper: action returned, entering Dispatcher.Run");
+                        Dispatcher.Run();
+                        Log.Information("StaThreadWrapper: Dispatcher.Run returned, thread exiting");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Without this catch, an exception inside the action()
+                    // (e.g., PlayerWindow construction failure during
+                    // PlayRandomCartoons) crashes the STA thread silently
+                    // - the process keeps running but the feature never
+                    // resumes and there's no trace of why.
+                    Log.Error(ex, "StaThreadWrapper: feature thread crashed");
+                }
             });
             dispatcherThread.SetApartmentState(ApartmentState.STA);
             dispatcherThread.IsBackground = true;
@@ -342,18 +388,88 @@ namespace LVP_WPF
         }
 
         /// <summary>
-        /// Stops the feature thread started by StaThreadWrapper. Uses
-        /// Dispatcher.InvokeShutdown - the .NET-6+ replacement for the
-        /// Thread.Abort pattern this code used to use (which throws
-        /// PlatformNotSupportedException at runtime).
+        /// Stops the feature thread started by StaThreadWrapper. Closes any
+        /// windows owned by the feature thread (so Window.Closing fires and
+        /// mediaPlayer / inactivityTimer get disposed), then shuts down the
+        /// feature dispatcher and joins the thread.
         /// </summary>
         internal static void EndFeature()
         {
-            if (dispatcherThread == null) return;
-            featureDispatcher?.InvokeShutdown();
+            if (dispatcherThread == null)
+            {
+                Log.Debug("EndFeature: no feature thread running, no-op");
+                return;
+            }
+            Log.Information("EndFeature: closing feature windows and shutting down feature dispatcher");
+
+            if (featureDispatcher != null && !featureDispatcher.HasShutdownStarted)
+            {
+                // CLOSE windows BEFORE InvokeShutdown. The original code
+                // jumped straight to InvokeShutdown, which exits ShowDialog's
+                // modal frame WITHOUT firing Window.Closing. Result: the
+                // PlayerWindow disappeared visually, but mediaPlayer.Dispose()
+                // never ran - the LibVLC audio engine kept playing in the
+                // background, and the only fix was to RDP in and kill the
+                // process. Closing the window first triggers the normal
+                // shutdown chain (Closing handler -> mediaPlayer.Stop() /
+                // Dispose() / inactivityTimer.Dispose() / saved-progress
+                // write) and exits ShowDialog cleanly.
+                try
+                {
+                    // Snapshot windows owned by the feature dispatcher.
+                    // Application.Windows is thread-affine to the main
+                    // dispatcher so enumerate from there.
+                    System.Collections.Generic.List<Window> owned =
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            var list = new System.Collections.Generic.List<Window>();
+                            foreach (Window w in Application.Current.Windows)
+                            {
+                                if (w.Dispatcher == featureDispatcher)
+                                {
+                                    list.Add(w);
+                                }
+                            }
+                            return list;
+                        });
+
+                    foreach (Window w in owned)
+                    {
+                        string typeName = w.GetType().Name;
+                        try
+                        {
+                            // Synchronous Invoke so we know the Closing
+                            // handler chain (incl. mediaPlayer.Dispose) has
+                            // finished before we call InvokeShutdown. An
+                            // async path would race the shutdown against the
+                            // dispose, which is exactly the bug we're fixing.
+                            featureDispatcher.Invoke(() =>
+                            {
+                                Log.Information("EndFeature: closing feature window '{Type}'", typeName);
+                                w.Close();
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Warning(ex, "EndFeature: closing feature window '{Type}' failed", typeName);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "EndFeature: enumerating feature windows failed");
+                }
+
+                // After windows close, action() returns and StaThreadWrapper
+                // either skips Dispatcher.Run (HasShutdownStarted check) or
+                // is blocked inside it. InvokeShutdown breaks the latter case.
+                featureDispatcher.InvokeShutdown();
+            }
+
             dispatcherThread.Join();
             dispatcherThread = null;
             featureDispatcher = null;
+            Log.Information("EndFeature: feature thread joined and cleared");
         }
 
         private void StartTimer()

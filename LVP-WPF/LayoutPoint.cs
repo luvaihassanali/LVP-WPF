@@ -141,11 +141,60 @@ namespace LVP_WPF.Windows
         // button highlighting").
         internal void FocusPlayerControl(int index)
         {
-            if (index < 0 || index >= playerControlList.Count) return;
+            if (index < 0 || index >= playerControlList.Count)
+            {
+                Log.Warning("FocusPlayerControl: index {Idx} out of range (list size {Size})",
+                    index, playerControlList.Count);
+                return;
+            }
+            Log.Debug("FocusPlayerControl: index={Idx}", index);
             currPoint = (index, 0);
             currControl = playerControlList[index];
             playerCursorParked = false;
             CenterMouseOverControl(currControl, index, scrollViewer: null);
+        }
+
+        // Warp the cursor to the player window's close button (top-right of
+        // the overlay) and wake the overlay so it's visible. This is the
+        // UP-key target while the player is active - acts as a "menu"
+        // shortcut for navigating to the close control.
+        //
+        // Pre-arms navigation state to point at the PLAY button (center of
+        // the seek row) so the next L/R/DOWN keypress returns predictably
+        // to play, regardless of which seek button the user was on before
+        // pressing UP. Without this pre-arm, LEFT-from-close stepped to
+        // (prev-1) and RIGHT-from-close stepped to (prev+1) - asymmetric
+        // and unintuitive. The close button itself isn't in
+        // playerControlList (it's not part of the bottom seek row), so we
+        // can't navigate "from" it via the index-based MoveAlong1D path;
+        // the parked-state trick is the simplest way to get a clean reset.
+        internal void FocusPlayerCloseButton()
+        {
+            Button closeBtn = gui?.playerCloseButton;
+            if (closeBtn == null)
+            {
+                Log.Warning("FocusPlayerCloseButton: gui.playerCloseButton is null, ignoring");
+                return;
+            }
+            Log.Debug("FocusPlayerCloseButton: warping cursor to close button");
+            // Dispatch the cursor warp to the close button's owning thread
+            // (the player window's dispatcher). WarpCursorToCenter calls
+            // PointToScreen, which is dispatcher-affine; this method is
+            // commonly called from the serial-port thread via Move().
+            closeBtn.Dispatcher.Invoke(() => WarpCursorToCenter(closeBtn));
+            gui.playerWindow?.WakeOverlay();
+
+            // Pre-arm: NEXT L/R press will see playerCursorParked=true and
+            // reveal the cursor at currControl (= play button) without
+            // applying a delta. Effectively "L or R from close button =
+            // jump to play". MovePlayerPoint then clears parked so a
+            // subsequent press steps normally from play.
+            if (playerControlList.Count > PlayerButtonPlay)
+            {
+                currPoint = (PlayerButtonPlay, 0);
+                currControl = playerControlList[PlayerButtonPlay];
+                playerCursorParked = true;
+            }
         }
 
         /// <summary>
@@ -212,19 +261,35 @@ namespace LVP_WPF.Windows
         {
             if (playerWindowActive)
             {
-                // Player has a single horizontal row of buttons. Left/Right
-                // walks the row via MovePlayerPoint (which itself wakes the
-                // overlay). Up/Down has no nav target but still wakes the
-                // overlay so the user gets visible feedback that input was
-                // received. pos.y carries the horizontal delta in this
-                // codebase (see `left`/`right` tuples at the top of the class).
+                // Player has a single horizontal row of seek buttons (the
+                // bottom of the overlay) plus the close button at top-right.
+                // Nav map:
+                //   Left/Right (pos.y != 0)  -> walk the seek row
+                //   Up         (pos.x < 0)   -> focus the close button
+                //                               (player "menu" - the close
+                //                               control at top of overlay)
+                //   Down       (pos.x > 0)   -> recenter on the play button
+                //                               (center of the seek row).
+                //                               Symmetric with UP-to-close;
+                //                               also acts as a clean
+                //                               "return to default" from
+                //                               wherever the user navigated.
+                // pos.y carries the horizontal delta in this codebase; see
+                // the `left`/`right` tuples at the top of the class.
                 if (pos.y != 0)
                 {
+                    Log.Debug("LayoutPoint.Move: player L/R delta={Delta}", pos.y);
                     MovePlayerPoint(pos.y);
+                }
+                else if (pos.x < 0)
+                {
+                    Log.Debug("LayoutPoint.Move: player UP -> close button");
+                    FocusPlayerCloseButton();
                 }
                 else
                 {
-                    gui.playerWindow?.WakeOverlay();
+                    Log.Debug("LayoutPoint.Move: player DOWN -> play (recenter)");
+                    FocusPlayerControl(PlayerButtonPlay);
                 }
                 return;
             }
@@ -253,8 +318,13 @@ namespace LVP_WPF.Windows
 
         public void Select(string controlName, bool isMovie = false)
         {
+            Log.Debug("LayoutPoint.Select: '{Control}' (isMovie={IsMovie}, mainActive={Main}, tvActive={Tv}, movieActive={Movie}, seasonActive={Season}, playerActive={Player}, langDropdown={Lang})",
+                controlName, isMovie,
+                mainWindowActive, tvShowWindowActive, movieWindowActive, seasonWindowActive, playerWindowActive, languageDropdownActive);
+
             if (PlaybackSession.IsCartoonShuffle || PlaybackSession.IsHistoryWatch)
             {
+                Log.Debug("LayoutPoint.Select: in cartoon-shuffle/history mode, just stashing returnPointA");
                 returnPointA = currPoint;
                 return;
             }
@@ -278,6 +348,7 @@ namespace LVP_WPF.Windows
         {
             if (seasonWindowActive)
             {
+                Log.Information("LayoutPoint: leaving SeasonWindow back to TvShowWindow");
                 seasonWindowActive = false;
                 seasonControlList.Clear();
                 seasonWindowGrid.Clear();
@@ -291,6 +362,7 @@ namespace LVP_WPF.Windows
                 returnPointB = currPoint;
                 if (controlName.Equals("SeasonWindow"))
                 {
+                    Log.Information("LayoutPoint: entering SeasonWindow from TvShowWindow (seasonIndex={Idx})", seasonIndex);
                     seasonWindowActive = true;
                     BuildSeasonGrid();
                     currPoint = GetCurrSeasonPoint(seasonIndex);
@@ -299,6 +371,7 @@ namespace LVP_WPF.Windows
                 }
                 if (controlName.Equals("PlayerWindow"))
                 {
+                    Log.Information("LayoutPoint: entering PlayerWindow from TvShowWindow");
                     playerWindowActive = true;
                     EnterPlayerNav();
                 }
@@ -308,6 +381,7 @@ namespace LVP_WPF.Windows
                 returnPointB = currPoint;
                 if (controlName.Equals("PlayerWindow"))
                 {
+                    Log.Information("LayoutPoint: entering PlayerWindow from MovieWindow");
                     playerWindowActive = true;
                     EnterPlayerNav();
                 }
@@ -350,6 +424,7 @@ namespace LVP_WPF.Windows
             returnPointA = currPoint;
             if (isMovie)
             {
+                Log.Information("LayoutPoint: MainWindow -> MovieWindow");
                 movieWindowActive = true;
                 movieIndex = 0;
                 currPoint = (movieIndex, -1);
@@ -358,6 +433,7 @@ namespace LVP_WPF.Windows
             }
             else
             {
+                Log.Information("LayoutPoint: MainWindow -> TvShowWindow");
                 tvShowWindowActive = true;
                 currPoint = (tvIndex, -1);
                 currControl = tvControlList[currPoint.x];
@@ -367,8 +443,11 @@ namespace LVP_WPF.Windows
 
         internal void CloseCurrWindow(bool click = true)
         {
+            Log.Debug("LayoutPoint.CloseCurrWindow: click={Click}, player={Player}, tv={Tv}, movie={Movie}, main={Main}, season={Season}, lang={Lang}",
+                click, playerWindowActive, tvShowWindowActive, movieWindowActive, mainWindowActive, seasonWindowActive, languageDropdownActive);
             if (seasonWindowActive || languageDropdownActive)
             {
+                Log.Debug("LayoutPoint.CloseCurrWindow: ignoring (season or lang-dropdown is active)");
                 return;
             }
 
@@ -380,25 +459,30 @@ namespace LVP_WPF.Windows
             {
                 if (playerWindowActive)
                 {
+                    Log.Information("LayoutPoint.CloseCurrWindow -> ClosePlayerWindow");
                     ClosePlayerWindow(click);
                     TcpSerialListener.EndFeature();
                 }
                 else if (tvShowWindowActive)
                 {
+                    Log.Information("LayoutPoint.CloseCurrWindow -> CloseTvWindow");
                     CloseTvWindow(click);
                 }
                 else if (movieWindowActive)
                 {
+                    Log.Information("LayoutPoint.CloseCurrWindow -> CloseMovieWindow");
                     CloseMovieWindow(click);
                 }
                 else if (mainWindowActive)
                 {
+                    Log.Information("LayoutPoint.CloseCurrWindow -> CloseMainWindow (app exit path)");
                     CloseMainWindow();
                 }
             }
             catch (Exception ex)
             {
-                Log.Error(ex.Message);
+                Log.Error(ex, "LayoutPoint.CloseCurrWindow failed (player={Player}, tv={Tv}, movie={Movie}, main={Main})",
+                    playerWindowActive, tvShowWindowActive, movieWindowActive, mainWindowActive);
             }
         }
 

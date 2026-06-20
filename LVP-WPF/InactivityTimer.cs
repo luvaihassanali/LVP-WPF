@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Windows.Input;
 using System.Windows.Threading;
 
@@ -8,6 +9,11 @@ namespace LVP_WPF
 {
     /// <summary>
     /// Measures the time of user inactivity in a WPF application.
+    ///
+    /// Threading: uses DispatcherTimer (UI-thread bound). PreNotifyInput
+    /// fires on the UI thread by definition. Tick fires on the UI thread.
+    /// Subscribers to the Inactivity event therefore also run on the UI
+    /// thread - safe to touch WPF controls directly from the handler.
     /// </summary>
     public class InactivityTimer : IDisposable
     {
@@ -87,6 +93,7 @@ namespace LVP_WPF
             _timer.Tick += new EventHandler(_timer_Tick);
 
             _timer.Start();
+            Log.Information("InactivityTimer started: timeout={Timeout}", timeOut);
         }
 
         /// <summary>
@@ -119,12 +126,17 @@ namespace LVP_WPF
 
             if (inactivityTime - time <= 0)
             {
+                Log.Information("InactivityTimer firing: {Idle} since last input (threshold {Timeout})",
+                    TimeSpan.FromMilliseconds(time - _lastActivityTime), TimeOut);
                 Inactivity?.Invoke(this, EventArgs.Empty);
                 _lastActivityTime = time;
                 _timer.Interval = TimeOut;
             }
             else
             {
+                // Re-arm for the remaining gap. Don't log per-tick - the
+                // timer can fire every few seconds depending on user input
+                // patterns, which would drown the file log in noise.
                 _timer.Interval = TimeSpan.FromMilliseconds(inactivityTime - time);
             }
         }

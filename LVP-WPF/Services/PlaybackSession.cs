@@ -1,3 +1,4 @@
+using Serilog;
 using System;
 using System.Collections.Generic;
 
@@ -36,14 +37,30 @@ namespace LVP_WPF.Services
 
         public static void StartCartoonShuffle(int limit, IReadOnlyList<TvShow> availableShows)
         {
+            Log.Information("PlaybackSession.StartCartoonShuffle: limit={Limit}, availableShows={ShowCount}",
+                limit, availableShows?.Count ?? 0);
+            if (availableShows == null || availableShows.Count == 0)
+            {
+                Log.Warning("PlaybackSession.StartCartoonShuffle: no shows available, queue will be empty");
+                Mode = PlaybackMode.CartoonShuffle;
+                CartoonShuffleQueue.Clear();
+                CartoonShuffleLimit = 0;
+                CartoonShuffleIndex = 0;
+                return;
+            }
             Mode = PlaybackMode.CartoonShuffle;
             CartoonShuffleQueue.Clear();
             CartoonShuffleLimit = limit;
             CartoonShuffleIndex = 0;
+            int skipped = 0;
             for (int i = 0; i < limit; i++)
             {
-                CartoonShuffleQueue.Add(PickRandomEpisode(availableShows));
+                Episode? pick = PickRandomEpisode(availableShows);
+                if (pick == null) { skipped++; continue; }
+                CartoonShuffleQueue.Add(pick);
             }
+            Log.Information("PlaybackSession.StartCartoonShuffle: queued {Queued} of {Limit} episodes ({Skipped} empty-show picks skipped)",
+                CartoonShuffleQueue.Count, limit, skipped);
         }
 
         /// <summary>
@@ -51,22 +68,44 @@ namespace LVP_WPF.Services
         /// at each level. Note: not actually uniform over all episodes;
         /// shows with fewer episodes get over-represented relative to ones
         /// with more. Preserved from the original behavior.
+        ///
+        /// Returns null when the chosen show has no seasons or the chosen
+        /// season has no episodes - callers must skip nulls.
         /// </summary>
-        private static Episode PickRandomEpisode(IReadOnlyList<TvShow> shows)
+        private static Episode? PickRandomEpisode(IReadOnlyList<TvShow> shows)
         {
+            // Defensive bail-outs - the random.Next call would throw
+            // ArgumentOutOfRangeException with no caller context if any of
+            // the arrays are empty (e.g., a show with no seasons because
+            // the scanner found no Season N folders, or a season with no
+            // episodes because all files filtered out).
             TvShow show = shows[_random.Next(shows.Count)];
+            if (show.Seasons == null || show.Seasons.Length == 0)
+            {
+                Log.Warning("PlaybackSession.PickRandomEpisode: show '{Name}' has no seasons", show.Name);
+                return null;
+            }
             Season season = show.Seasons[_random.Next(show.Seasons.Length)];
+            if (season.Episodes == null || season.Episodes.Length == 0)
+            {
+                Log.Warning("PlaybackSession.PickRandomEpisode: show '{Name}' season {Sn} has no episodes",
+                    show.Name, season.Id);
+                return null;
+            }
             return season.Episodes[_random.Next(season.Episodes.Length)];
         }
 
         public static void StartHistoryWatch()
         {
+            Log.Information("PlaybackSession.StartHistoryWatch");
             Mode = PlaybackMode.HistoryWatch;
         }
 
         /// <summary>Clear the mode back to Normal. Called when the player closes.</summary>
         public static void End()
         {
+            Log.Information("PlaybackSession.End: was {Mode}, queue cleared ({Queued} entries)",
+                Mode, CartoonShuffleQueue.Count);
             Mode = PlaybackMode.Normal;
             CartoonShuffleQueue.Clear();
         }

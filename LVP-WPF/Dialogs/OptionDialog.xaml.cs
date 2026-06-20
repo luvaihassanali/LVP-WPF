@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LVP_WPF.Models;
 using LVP_WPF.Services;
+using Serilog;
 using System;
 using System.Windows;
 
@@ -20,6 +21,8 @@ namespace LVP_WPF
 
         public static int Show(string title, string path, string[][] info, DateTime?[] dates)
         {
+            Log.Information("OptionDialog.Show: '{Title}' with {Count} options (path={Path})",
+                title, info?[0]?.Length ?? 0, path);
             shown = true;
             OptionDialog dialog = new OptionDialog
             {
@@ -59,6 +62,7 @@ namespace LVP_WPF
 
         private void ExitButton_Click(object sender, RoutedEventArgs e)
         {
+            Log.Information("OptionDialog: user clicked Exit -> Application.Shutdown");
             CursorManager.RestoreSystemCursor();
             Application.Current.Shutdown();
         }
@@ -67,10 +71,12 @@ namespace LVP_WPF
         {
             if (OptionListView.SelectedIndex == -1)
             {
+                Log.Warning("OptionDialog: Continue clicked with no selection - ignoring");
                 return;
             }
 
             OptionWindowBox o = (OptionWindowBox)OptionListView.SelectedItem;
+            Log.Information("OptionDialog: user selected Id={Id} Name='{Name}'", o.Id, o.Name);
             selectedId = o.Id;
             this.Close();
         }

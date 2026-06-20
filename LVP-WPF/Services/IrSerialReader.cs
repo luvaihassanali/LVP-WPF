@@ -16,6 +16,14 @@ namespace LVP_WPF.Services
     ///
     /// Was previously the bottom half of TcpSerialListener; pulled out so the
     /// TCP/joystick code in TcpSerialListener stays focused on that protocol.
+    ///
+    /// Threading: SerialPort.DataReceived fires on a worker thread owned by
+    /// the System.IO.Ports internals. Player and LayoutPoint methods touch
+    /// WPF UI elements (timeline slider, button visuals, DispatcherTimer
+    /// state); those calls are marshalled to the player's Dispatcher inside
+    /// this class instead of relying on each callee to remember to dispatch.
+    /// That keeps the threading model explicit at the boundary where worker
+    /// threads cross into UI code.
     /// </summary>
     internal sealed class IrSerialReader
     {
@@ -49,6 +57,7 @@ namespace LVP_WPF.Services
         {
             _gui = gui;
             Enabled = AppConfig.SerialPortEnabled;
+            Log.Information("IrSerialReader ctor: Enabled={Enabled} SerialPort=COM{Port}", Enabled, AppConfig.SerialPort);
         }
 
         /// <summary>
@@ -69,11 +78,15 @@ namespace LVP_WPF.Services
             };
             _serialPort.DataReceived += OnDataReceived;
 
-            if (!Enabled) return;
+            if (!Enabled)
+            {
+                Log.Information("IrSerialReader.Initialize: disabled in config, skipping port open");
+                return;
+            }
 
             if (!TryOpenPort())
             {
-                Log.Warning("No device connected to serial port");
+                Log.Warning("No device connected to serial port (initial open failed; will retry on tick)");
             }
         }
 
@@ -98,24 +111,72 @@ namespace LVP_WPF.Services
             try
             {
                 _serialPort.Open();
-                Log.Information("Serial port connected");
+                Log.Information("Serial port connected (COM{Port}, {Retries} retries used)",
+                    AppConfig.SerialPort, OpenRetryBudget - _retriesLeft);
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
                 _retriesLeft--;
-                if (_retriesLeft < 0) Enabled = false;
+                if (_retriesLeft < 0)
+                {
+                    Enabled = false;
+                    Log.Warning("Serial port retry budget exhausted ({Budget} attempts), giving up: {Msg}",
+                        OpenRetryBudget, ex.Message);
+                }
                 return false;
             }
         }
 
+        // OnDataReceived runs on a worker thread owned by System.IO.Ports.
+        // Wrap the whole handler in try/catch: an unhandled exception here
+        // is invisible (no UI, no thread name) and silently kills the IR
+        // dispatch loop until process restart. The catch logs the exception
+        // with the originating command so the failure mode is at least
+        // diagnosable from the log file.
         private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             if (e.EventType != SerialData.Chars) return;
 
-            SerialPort port = (SerialPort)sender;
-            string msg = port.ReadLine().Replace("\r", "");
-            Log.Information(msg);
+            string msg = "";
+            try
+            {
+                SerialPort port = (SerialPort)sender;
+                msg = port.ReadLine().Replace("\r", "");
+                OnCommand(msg, source: "IR");
+            }
+            catch (Exception ex)
+            {
+                // Catch-all so a single broken message can't kill the serial
+                // thread. Common offenders: PlayerWindow null-deref races on
+                // window-close, Dispatcher.Invoke on a torn-down window,
+                // partial-line reads from the IR receiver.
+                Log.Error(ex, "IR handler crashed on '{Cmd}'", msg);
+            }
+        }
+
+        /// <summary>
+        /// Entry point shared by the IR serial port (real-hardware path) and
+        /// the keyboard global handler in App.xaml.cs (dev/debug path).
+        /// Performs: command logging, debounce, optional cursor hide,
+        /// then dispatch through the same switch as the IR remote uses.
+        ///
+        /// Returns true if the command was dispatched, false if it was
+        /// dropped (debounce hit or empty message).
+        /// </summary>
+        /// <param name="msg">The remote-style command string (up/down/left/right/enter/return/play/pause/...)</param>
+        /// <param name="source">Free-form tag for the log line ("IR", "kbd", "test", etc.) so the file log shows where each command came from.</param>
+        internal bool OnCommand(string msg, string source)
+        {
+            if (string.IsNullOrEmpty(msg)) return false;
+
+            Log.Information("{Source} rx: '{Cmd}' (player={Player}, season={Season}, tv={Tv}, movie={Movie}, main={Main})",
+                source, msg,
+                TcpSerialListener.layoutPoint?.playerWindowActive,
+                TcpSerialListener.layoutPoint?.seasonWindowActive,
+                TcpSerialListener.layoutPoint?.tvShowWindowActive,
+                TcpSerialListener.layoutPoint?.movieWindowActive,
+                TcpSerialListener.layoutPoint?.mainWindowActive);
 
             // Drop duplicate "action" commands inside the debounce window
             // (see field comment above). Arrow keys fall through unchanged
@@ -125,9 +186,9 @@ namespace LVP_WPF.Services
                 int now = Environment.TickCount;
                 if (msg == _lastActionCmd && (now - _lastActionTick) < ActionDebounceMs)
                 {
-                    Log.Debug("IR debounce: dropped duplicate '{Cmd}' ({Ms}ms since last)",
-                        msg, now - _lastActionTick);
-                    return;
+                    Log.Debug("{Source} debounce: dropped duplicate '{Cmd}' ({Ms}ms since last)",
+                        source, msg, now - _lastActionTick);
+                    return false;
                 }
                 _lastActionCmd = msg;
                 _lastActionTick = now;
@@ -138,19 +199,35 @@ namespace LVP_WPF.Services
                 Application.Current.Dispatcher.Invoke(new Action(() => { Mouse.OverrideCursor = Cursors.None; }));
             }
 
+            DispatchCommand(msg);
+            return true;
+        }
+
+        // Splits the case-switch out of OnDataReceived so the try/catch
+        // there can wrap a single named call. Player-side commands are
+        // marshalled to the player's Dispatcher in one place at the top
+        // of each transport case - the player methods themselves used to
+        // have partial dispatcher coverage that missed pollingTimer
+        // Start/Stop and the LayoutPoint cursor warps.
+        private void DispatchCommand(string msg)
+        {
             LayoutPoint layoutPoint = TcpSerialListener.layoutPoint;
             switch (msg)
             {
                 case "left":
+                    Log.Debug("IR -> Move(left)");
                     layoutPoint.Move(layoutPoint.left);
                     break;
                 case "right":
+                    Log.Debug("IR -> Move(right)");
                     layoutPoint.Move(layoutPoint.right);
                     break;
                 case "up":
+                    Log.Debug("IR -> Move(up)");
                     layoutPoint.Move(layoutPoint.up);
                     break;
                 case "down":
+                    Log.Debug("IR -> Move(down)");
                     layoutPoint.Move(layoutPoint.down);
                     break;
                 case "enter":
@@ -162,6 +239,8 @@ namespace LVP_WPF.Services
                     // new seek buttons (the click never reached them). The IR
                     // remote's dedicated "play"/"pause"/"stop" keys below
                     // still toggle play/pause without needing cursor position.
+                    Log.Debug("IR -> enter (mainOrPlayer={MainOrPlayer})",
+                        layoutPoint.mainWindowActive || layoutPoint.playerWindowActive);
                     if (layoutPoint.mainWindowActive || layoutPoint.playerWindowActive)
                     {
                         TcpSerialListener.DoMouseClick();
@@ -176,54 +255,101 @@ namespace LVP_WPF.Services
                     }
                     break;
                 case "return":
+                    Log.Debug("IR -> CloseCurrWindow");
                     layoutPoint.CloseCurrWindow();
                     break;
-                // All transport commands wake the overlay AND warp the joystick
+                // Transport commands wake the overlay AND warp the joystick
                 // cursor onto the corresponding button so the user gets visual
                 // feedback ("you just hit fast-forward -> look at the FF button
-                // glow"). WakeOverlay runs after the action so it overrides
-                // TogglePlayPause's play-branch hide. FocusPlayerControl warps
-                // the cursor and updates LayoutPoint's currPoint so a subsequent
-                // arrow press steps from this button, not from somewhere stale.
+                // glow"). All wrapped in InvokeOnPlayer so the UI mutations
+                // (DispatcherTimer.Start/Stop inside TogglePlayPause,
+                // PointToScreen inside FocusPlayerControl) execute on the
+                // player's UI thread rather than the serial-port thread that
+                // OnDataReceived fires from.
                 case "play":
                 case "pause":
                 case "stop":
-                    _gui.playerWindow.TogglePlayPause();
-                    _gui.playerWindow.WakeOverlay();
-                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonPlay);
+                    InvokeOnPlayer("play/pause/stop", pw =>
+                    {
+                        pw.TogglePlayPause();
+                        pw.WakeOverlay();
+                        layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonPlay);
+                    });
                     break;
                 case "fastforward":
-                    _gui.playerWindow.SeekRelative(false);
-                    _gui.playerWindow.WakeOverlay();
-                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonFastForward);
+                    InvokeOnPlayer("fastforward", pw =>
+                    {
+                        pw.SeekRelative(false);
+                        pw.WakeOverlay();
+                        layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonFastForward);
+                    });
                     break;
                 case "rewind":
-                    _gui.playerWindow.SeekRelative(true);
-                    _gui.playerWindow.WakeOverlay();
-                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonRewind);
+                    InvokeOnPlayer("rewind", pw =>
+                    {
+                        pw.SeekRelative(true);
+                        pw.WakeOverlay();
+                        layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonRewind);
+                    });
                     break;
                 case "forward":
-                    _gui.playerWindow.JumpToEdge(false);
-                    _gui.playerWindow.WakeOverlay();
-                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonForward);
+                    InvokeOnPlayer("forward", pw =>
+                    {
+                        pw.JumpToEdge(false);
+                        pw.WakeOverlay();
+                        layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonForward);
+                    });
                     break;
                 case "backward":
-                    _gui.playerWindow.JumpToEdge(true);
-                    _gui.playerWindow.WakeOverlay();
-                    layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonBackward);
+                    InvokeOnPlayer("backward", pw =>
+                    {
+                        pw.JumpToEdge(true);
+                        pw.WakeOverlay();
+                        layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonBackward);
+                    });
                     break;
                 case "cartoons":
+                    Log.Information("IR -> PlayRandomCartoons");
                     TcpSerialListener.StaThreadWrapper(() =>
                     {
                         TvShowWindow.PlayRandomCartoons();
                     });
                     break;
                 case "history-play":
+                    Log.Information("IR -> PlayHistoryList");
                     TcpSerialListener.StaThreadWrapper(() =>
                     {
                         TvShowWindow.PlayHistoryList();
                     });
                     break;
+                default:
+                    Log.Warning("IR unknown command: '{Cmd}'", msg);
+                    break;
+            }
+        }
+
+        // Marshal a player-side action onto the player's Dispatcher (the UI
+        // thread that owns the PlayerWindow's controls). Logs entry + exit so
+        // it's clear in the file log when the action ran, how long it took,
+        // and whether it threw. Skips entirely when the player isn't open -
+        // common during fast IR-button-mashing across window transitions.
+        private void InvokeOnPlayer(string actionName, Action<PlayerWindow> body)
+        {
+            PlayerWindow pw = _gui.playerWindow;
+            if (pw == null)
+            {
+                Log.Warning("IR -> {Action}: player window is null, dropping", actionName);
+                return;
+            }
+            try
+            {
+                int t0 = Environment.TickCount;
+                pw.Dispatcher.Invoke(() => body(pw));
+                Log.Debug("IR -> {Action}: completed in {Ms}ms", actionName, Environment.TickCount - t0);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "IR -> {Action}: dispatcher invoke threw", actionName);
             }
         }
     }

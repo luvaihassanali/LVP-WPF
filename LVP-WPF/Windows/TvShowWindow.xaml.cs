@@ -72,6 +72,8 @@ namespace LVP_WPF.Windows
 
         private void TvShowWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            Log.Information("TvShowWindow.Loaded: '{Show}' (multiLang={Multi}, currSeason={CurrSeason})",
+                tvShow.Name, tvShow.MultiLang, tvShow.CurrSeason);
             this.Height = (int)SystemParameters.PrimaryScreenHeight;
             GetLanguageInfo(tvShow);
             TcpSerialListener.layoutPoint.tvControlList.Add(this.tvBackdrop);
@@ -88,8 +90,13 @@ namespace LVP_WPF.Windows
 
         private async void TvShowWindow_Closing(object sender, CancelEventArgs e)
         {
+            Log.Information("TvShowWindow.Closing: '{Show}' (langChanged={LangChanged})",
+                tvShow.Name, langChanged);
             if (langChanged)
             {
+                // Reset to English on close so re-opening the show defaults
+                // back to the canonical language. 1s delay covers the
+                // SwitchMultiLangTvIndex's async TMDB / file rename work.
                 SwitchMultiLangTvIndex(tvShow, "English");
                 await Task.Delay(1000);
             }
@@ -284,6 +291,8 @@ namespace LVP_WPF.Windows
             TvShowWindow_Fade(0.1);
             int prevIndex = tvShow.CurrSeason;
             int seasonIndex = SeasonWindow.Show(tvShow);
+            Log.Information("TvShowWindow.SeasonButton_Click: '{Show}' season {Prev} -> {New}",
+                tvShow.Name, prevIndex, seasonIndex);
             if (seasonIndex != 0 && seasonIndex != prevIndex)
             {
                 tvShow.CurrSeason = seasonIndex;
@@ -420,6 +429,8 @@ namespace LVP_WPF.Windows
 
         private async void LangComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            Log.Information("TvShowWindow.LangComboBox: '{Show}' selected '{Lang}' (idx={Idx})",
+                tvShow.Name, langComboBox.SelectedItem, langComboBox.SelectedIndex);
             loadGrid.Visibility = Visibility.Visible;
             TvShowWindow_Fade(0.1);
 

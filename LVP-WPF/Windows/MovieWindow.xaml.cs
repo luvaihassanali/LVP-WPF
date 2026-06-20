@@ -2,6 +2,7 @@
 using LibVLCSharp.Shared;
 using LVP_WPF.Services;
 using LVP_WPF.Util;
+using Serilog;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ namespace LVP_WPF.Windows
 
         public static void Show(Movie m)
         {
+            Log.Information("MovieWindow.Show: '{Movie}' ({Year})", m.Name, m.Date.GetValueOrDefault().Year);
             SubtitleConfig.Track = Int32.MaxValue;
             SubtitleConfig.HasSrtFile = false;
             movie = m;
@@ -98,9 +100,17 @@ namespace LVP_WPF.Windows
         private void GetLanguageInfo(Movie movie)
         {
             LibVLCSharp.Shared.Media media = new LibVLCSharp.Shared.Media(PlayerWindow.libVLC, movie.Path, FromType.FromPath);
-            Task.Run(async () => { await media.Parse(MediaParseOptions.ParseLocal); }).Wait();
+            try
+            {
+                Task.Run(async () => { await media.Parse(MediaParseOptions.ParseLocal); }).Wait();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "MovieWindow.GetLanguageInfo: media.Parse failed for {Path}", movie.Path);
+            }
 
             subTrackComboBox.Items.Add("Subtitles (none)");
+            int embeddedSubs = 0;
             foreach (MediaTrack track in media.Tracks)
             {
                 switch (track.TrackType)
@@ -109,9 +119,12 @@ namespace LVP_WPF.Windows
                     //case TrackType.Video:
                     case TrackType.Text:
                         subTrackComboBox.Items.Add(track.Description);
+                        embeddedSubs++;
                         break;
                 }
             }
+            Log.Information("MovieWindow.GetLanguageInfo: parsed '{Movie}' - {Embedded} embedded subtitle track(s)",
+                movie.Name, embeddedSubs);
 
             if (subTrackComboBox.Items.Count > 1)
             {
@@ -126,6 +139,7 @@ namespace LVP_WPF.Windows
             // no companion .srt; nothing to enable.
             if (movieFiles.Length == 1)
             {
+                Log.Debug("MovieWindow.GetLanguageInfo: no embedded subs and no sidecar .srt - subtitle UI hidden");
                 return;
             }
 
@@ -156,6 +170,7 @@ namespace LVP_WPF.Windows
         {
             if (subTrackComboBox.SelectedIndex == 0)
             {
+                Log.Information("MovieWindow: subtitle disabled ('Subtitles (none)' selected)");
                 SubtitleConfig.Track = Int32.MaxValue;
                 SubtitleConfig.HasSrtFile = false;
             }
@@ -163,10 +178,12 @@ namespace LVP_WPF.Windows
             {
                 if (srtFileExists)
                 {
+                    Log.Information("MovieWindow: subtitle enabled (sidecar .srt file)");
                     SubtitleConfig.HasSrtFile = true;
                     return;
                 }
                 SubtitleConfig.Track = subTrackComboBox.SelectedIndex - 1;
+                Log.Information("MovieWindow: subtitle enabled (embedded track {Track})", SubtitleConfig.Track);
             }
         }
 

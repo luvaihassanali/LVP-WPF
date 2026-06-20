@@ -137,7 +137,19 @@ namespace LVP_WPF
                 tcpWorker.StartThread();
             });
 
-            inactivityTimer = new InactivityTimer(TimeSpan.FromMinutes(30));
+            // Inactivity shutdown timer. Resets on any mouse/keyboard/stylus
+            // input event via InactivityTimer.PreNotifyInput. Skipped when
+            // playback is active (see InactivityDetected: gui.isPlaying gate).
+            //
+            // DEBUG builds use a much shorter 2-minute timeout so the shutdown
+            // path is testable in a development session without waiting half
+            // an hour. Production gets the full 30 minutes.
+#if DEBUG
+            TimeSpan inactivityTimeout = TimeSpan.FromMinutes(2);
+#else
+            TimeSpan inactivityTimeout = TimeSpan.FromMinutes(30);
+#endif
+            inactivityTimer = new InactivityTimer(inactivityTimeout);
             inactivityTimer.Inactivity += InactivityDetected;
             PlayerWindow.InitializeLibVlcCore();
             MainWindow_Fade(1.0);
@@ -361,15 +373,26 @@ namespace LVP_WPF
 
         private async void InactivityDetected(object sender, EventArgs e)
         {
+            // Runs on the UI dispatcher thread (DispatcherTimer-backed event).
+            // The async/await keeps the continuation on the UI thread too,
+            // so direct WPF mutation (Window.Close, Application.Current.Shutdown)
+            // is safe without further marshalling.
             if (gui.isPlaying)
             {
+                Log.Information("InactivityDetected: playback active, ignoring");
                 return;
             }
 
+            int closed = 0;
             foreach (Window w in Application.Current.Windows)
             {
-                if (w is TvShowWindow) w.Close();
+                if (w is TvShowWindow)
+                {
+                    w.Close();
+                    closed++;
+                }
             }
+            Log.Information("InactivityDetected: closing app ({Closed} TvShowWindow(s) closed first, 1s grace then Shutdown)", closed);
             await Task.Delay(1000);
             Log.Information("Inactivity shutdown");
             Application.Current.Shutdown();

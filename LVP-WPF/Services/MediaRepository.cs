@@ -1,4 +1,7 @@
 using Newtonsoft.Json;
+using Serilog;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -35,12 +38,32 @@ namespace LVP_WPF.Services
         {
             if (!File.Exists(_path))
             {
+                Log.Information("MediaRepository.Load: no existing file at {Path} (first run or rebuild)", _path);
                 return null;
             }
-            using FileStream fs = File.OpenRead(_path);
-            using StreamReader sr = new StreamReader(fs);
-            using JsonTextReader jr = new JsonTextReader(sr);
-            return new JsonSerializer().Deserialize<MainModel>(jr);
+            try
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                long sizeBytes = new FileInfo(_path).Length;
+                using FileStream fs = File.OpenRead(_path);
+                using StreamReader sr = new StreamReader(fs);
+                using JsonTextReader jr = new JsonTextReader(sr);
+                MainModel? model = new JsonSerializer().Deserialize<MainModel>(jr);
+                Log.Information("MediaRepository.Load: {Path} ({SizeKb} KB) deserialized in {Ms}ms (movies={Movies}, tv={Tv})",
+                    _path, sizeBytes / 1024, sw.ElapsedMilliseconds,
+                    model?.Movies?.Length ?? 0, model?.TvShows?.Length ?? 0);
+                return model;
+            }
+            catch (Exception ex)
+            {
+                // Surface the failure in the file log AND re-throw - the
+                // caller (MediaLibrary.Initialize) needs the exception to
+                // decide whether to rebuild from scratch. Without this log
+                // the rebuild path fires with no diagnostic for why the
+                // existing file couldn't be reused.
+                Log.Error(ex, "MediaRepository.Load: failed to deserialize {Path}", _path);
+                throw;
+            }
         }
 
         /// <summary>
@@ -56,21 +79,44 @@ namespace LVP_WPF.Services
         /// </summary>
         public void Save(MainModel model)
         {
+            int beforeMovies = model.Movies.Length;
+            int beforeTv     = model.TvShows.Length;
             model.Movies = model.Movies.Where(m => m.Id != 0).ToArray();
             model.TvShows = model.TvShows.Where(t => t.Id != 0).ToArray();
-
-            string json = JsonConvert.SerializeObject(model);
-            File.WriteAllText(_tempPath, json);
-
-            if (File.Exists(_path))
+            int droppedMovies = beforeMovies - model.Movies.Length;
+            int droppedTv     = beforeTv - model.TvShows.Length;
+            if (droppedMovies > 0 || droppedTv > 0)
             {
-                if (File.Exists(_backupPath))
-                {
-                    File.Delete(_backupPath);
-                }
-                File.Move(_path, _backupPath);
+                Log.Warning("MediaRepository.Save: dropping {DroppedMovies} unmatched movies and {DroppedTv} unmatched tv shows (Id==0)",
+                    droppedMovies, droppedTv);
             }
-            File.Move(_tempPath, _path);
+
+            try
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                string json = JsonConvert.SerializeObject(model);
+                File.WriteAllText(_tempPath, json);
+
+                if (File.Exists(_path))
+                {
+                    if (File.Exists(_backupPath))
+                    {
+                        File.Delete(_backupPath);
+                    }
+                    File.Move(_path, _backupPath);
+                }
+                File.Move(_tempPath, _path);
+                Log.Information("MediaRepository.Save: {Path} written ({SizeKb} KB, {Ms}ms, movies={Movies}, tv={Tv})",
+                    _path, json.Length / 1024, sw.ElapsedMilliseconds, model.Movies.Length, model.TvShows.Length);
+            }
+            catch (Exception ex)
+            {
+                // Save is called from MainWindow.Closing and from the Save
+                // button on NotificationDialog. Both ignore the return value;
+                // the file log is the only place this failure surfaces.
+                Log.Error(ex, "MediaRepository.Save: failed at swap for {Path}", _path);
+                throw;
+            }
         }
     }
 }

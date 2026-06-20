@@ -1,4 +1,4 @@
-﻿using LVP_WPF.Windows;
+using LVP_WPF.Windows;
 using Serilog;
 using System;
 using System.IO;
@@ -12,9 +12,18 @@ namespace LVP_WPF
         private void Application_Startup(object sender, StartupEventArgs e)
         {
             AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
-#if DEBUG
-            EventManager.RegisterClassHandler(typeof(Window), Keyboard.KeyUpEvent, new KeyEventHandler(GlobalKeyUp), true);
-#endif
+            // Global keyboard handler is active in BOTH Debug and Release.
+            // The IR remote is the primary input on the production media
+            // server, but keyboard works as a fallback (server keyboard or
+            // remote desktop session) so users aren't locked out if the
+            // remote / serial cable comes loose.
+            //
+            // KeyDown (not KeyUp): IR remote dispatch is press-driven, and
+            // KeyDown gives Windows' auto-repeat behavior for arrows when
+            // held - which mimics held-button IR repeat reasonably well.
+            // Non-arrow keys filter out IsRepeat inside GlobalKeyDown so a
+            // held action key doesn't fire as a stream of one-shots.
+            EventManager.RegisterClassHandler(typeof(Window), Keyboard.KeyDownEvent, new KeyEventHandler(GlobalKeyDown), true);
             string baseFolder = AppDomain.CurrentDomain.BaseDirectory;
             string logPath = $"{baseFolder}logs\\";
             if (!Directory.Exists(logPath))
@@ -57,58 +66,74 @@ namespace LVP_WPF
                 .CreateLogger();
         }
 
-        private void GlobalKeyUp(object sender, KeyEventArgs e)
+        // Routes keyboard input through the same IrSerialReader.OnCommand
+        // pipeline the IR remote uses, so a keypress is indistinguishable
+        // from a serial-port command in the rest of the system: same
+        // debounce, same threading marshalling for player calls, same
+        // logging.
+        //
+        // Keyboard map (also documented in README.md - keep in sync):
+        //
+        //   Key                       IR-equivalent    Effect
+        //   ─────────────────────────  ──────────────  ──────────────────────────────
+        //   Up / Down / Left / Right  up/down/left/   navigation (arrow nav)
+        //                             right
+        //   Enter                     enter           activate focused control
+        //   Esc                       return          back / close current window
+        //   Space                     play            toggle play/pause in player
+        //   F                         fastforward     +30s
+        //   R                         rewind          -30s
+        //   End                       forward         jump to end
+        //   Home                      backward        jump to start
+        //
+        // Removed: 'S' (cartoons) and 'W' (history) - these used to be
+        // dev shortcuts when there was no UI for them; now exposed as
+        // dedicated MainWindow buttons (gui.shuffleButton / historyButton).
+        private void GlobalKeyDown(object sender, KeyEventArgs e)
         {
-            if (OptionDialog.shown)
-            {
-                return;
-            }
+            if (OptionDialog.shown) return;
 
-            // Arrow-key cases all do the same shape (log + Move). Dispatch via
-            // a tiny table so adding/changing one of them only touches one line.
-            LayoutPoint lp = TcpSerialListener.layoutPoint;
-            (string Label, (int x, int y) Dir)? mapped = e.Key switch
+            // Skip modifier-combos so Ctrl+L / Alt+F4 / Shift+arrows etc.
+            // don't fire as bare commands. The IR remote has no modifier
+            // concept; only un-modifiered keypresses should mimic it.
+            if (Keyboard.Modifiers != ModifierKeys.None) return;
+
+            string msg = e.Key switch
             {
-                Key.Up    => ("up",    lp.up),
-                Key.Down  => ("down",  lp.down),
-                Key.Left  => ("left",  lp.left),
-                Key.Right => ("right", lp.right),
-                _ => null
+                Key.Up     => "up",
+                Key.Down   => "down",
+                Key.Left   => "left",
+                Key.Right  => "right",
+                Key.Enter  => "enter",
+                Key.Escape => "return",
+                Key.Space  => "play",
+                Key.F      => "fastforward",
+                Key.R      => "rewind",
+                Key.End    => "forward",
+                Key.Home   => "backward",
+                _          => null
             };
-            if (mapped.HasValue)
-            {
-                Log.Debug(mapped.Value.Label);
-                lp.Move(mapped.Value.Dir);
-                return;
-            }
+            if (msg == null) return;
 
-            switch (e.Key)
-            {
-                case Key.Enter:
-                    Log.Debug("enter");
-                    TcpSerialListener.DoMouseClick();
-                    break;
-                case Key.Escape:
-                    Log.Debug("esc");
-                    TcpSerialListener.layoutPoint.CloseCurrWindow();
-                    break;
-                case Key.S:
-                    Log.Debug("cartoons");
+            // Auto-repeat policy: arrows keep their stream (IR remote behaves
+            // the same when held - users expect to hold to scroll a long
+            // grid). Action keys filter IsRepeat so a held Enter / Space
+            // doesn't fire as a thousand one-shots. IrSerialReader's
+            // debounce window inside OnCommand catches anything that slips
+            // through within ~300ms anyway.
+            bool isArrow = e.Key is Key.Up or Key.Down or Key.Left or Key.Right;
+            if (!isArrow && e.IsRepeat) return;
 
-                    TcpSerialListener.StaThreadWrapper(() =>
-                    {
-                        TvShowWindow.PlayRandomCartoons();
-                    });
-                    break;
-                case Key.W:
-                    Log.Debug("historyWatch");
-
-                    TcpSerialListener.StaThreadWrapper(() =>
-                    {
-                        TvShowWindow.PlayHistoryList();
-                    });
-                    break;
-            }
+            // tcpWorker is null until MainWindow_Loaded constructs it (after
+            // library init), and IrReader is null if the user disabled
+            // SerialPortEnabled. Guard both so a keypress during startup or
+            // in a SerialPortEnabled=false config doesn't NRE.
+            //
+            // Fully qualified: in App's context "MainWindow" otherwise
+            // resolves to Application.MainWindow (the inherited property),
+            // which is just a System.Windows.Window reference - not our
+            // class with the static tcpWorker field.
+            LVP_WPF.MainWindow.tcpWorker?.IrReader?.OnCommand(msg, source: "kbd");
         }
 
         private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
