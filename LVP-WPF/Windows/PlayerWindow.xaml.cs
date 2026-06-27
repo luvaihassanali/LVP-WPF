@@ -102,7 +102,7 @@ namespace LVP_WPF.Windows
             inactivityTimer.Inactivity += InactivityDetected;
 
             LibVLCSharp.Shared.Media currVLCMedia = CreateMedia(currMedia);
-            Log.Information("Play: {Media}", currMedia.Path);
+            Log.Information("Play: {Media} ({Duration})", currMedia.Path, FormatMediaDuration(currMedia));
 
             bool res = mediaPlayer.Play(currVLCMedia);
             if (!res)
@@ -415,9 +415,27 @@ namespace LVP_WPF.Windows
         {
             currMedia = m;
             LibVLCSharp.Shared.Media next = CreateMedia(m);
-            Log.Information("Play: {Media}", m.Path);
+            Log.Information("Play: {Media} ({Duration})", m.Path, FormatMediaDuration(m));
             ThreadPool.QueueUserWorkItem(_ => mediaPlayer.Play(next));
         }
+
+        // Pretty-prints the media's expected duration for the "Play:" log line.
+        // Different source per subtype:
+        //   Episode.Length     -> set by MediaPlayer_LengthChanged after the
+        //                         first play of this episode, persisted in
+        //                         media.json. 0 means never played yet, so we
+        //                         can't show a length up front - happens on
+        //                         cartoon shuffle picking a first-time episode.
+        //   Movie.RunningTime  -> set from TMDB metadata at scan time, in
+        //                         minutes. Always known if the movie was
+        //                         enriched (the usual case).
+        // Anything else -> "?" so the log line still parses.
+        private static string FormatMediaDuration(Media m) => m switch
+        {
+            Episode ep when ep.Length > 0     => TimeSpan.FromMilliseconds(ep.Length).ToString(@"hh\:mm\:ss"),
+            Movie mv  when mv.RunningTime > 0 => TimeSpan.FromMinutes(mv.RunningTime).ToString(@"hh\:mm\:ss"),
+            _                                  => "?"
+        };
 
         private void MediaPlayer_EncounteredError(object? sender, EventArgs e)
         {

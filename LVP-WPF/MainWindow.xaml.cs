@@ -379,7 +379,11 @@ namespace LVP_WPF
             // is safe without further marshalling.
             if (gui.isPlaying)
             {
-                Log.Information("InactivityDetected: playback active, ignoring");
+                // Debug-level: this is the no-op branch of inactivity handling
+                // - fires routinely during long playback sessions and adds
+                // nothing actionable. The shutdown branch below stays at
+                // Information because that one matters.
+                Log.Debug("InactivityDetected: playback active, ignoring");
                 return;
             }
 

@@ -126,7 +126,13 @@ namespace LVP_WPF
 
             if (inactivityTime - time <= 0)
             {
-                Log.Information("InactivityTimer firing: {Idle} since last input (threshold {Timeout})",
+                // Debug-level: the timer fires every TimeOut period (30 min /
+                // 2 hr) for the lifetime of the app/player, and the actual
+                // consequence is logged downstream by the Inactivity handler
+                // (either "playback active, ignoring" or the shutdown path).
+                // Keeping this at Information adds a noisy paired line for
+                // every routine no-op tick.
+                Log.Debug("InactivityTimer firing: {Idle} since last input (threshold {Timeout})",
                     TimeSpan.FromMilliseconds(time - _lastActivityTime), TimeOut);
                 Inactivity?.Invoke(this, EventArgs.Empty);
                 _lastActivityTime = time;
