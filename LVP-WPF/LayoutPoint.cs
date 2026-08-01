@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -531,48 +532,72 @@ namespace LVP_WPF.Windows
             CenterMouseOverControl(currControl);
         }
 
-        private async void ClosePlayerWindow(bool click)
+        private void ClosePlayerWindow(bool click)
         {
             playerWindowActive = false;
 
-            // Cartoon shuffle / history watch run on a feature dispatcher.
-            // CloseCurrWindow calls EndFeature immediately after us, and that
-            // path now properly closes the PlayerWindow (fires Closing ->
-            // mediaPlayer.Dispose). The old click-simulation below is
-            // redundant AND actively harmful in feature mode:
-            //   1. Cursor warps to gui.playerCloseButton (top-right of the
-            //      player, i.e. top-right of the screen).
-            //   2. Await 200ms - during which EndFeature runs on the caller
-            //      and destroys the PlayerWindow.
-            //   3. DoMouseClick fires at cursor position. Player is gone,
-            //      so the click falls through to whatever is at the same
-            //      screen coordinate on the now-frontmost window - which
-            //      is MainWindow, whose Close button sits at the SAME
-            //      top-right position. Result: MainWindow.CloseButton_Click
-            //      -> App.Shutdown(). The app exits when the user just
-            //      wanted to leave the player.
-            // Regular TV / movie playback does NOT go through StaThreadWrapper
-            // and has no feature dispatcher, so EndFeature is a no-op for
-            // those - the click simulation IS the close mechanism and stays.
+            // Two close mechanisms depending on mode:
+            //
+            //   Regular TV / movie: no feature dispatcher, so EndFeature is
+            //   a no-op. The mechanism here IS the close - warp the cursor
+            //   onto the player's close button, pause so the user sees the
+            //   button's hover highlight (visual acknowledgment of the
+            //   return-button press), then synthesize a mouse click that
+            //   fires CloseButton_Click -> this.Close().
+            //
+            //   Cartoon shuffle / history watch: EndFeature (called next in
+            //   CloseCurrWindow) closes the PlayerWindow via the feature
+            //   dispatcher. The click simulation MUST be skipped - by the
+            //   time DoMouseClick fires 200ms later, the player is already
+            //   gone and the click falls through to MainWindow's close
+            //   button at the same top-right screen position, exiting the
+            //   app. But we still want the visual acknowledgment, so we
+            //   warp the cursor and pause without the click.
+            //
+            // Synchronous (Thread.Sleep instead of await Task.Delay) is
+            // deliberate: async void would let CloseCurrWindow return and
+            // call EndFeature immediately, destroying the window before the
+            // user sees any highlight at all. Blocking here holds the caller
+            // for the ~200ms it takes to render the highlight. Callers are
+            // fine to block: IR dispatch runs on a serial worker thread with
+            // its own debounce, and the DeferCloseCurrWindow path for
+            // MediaPlayer_EndReached hops to the main UI dispatcher whose
+            // brief pause isn't visible under a full-screen player.
             bool featureMode = PlaybackSession.IsCartoonShuffle || PlaybackSession.IsHistoryWatch;
 
-            if (click && !featureMode)
+            if (click)
             {
+                // WakeOverlay BEFORE the cursor warp. If auto-hide fired
+                // during playback, overlayGrid.Visibility is Hidden and the
+                // close button is not hit-testable - warping onto it in
+                // that state doesn't fire MouseEnter, so the blue-highlight
+                // acknowledgment never appears. Regular TV mode happened to
+                // work by accident because the visibility-change synthetic
+                // MouseMove sometimes lined up on the main UI dispatcher,
+                // but cartoon/history mode (player on a separate feature
+                // dispatcher) hit a race that skipped the MouseEnter. Showing
+                // the overlay explicitly first makes the button hit-testable
+                // by the time the warp posts its WM_MOUSEMOVE, so MouseEnter
+                // fires deterministically.
+                gui.playerWindow?.WakeOverlay();
+
                 CenterMouseOverControl(gui.playerCloseButton);
                 WpfTreeHelpers.DoEvents();
-                await Task.Delay(200);
-                TcpSerialListener.DoMouseClick();
-                await Task.Delay(200);
-            }
-            else if (click && featureMode)
-            {
-                // NotifyWindowClosedFromUI (which normally clears
-                // incomingSerialMsg after the simulated click's
-                // CloseButton_Click fires) doesn't run when we skip the
-                // simulation. Clear it here so a subsequent mouse-driven
-                // close on some other window isn't misinterpreted as
-                // "state already advanced, do nothing".
-                incomingSerialMsg = false;
+                Thread.Sleep(200);
+
+                if (featureMode)
+                {
+                    // No click simulation - see comment above. Clear the
+                    // serial-message flag directly since the click's
+                    // NotifyWindowClosedFromUI (which normally clears it)
+                    // never fires.
+                    incomingSerialMsg = false;
+                }
+                else
+                {
+                    TcpSerialListener.DoMouseClick();
+                    Thread.Sleep(200);
+                }
             }
 
             if (movieWindowActive)
