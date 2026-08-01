@@ -534,13 +534,45 @@ namespace LVP_WPF.Windows
         private async void ClosePlayerWindow(bool click)
         {
             playerWindowActive = false;
-            if (click)
+
+            // Cartoon shuffle / history watch run on a feature dispatcher.
+            // CloseCurrWindow calls EndFeature immediately after us, and that
+            // path now properly closes the PlayerWindow (fires Closing ->
+            // mediaPlayer.Dispose). The old click-simulation below is
+            // redundant AND actively harmful in feature mode:
+            //   1. Cursor warps to gui.playerCloseButton (top-right of the
+            //      player, i.e. top-right of the screen).
+            //   2. Await 200ms - during which EndFeature runs on the caller
+            //      and destroys the PlayerWindow.
+            //   3. DoMouseClick fires at cursor position. Player is gone,
+            //      so the click falls through to whatever is at the same
+            //      screen coordinate on the now-frontmost window - which
+            //      is MainWindow, whose Close button sits at the SAME
+            //      top-right position. Result: MainWindow.CloseButton_Click
+            //      -> App.Shutdown(). The app exits when the user just
+            //      wanted to leave the player.
+            // Regular TV / movie playback does NOT go through StaThreadWrapper
+            // and has no feature dispatcher, so EndFeature is a no-op for
+            // those - the click simulation IS the close mechanism and stays.
+            bool featureMode = PlaybackSession.IsCartoonShuffle || PlaybackSession.IsHistoryWatch;
+
+            if (click && !featureMode)
             {
                 CenterMouseOverControl(gui.playerCloseButton);
                 WpfTreeHelpers.DoEvents();
                 await Task.Delay(200);
                 TcpSerialListener.DoMouseClick();
                 await Task.Delay(200);
+            }
+            else if (click && featureMode)
+            {
+                // NotifyWindowClosedFromUI (which normally clears
+                // incomingSerialMsg after the simulated click's
+                // CloseButton_Click fires) doesn't run when we skip the
+                // simulation. Clear it here so a subsequent mouse-driven
+                // close on some other window isn't misinterpreted as
+                // "state already advanced, do nothing".
+                incomingSerialMsg = false;
             }
 
             if (movieWindowActive)
