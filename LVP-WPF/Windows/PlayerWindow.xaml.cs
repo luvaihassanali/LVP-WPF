@@ -188,32 +188,51 @@ namespace LVP_WPF.Windows
             {
                 if (currMedia is Episode episode)
                 {
+                    // Defensive null guard: TvShowWindow.tvShow is null when
+                    // the player was NOT opened through the TV-show flow
+                    // (e.g., cartoon shuffle picks Episodes but never opens
+                    // TvShowWindow). If the PlaybackSession mode gets
+                    // cleared before Closing fires - e.g., during a broken
+                    // close-ordering refactor - this branch is entered for
+                    // a cartoon Episode and would NRE on FindSeasonIdOf,
+                    // aborting the handler BEFORE mediaPlayer.Dispose()
+                    // runs. Result: audio keeps playing after the window
+                    // is gone, only manual kill fixes it. Bail out cleanly
+                    // instead so the dispose path below always runs.
                     TvShow tvShow = TvShowWindow.tvShow;
-                    int? seasonId = tvShow.FindSeasonIdOf(episode);
-
-                    long endTime = mediaPlayer.Time;
-                    if (endTime > episode.Length)
+                    if (tvShow == null)
                     {
-                        endTime = episode.Length;
-                    }
-
-                    if (endTime > 0 && seasonId.HasValue)
-                    {
-                        Log.Information("PlayerWindow.Closing: saving progress for '{Show}' S{Sn}E{Ep} '{Title}' = {Time}ms / {Length}ms",
-                            tvShow.Name, seasonId.Value, episode.Id, episode.Name, endTime, episode.Length);
-                        episode.SavedTime = endTime;
-                        if (seasonId.Value != -1)  // -1 means the Extras pseudo-season; don't promote that to LastEpisode
-                        {
-                            tvShow.CurrSeason = seasonId.Value;
-                            tvShow.LastEpisode = episode;
-                        }
+                        Log.Warning("PlayerWindow.Closing: TvShowWindow.tvShow is null for episode '{Ep}' - skipping progress save",
+                            episode.Name);
                     }
                     else
                     {
-                        Log.Debug("PlayerWindow.Closing: not saving progress (endTime={Time}, seasonId={SeasonId})",
-                            endTime, seasonId);
+                        int? seasonId = tvShow.FindSeasonIdOf(episode);
+
+                        long endTime = mediaPlayer.Time;
+                        if (endTime > episode.Length)
+                        {
+                            endTime = episode.Length;
+                        }
+
+                        if (endTime > 0 && seasonId.HasValue)
+                        {
+                            Log.Information("PlayerWindow.Closing: saving progress for '{Show}' S{Sn}E{Ep} '{Title}' = {Time}ms / {Length}ms",
+                                tvShow.Name, seasonId.Value, episode.Id, episode.Name, endTime, episode.Length);
+                            episode.SavedTime = endTime;
+                            if (seasonId.Value != -1)  // -1 means the Extras pseudo-season; don't promote that to LastEpisode
+                            {
+                                tvShow.CurrSeason = seasonId.Value;
+                                tvShow.LastEpisode = episode;
+                            }
+                        }
+                        else
+                        {
+                            Log.Debug("PlayerWindow.Closing: not saving progress (endTime={Time}, seasonId={SeasonId})",
+                                endTime, seasonId);
+                        }
+                        UpdateProgressBar(episode);
                     }
-                    UpdateProgressBar(episode);
                 }
             }
 

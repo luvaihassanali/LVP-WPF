@@ -463,6 +463,22 @@ namespace LVP_WPF.Windows
                     Log.Information("LayoutPoint.CloseCurrWindow -> ClosePlayerWindow");
                     ClosePlayerWindow(click);
                     TcpSerialListener.EndFeature();
+
+                    // Clear the cartoon/history session AFTER EndFeature (i.e.
+                    // AFTER PlayerWindow.Closing has fired). ClosePlayerWindow
+                    // used to do this itself, but the sync refactor made it
+                    // run BEFORE Closing - which broke the mode-based branch
+                    // guard at PlayerWindow.xaml.cs:187 (`!IsCartoonShuffle
+                    // && !skipClosing`). With the mode already Normal by
+                    // then, Closing entered the "save regular-TV progress"
+                    // branch and NRE'd on the null TvShowWindow.tvShow that
+                    // cartoon shuffle never sets, aborting the handler
+                    // before mediaPlayer.Dispose() ran - so LibVLC kept
+                    // playing audio after the window vanished.
+                    if (PlaybackSession.Mode != PlaybackMode.Normal)
+                    {
+                        PlaybackSession.End();
+                    }
                 }
                 else if (tvShowWindowActive)
                 {
@@ -592,12 +608,37 @@ namespace LVP_WPF.Windows
                     // NotifyWindowClosedFromUI (which normally clears it)
                     // never fires.
                     incomingSerialMsg = false;
+
+                    // Close the feature-mode window HERE - not after we
+                    // return to CloseCurrWindow. If EndFeature runs after
+                    // ClosePlayerWindow returns, the state-transition block
+                    // below (which warps the cursor onto the main-window
+                    // tile) runs FIRST - the user sees the highlight
+                    // disappear as the cursor leaves the close button
+                    // while the player is still up on screen, then the
+                    // player finally closes. Regular mode doesn't have
+                    // this jump because DoMouseClick closes the window
+                    // BEFORE the state-transition block runs. Doing
+                    // EndFeature here matches that ordering: window
+                    // disappears while the highlight is still on it, THEN
+                    // the cursor repositions. EndFeature is idempotent
+                    // (dispatcherThread nulled after the first call), so
+                    // the redundant call in CloseCurrWindow no-ops.
+                    TcpSerialListener.EndFeature();
                 }
                 else
                 {
                     TcpSerialListener.DoMouseClick();
-                    Thread.Sleep(200);
                 }
+
+                // Matched trailing pause. Regular mode's second Sleep(200)
+                // used to sit inside the click branch; we now share it with
+                // feature mode so both close paths have the same rhythm -
+                // highlight held (Sleep 200) -> close fires -> brief pause
+                // with the parent window visible (Sleep 200) -> cursor
+                // moves. Without this pause, feature mode transitions
+                // straight from close to cursor-warp, which looks abrupt.
+                Thread.Sleep(200);
             }
 
             if (movieWindowActive)
@@ -616,7 +657,10 @@ namespace LVP_WPF.Windows
                 currPoint = returnPointA;
                 currControl = mainWindowControlGrid[currPoint.x][currPoint.y];
                 CenterMouseOverControl(currControl);
-                PlaybackSession.End();
+                // PlaybackSession.End() moved to CloseCurrWindow AFTER
+                // EndFeature - see comment there. Calling it here fired
+                // BEFORE PlayerWindow.Closing and broke the mode-based
+                // branch guard, leaking mediaPlayer (audio kept playing).
                 playerWindowActive = false;
             }
         }
