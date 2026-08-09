@@ -107,7 +107,20 @@ namespace MouseMoverClient
             }
 #pragma warning restore CA1416 // Validate platform compatibility
 
-            ConsoleHelper.SetWindowPosition(winLeft, winTop);
+            // ConsoleCenterOnScreen wins over ConsoleWindowLeft/Top when
+            // set to true. Both keys stay so a user can flip back to fixed
+            // placement by toggling this to false without having to rewrite
+            // the Left/Top values.
+            bool centerOnScreen =
+                bool.TryParse(ConfigurationManager.AppSettings["ConsoleCenterOnScreen"], out bool c) && c;
+            if (centerOnScreen)
+            {
+                ConsoleHelper.CenterOnPrimaryScreen();
+            }
+            else
+            {
+                ConsoleHelper.SetWindowPosition(winLeft, winTop);
+            }
             int opacity = Int32.Parse(ConfigurationManager.AppSettings["Opacity"]);
             ConsoleHelper.SetWindowTransparency(opacity); // /256
             // Title bar (caption + min/max/close + system menu) intentionally
@@ -601,6 +614,39 @@ namespace MouseMoverClient
                 // refusing to place the window at all.
             }
             SetWindowPos(MyConsole, 0, adjX, adjY, 0, 0, SWP_NOSIZE);
+        }
+
+        // Center the console's OUTER window on the primary screen. Uses
+        // Screen.PrimaryScreen.Bounds (full display) rather than
+        // .WorkingArea (which excludes the taskbar): the media-server box
+        // hides its taskbar, so the working area's exclusion band would
+        // just push the window off-center by however many pixels the
+        // taskbar would have taken. Must be called AFTER the console has
+        // been resized to its final dimensions - GetWindowRect returns the
+        // CURRENT window rect, so if this runs before Console.SetWindowSize
+        // the centering is based on the pre-resize size and lands wrong.
+        internal static void CenterOnPrimaryScreen()
+        {
+            if (!GetWindowRect(MyConsole, out RECT wr)) return;
+
+            // Screen.PrimaryScreen is nullable in .NET 6+ (headless / no
+            // display attached). No meaningful "center" without a display,
+            // so bail cleanly and leave the window wherever conhost placed
+            // it.
+            Screen? primary = Screen.PrimaryScreen;
+            if (primary == null) return;
+
+            int windowWidth  = wr.right  - wr.left;
+            int windowHeight = wr.bottom - wr.top;
+
+            System.Drawing.Rectangle bounds = primary.Bounds;
+            int centeredLeft = bounds.Left + (bounds.Width  - windowWidth)  / 2;
+            int centeredTop  = bounds.Top  + (bounds.Height - windowHeight) / 2;
+
+            // SWP_NOSIZE: move only, keep the current size. We center the
+            // OUTER window (not the client area) so a titlebar-included
+            // window still looks centered on screen.
+            SetWindowPos(MyConsole, 0, centeredLeft, centeredTop, 0, 0, SWP_NOSIZE);
         }
 
         // > Transparency
