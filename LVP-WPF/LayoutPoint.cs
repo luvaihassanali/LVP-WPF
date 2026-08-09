@@ -1092,6 +1092,30 @@ namespace LVP_WPF.Windows
         // live PresentationSource (i.e., hosted in a Window with a valid
         // HWND). When a window has just been closed or hasn't finished
         // initializing, PointToScreen throws Win32Exception "Invalid window
+        // Public entry point used by IR-remote handlers (cartoons /
+        // history-play) to trigger a real button click with visual
+        // feedback: warp the cursor onto the button so its hover
+        // highlight lights up, pause briefly so the user sees it, then
+        // synthesize a mouse click. The button's Click handler fires
+        // exactly as it would from a manual mouse click - keeping the
+        // shortcut and the button as a single source of truth for what
+        // the action does. Runs synchronously on the caller thread;
+        // safe to call from serial-worker threads because the
+        // dispatcher marshalling is handled inside WarpCursorToCenter.
+        internal void FocusAndClick(FrameworkElement button)
+        {
+            if (button == null)
+            {
+                Log.Warning("FocusAndClick: button is null, ignoring");
+                return;
+            }
+            Log.Debug("FocusAndClick: button={Name}", button.Name);
+            button.Dispatcher.Invoke(() => WarpCursorToCenter(button));
+            WpfTreeHelpers.DoEvents();
+            System.Threading.Thread.Sleep(200);
+            TcpSerialListener.DoMouseClick();
+        }
+
         // handle" - which used to bubble up through SeasonWindow.ShowDialog
         // / TvShowWindow callbacks and crash the app. Skip the warp in
         // those cases; the user just doesn't see a cursor move.

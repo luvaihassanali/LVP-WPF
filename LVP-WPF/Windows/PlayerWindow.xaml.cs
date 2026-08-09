@@ -175,74 +175,102 @@ namespace LVP_WPF.Windows
             pollingTimer?.Stop();
             pollingTimer = null;
 
-            if (PlaybackSession.IsHistoryWatch)
+            // Wrap the mode-specific bookkeeping in try/finally so a
+            // failure in the progress-save / history-reset paths CAN'T
+            // skip mediaPlayer.Stop/Dispose below. Skipping Dispose is the
+            // exact bug that used to leave the LibVLC audio engine playing
+            // after the window disappeared, forcing a manual kill. Even
+            // with the null guards in place, defense in depth: any NEW
+            // code added to the branches inherits the guarantee.
+            try
             {
-                if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
+                if (PlaybackSession.IsHistoryWatch)
                 {
-                    Log.Information("PlayerWindow.Closing: history watch reached end, resetting HistoryIndex");
-                    MainWindow.model.HistoryIndex = 0;
-                    MainWindow.model.HistoryEpisode = null;
-                }
-            }
-            else if (!PlaybackSession.IsCartoonShuffle && !skipClosing)
-            {
-                if (currMedia is Episode episode)
-                {
-                    // Defensive null guard: TvShowWindow.tvShow is null when
-                    // the player was NOT opened through the TV-show flow
-                    // (e.g., cartoon shuffle picks Episodes but never opens
-                    // TvShowWindow). If the PlaybackSession mode gets
-                    // cleared before Closing fires - e.g., during a broken
-                    // close-ordering refactor - this branch is entered for
-                    // a cartoon Episode and would NRE on FindSeasonIdOf,
-                    // aborting the handler BEFORE mediaPlayer.Dispose()
-                    // runs. Result: audio keeps playing after the window
-                    // is gone, only manual kill fixes it. Bail out cleanly
-                    // instead so the dispose path below always runs.
-                    TvShow tvShow = TvShowWindow.tvShow;
-                    if (tvShow == null)
+                    if (MainWindow.model.HistoryIndex == MainWindow.model.HistoryList.Count)
                     {
-                        Log.Warning("PlayerWindow.Closing: TvShowWindow.tvShow is null for episode '{Ep}' - skipping progress save",
-                            episode.Name);
+                        Log.Information("PlayerWindow.Closing: history watch reached end, resetting HistoryIndex");
+                        MainWindow.model.HistoryIndex = 0;
+                        MainWindow.model.HistoryEpisode = null;
                     }
-                    else
+                }
+                else if (!PlaybackSession.IsCartoonShuffle && !skipClosing)
+                {
+                    if (currMedia is Episode episode)
                     {
-                        int? seasonId = tvShow.FindSeasonIdOf(episode);
-
-                        long endTime = mediaPlayer.Time;
-                        if (endTime > episode.Length)
+                        // Defensive null guard: TvShowWindow.tvShow is null when
+                        // the player was NOT opened through the TV-show flow
+                        // (e.g., cartoon shuffle picks Episodes but never opens
+                        // TvShowWindow). If the PlaybackSession mode gets
+                        // cleared before Closing fires - e.g., during a broken
+                        // close-ordering refactor - this branch is entered for
+                        // a cartoon Episode and would NRE on FindSeasonIdOf.
+                        // The try/finally now catches that too, but we still
+                        // bail cleanly here to avoid noise in the error log.
+                        TvShow tvShow = TvShowWindow.tvShow;
+                        if (tvShow == null)
                         {
-                            endTime = episode.Length;
-                        }
-
-                        if (endTime > 0 && seasonId.HasValue)
-                        {
-                            Log.Information("PlayerWindow.Closing: saving progress for '{Show}' S{Sn}E{Ep} '{Title}' = {Time}ms / {Length}ms",
-                                tvShow.Name, seasonId.Value, episode.Id, episode.Name, endTime, episode.Length);
-                            episode.SavedTime = endTime;
-                            if (seasonId.Value != -1)  // -1 means the Extras pseudo-season; don't promote that to LastEpisode
-                            {
-                                tvShow.CurrSeason = seasonId.Value;
-                                tvShow.LastEpisode = episode;
-                            }
+                            Log.Warning("PlayerWindow.Closing: TvShowWindow.tvShow is null for episode '{Ep}' - skipping progress save",
+                                episode.Name);
                         }
                         else
                         {
-                            Log.Debug("PlayerWindow.Closing: not saving progress (endTime={Time}, seasonId={SeasonId})",
-                                endTime, seasonId);
+                            int? seasonId = tvShow.FindSeasonIdOf(episode);
+
+                            long endTime = mediaPlayer.Time;
+                            if (endTime > episode.Length)
+                            {
+                                endTime = episode.Length;
+                            }
+
+                            if (endTime > 0 && seasonId.HasValue)
+                            {
+                                Log.Information("PlayerWindow.Closing: saving progress for '{Show}' S{Sn}E{Ep} '{Title}' = {Time}ms / {Length}ms",
+                                    tvShow.Name, seasonId.Value, episode.Id, episode.Name, endTime, episode.Length);
+                                episode.SavedTime = endTime;
+                                if (seasonId.Value != -1)  // -1 means the Extras pseudo-season; don't promote that to LastEpisode
+                                {
+                                    tvShow.CurrSeason = seasonId.Value;
+                                    tvShow.LastEpisode = episode;
+                                }
+                            }
+                            else
+                            {
+                                Log.Debug("PlayerWindow.Closing: not saving progress (endTime={Time}, seasonId={SeasonId})",
+                                    endTime, seasonId);
+                            }
+                            UpdateProgressBar(episode);
                         }
-                        UpdateProgressBar(episode);
                     }
                 }
             }
-
-            if (mediaPlayer.IsPlaying)
+            catch (Exception ex)
             {
-                mediaPlayer.Stop();
+                Log.Error(ex, "PlayerWindow.Closing: bookkeeping threw - continuing to media teardown so audio stops");
             }
-            mediaPlayer.Dispose();
-            inactivityTimer.Dispose();
-            Log.Information("PlayerWindow.Closing: complete (mediaPlayer disposed, inactivityTimer disposed)");
+            finally
+            {
+                // Unconditional Stop before Dispose. The old
+                // `if (mediaPlayer.IsPlaying) mediaPlayer.Stop();` was
+                // racy: LibVLC transitions through Buffering / Opening /
+                // Ended briefly where IsPlaying reports false even
+                // though the audio decoder is still driving output. If
+                // Stop is skipped in that window, Dispose sometimes
+                // fails to fully tear down the audio pipeline and the
+                // sound persists after the window is gone. Stop is
+                // idempotent (safe on a paused / stopped / ended
+                // player), so calling it unconditionally is strictly
+                // better.
+                try { mediaPlayer?.Stop(); }
+                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: mediaPlayer.Stop threw"); }
+
+                try { mediaPlayer?.Dispose(); }
+                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: mediaPlayer.Dispose threw"); }
+
+                try { inactivityTimer?.Dispose(); }
+                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: inactivityTimer.Dispose threw"); }
+
+                Log.Information("PlayerWindow.Closing: complete (mediaPlayer disposed, inactivityTimer disposed)");
+            }
         }
 
         private static void UpdateProgressBar(Episode episode)

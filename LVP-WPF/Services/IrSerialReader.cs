@@ -309,18 +309,21 @@ namespace LVP_WPF.Services
                     });
                     break;
                 case "cartoons":
-                    Log.Information("IR -> PlayRandomCartoons");
-                    TcpSerialListener.StaThreadWrapper(() =>
-                    {
-                        TvShowWindow.PlayRandomCartoons();
-                    });
+                    // Route through the actual shuffle-button click so the
+                    // shortcut behaves identically to a manual mouse click:
+                    // cursor warps onto the button (hover highlight comes
+                    // on via MouseEnter), 200ms pause so the highlight is
+                    // visible, then DoMouseClick synthesizes a real click
+                    // -> ShuffleButton_Click fires and calls the same
+                    // StaThreadWrapper the IR path used to call directly.
+                    // Single source of truth for what "cartoons" does; no
+                    // divergence between manual and remote UX.
+                    Log.Information("IR -> shuffleButton click (PlayRandomCartoons)");
+                    layoutPoint.FocusAndClick(_gui.shuffleButton);
                     break;
                 case "history-play":
-                    Log.Information("IR -> PlayHistoryList");
-                    TcpSerialListener.StaThreadWrapper(() =>
-                    {
-                        TvShowWindow.PlayHistoryList();
-                    });
+                    Log.Information("IR -> historyButton click (PlayHistoryList)");
+                    layoutPoint.FocusAndClick(_gui.historyButton);
                     break;
                 default:
                     Log.Warning("IR unknown command: '{Cmd}'", msg);

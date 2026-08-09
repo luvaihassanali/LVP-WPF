@@ -627,6 +627,17 @@ namespace MouseMoverClient
         // the centering is based on the pre-resize size and lands wrong.
         internal static void CenterOnPrimaryScreen()
         {
+            // Give conhost time to apply pending changes before we read
+            // the window rect. SetCurrentFont + Console.SetWindowSize +
+            // Console.SetBufferSize all send messages that conhost
+            // processes asynchronously - GetWindowRect immediately after
+            // returns the PRE-resize dimensions on some systems, so the
+            // centering computes an offset for a smaller/older window
+            // size and lands near the top-left instead of the middle.
+            // 150ms is well above the observed lag and imperceptible to
+            // the user (the whole launch is already spinning up).
+            System.Threading.Thread.Sleep(150);
+
             if (!GetWindowRect(MyConsole, out RECT wr)) return;
 
             // Screen.PrimaryScreen is nullable in .NET 6+ (headless / no
@@ -642,6 +653,12 @@ namespace MouseMoverClient
             System.Drawing.Rectangle bounds = primary.Bounds;
             int centeredLeft = bounds.Left + (bounds.Width  - windowWidth)  / 2;
             int centeredTop  = bounds.Top  + (bounds.Height - windowHeight) / 2;
+
+            // Log the numbers used - if the window still lands wrong,
+            // this line tells you whether it was the window rect
+            // (wrong size read) or the screen bounds (wrong screen
+            // reported) that caused it.
+            Console.WriteLine($"[MouseHub] CenterOnPrimaryScreen: window={windowWidth}x{windowHeight}, screen={bounds.Width}x{bounds.Height}, target=({centeredLeft},{centeredTop})");
 
             // SWP_NOSIZE: move only, keep the current size. We center the
             // OUTER window (not the client area) so a titlebar-included
