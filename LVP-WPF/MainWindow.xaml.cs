@@ -211,12 +211,28 @@ namespace LVP_WPF
         {
             Stopwatch totalSw = Stopwatch.StartNew();
 
-            // Apply runtime cartoon-exception overrides before partitioning.
+            // Apply runtime cartoon overrides before partitioning. Both
+            // directions of override are needed AT THIS POINT (not just in
+            // MediaEnricher) because MediaEnricher only runs on the
+            // needsRebuild path - shows already in media.json bypass
+            // enrichment entirely on subsequent launches. Applying here
+            // makes the flags respond to config changes without a rebuild.
+            //
+            //   CartoonExceptions: TMDB genre=Animation but treat as regular TV
+            //                      (e.g. anime that's aimed at adults).
+            //   ForceCartoons:     TMDB genre != Animation but treat as cartoon
+            //                      (e.g. That's So Raven / Smart Guy - live-
+            //                      action, but the user wants them in the
+            //                      cartoons partition + shuffle pool).
             foreach (TvShow show in model.TvShows)
             {
                 if (show.Cartoon && AppConfig.CartoonExceptions.Contains(show.Name))
                 {
                     show.Cartoon = false;
+                }
+                if (AppConfig.ForceCartoons.Contains(show.Name))
+                {
+                    show.Cartoon = true;
                 }
             }
 

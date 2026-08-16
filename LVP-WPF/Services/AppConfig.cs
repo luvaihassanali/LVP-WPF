@@ -1,5 +1,6 @@
 using System;
 using System.Configuration;
+using System.Linq;
 
 namespace LVP_WPF.Services
 {
@@ -45,8 +46,14 @@ namespace LVP_WPF.Services
         {
             Drives = ConfigurationManager.AppSettings["Drives"].Split(';');
             Languages = ConfigurationManager.AppSettings["Languages"].Split(';');
-            CartoonExceptions = ConfigurationManager.AppSettings["CartoonExceptions"].Split(';');
-            ForceCartoons = ConfigurationManager.AppSettings["ForceCartoons"].Split(';');
+            // Trim entries: config strings are semicolon+space separated for
+            // readability ("Foo; Bar"), but raw Split(';') leaves the leading
+            // space on every entry after the first (" Bar" != "Bar"), so
+            // subsequent Contains(show.Name) checks silently miss. Also drop
+            // empty entries so a trailing "; " doesn't produce a ghost match
+            // on empty-name shows.
+            CartoonExceptions = SplitAndTrim(ConfigurationManager.AppSettings["CartoonExceptions"]);
+            ForceCartoons     = SplitAndTrim(ConfigurationManager.AppSettings["ForceCartoons"]);
             TmdbApiKey = ConfigurationManager.AppSettings["TmdbApiKey"];
             LibreTranslatePath = ConfigurationManager.AppSettings["LibreTranslatePath"];
             CartoonLimit = int.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
@@ -61,6 +68,20 @@ namespace LVP_WPF.Services
 
             ShowSnow = bool.Parse(ConfigurationManager.AppSettings["Snow"]);
             MouseHubPath = ConfigurationManager.AppSettings["MouseHubPath"];
+        }
+
+        // Semicolon-separated app-settings that hold display-name lists
+        // (CartoonExceptions, ForceCartoons) go through this so a config
+        // written as "Foo; Bar" matches at Contains() time. Without the
+        // trim, only the FIRST entry ever matches - which is the exact
+        // bug the ForceCartoons key hit for the second show.
+        private static string[] SplitAndTrim(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return Array.Empty<string>();
+            return raw.Split(';', StringSplitOptions.RemoveEmptyEntries)
+                      .Select(s => s.Trim())
+                      .Where(s => s.Length > 0)
+                      .ToArray();
         }
     }
 }

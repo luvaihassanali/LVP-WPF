@@ -185,10 +185,11 @@ namespace LVP_WPF.Services
                 {
                     tvShow.Cartoon = true;
                 }
-                else if (!AppConfig.ForceCartoons.Contains(tvShow.Name))
-                {
-                    tvShow.Cartoon = true;
-                }
+            }
+
+            if (AppConfig.ForceCartoons.Contains(tvShow.Name))
+            {
+                tvShow.Cartoon = true;
             }
 
             if (tvShow.Backdrop != null)
