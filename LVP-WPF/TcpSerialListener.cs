@@ -404,63 +404,58 @@ namespace LVP_WPF
 
             if (featureDispatcher != null && !featureDispatcher.HasShutdownStarted)
             {
-                // CLOSE windows BEFORE InvokeShutdown. The original code
-                // jumped straight to InvokeShutdown, which exits ShowDialog's
-                // modal frame WITHOUT firing Window.Closing. Result: the
-                // PlayerWindow disappeared visually, but mediaPlayer.Dispose()
-                // never ran - the LibVLC audio engine kept playing in the
-                // background, and the only fix was to RDP in and kill the
-                // process. Closing the window first triggers the normal
-                // shutdown chain (Closing handler -> mediaPlayer.Stop() /
-                // Dispose() / inactivityTimer.Dispose() / saved-progress
-                // write) and exits ShowDialog cleanly.
-                try
+                // CLOSE the feature-thread PlayerWindow BEFORE InvokeShutdown.
+                // Without this, InvokeShutdown exits ShowDialog's modal
+                // frame without firing Window.Closing, so mediaPlayer.Dispose
+                // never runs and the LibVLC audio engine keeps playing after
+                // the window is gone.
+                //
+                // Previous implementation enumerated Application.Current.Windows
+                // from the main dispatcher and filtered by Dispatcher ==
+                // featureDispatcher. That was BROKEN: WPF's Application.Windows
+                // is thread-affine - iterating it from the main dispatcher
+                // does NOT reliably include windows created on a separate STA
+                // thread. The filter matched nothing, the close loop was
+                // silently a no-op, and every subsequent IR-return in cartoon
+                // shuffle mode left audio playing. The log showed the
+                // "closing feature window 'PlayerWindow'" line was missing
+                // entirely - which is what tipped this off.
+                //
+                // MainWindow.gui.playerWindow is set in PlayerWindow_Loaded
+                // and points directly at the active PlayerWindow instance
+                // regardless of which thread created it. Use that reference
+                // directly - no cross-thread enumeration needed.
+                Window pw = MainWindow.gui?.playerWindow;
+                if (pw != null && pw.Dispatcher == featureDispatcher)
                 {
-                    // Snapshot windows owned by the feature dispatcher.
-                    // Application.Windows is thread-affine to the main
-                    // dispatcher so enumerate from there.
-                    System.Collections.Generic.List<Window> owned =
-                        Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            var list = new System.Collections.Generic.List<Window>();
-                            foreach (Window w in Application.Current.Windows)
-                            {
-                                if (w.Dispatcher == featureDispatcher)
-                                {
-                                    list.Add(w);
-                                }
-                            }
-                            return list;
-                        });
-
-                    foreach (Window w in owned)
+                    try
                     {
-                        string typeName = w.GetType().Name;
-                        try
+                        // Synchronous Invoke so the Closing handler chain
+                        // (mediaPlayer.Stop/Dispose/etc.) finishes on the
+                        // feature thread BEFORE we ask the dispatcher to
+                        // shut down. Otherwise InvokeShutdown races the
+                        // Closing handler and can kill the thread mid-
+                        // Dispose - which is what left LibVLC's audio
+                        // decoder alive.
+                        featureDispatcher.Invoke(() =>
                         {
-                            // Synchronous Invoke so we know the Closing
-                            // handler chain (incl. mediaPlayer.Dispose) has
-                            // finished before we call InvokeShutdown. An
-                            // async path would race the shutdown against the
-                            // dispose, which is exactly the bug we're fixing.
-                            featureDispatcher.Invoke(() =>
-                            {
-                                Log.Information("EndFeature: closing feature window '{Type}'", typeName);
-                                w.Close();
-                            });
-                        }
-                        catch (Exception ex)
-                        {
-                            Log.Warning(ex, "EndFeature: closing feature window '{Type}' failed", typeName);
-                        }
+                            Log.Information("EndFeature: closing feature window 'PlayerWindow'");
+                            pw.Close();
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning(ex, "EndFeature: closing PlayerWindow failed");
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    Log.Warning(ex, "EndFeature: enumerating feature windows failed");
+                    Log.Warning("EndFeature: no PlayerWindow to close (gui.playerWindow={PwNull}, dispatcherMatch={Match})",
+                        pw == null ? "NULL" : "ok",
+                        pw != null && pw.Dispatcher == featureDispatcher);
                 }
 
-                // After windows close, action() returns and StaThreadWrapper
+                // After the window closes, action() returns and StaThreadWrapper
                 // either skips Dispatcher.Run (HasShutdownStarted check) or
                 // is blocked inside it. InvokeShutdown breaks the latter case.
                 featureDispatcher.InvokeShutdown();

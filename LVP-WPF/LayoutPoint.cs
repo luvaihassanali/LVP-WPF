@@ -1102,22 +1102,37 @@ namespace LVP_WPF.Windows
         // truth. Runs synchronously on the caller thread; safe to call
         // from serial-worker threads because the WPF work is marshalled
         // inside Dispatcher.Invoke.
-        internal void FocusAndClick(FrameworkElement button)
+        // Visual-feedback-only helper: brings the button into view, warps
+        // the cursor onto it so the hover highlight fires, waits 200ms so
+        // the user sees the highlight. Does NOT click the button - the
+        // caller is expected to invoke the underlying action directly
+        // AFTER this returns. Two reasons for the split:
+        //
+        //   1. Reliability. Programmatic click paths through WPF (RaiseEvent
+        //      or ButtonAutomationPeer.Invoke) turned out to behave
+        //      unpredictably from the serial worker thread: sometimes the
+        //      Click handler didn't fire at all, sometimes it fired but
+        //      the ShowDialog on the resulting feature thread stayed
+        //      hidden behind the main window (audio playing, no visible
+        //      player).
+        //   2. Same thread-affinity issue that caused the original crash:
+        //      every WPF property touch has to be marshalled to the
+        //      button's dispatcher. Doing MORE work in this method is
+        //      more surface area for that class of bug.
+        //
+        // Caller does the direct StaThreadWrapper call - same behavior as
+        // before the whole "click the button" refactor started, with the
+        // cursor warp added as pure decoration.
+        internal void FocusButton(FrameworkElement button)
         {
             if (button == null)
             {
-                Log.Warning("FocusAndClick: button is null, ignoring");
+                Log.Warning("FocusButton: button is null, ignoring");
                 return;
             }
 
-            // CRITICAL: this method is called from the IR serial-worker
-            // thread. Every access to a WPF DependencyProperty (including
-            // button.Name) throws "calling thread cannot access this object"
-            // unless it happens inside a Dispatcher.Invoke marshalled to
-            // the button's own thread. GetType().Name is safe (reflection,
-            // no thread affinity) but Name IS a DependencyProperty. Fetch
-            // the name once inside the dispatcher so we can safely include
-            // it in log messages from any thread below.
+            // Name is a DependencyProperty - dispatcher-affine. Fetch it
+            // inside Invoke so subsequent log messages can safely include it.
             string btnName;
             try
             {
@@ -1125,23 +1140,18 @@ namespace LVP_WPF.Windows
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "FocusAndClick: could not read button name (dispatcher access failed)");
-                return;
+                Log.Warning(ex, "FocusButton: could not read button name, continuing anyway");
+                btnName = "?";
             }
 
-            Log.Information("FocusAndClick: START button={Name} type={Type}",
-                btnName, button.GetType().Name);
+            Log.Information("FocusButton: START button={Name}", btnName);
 
             try
             {
-                // BringIntoView first. shuffleButton and historyButton sit
-                // inside the main scroll grid as pseudo-row anchors: unless
-                // the user has scrolled to that exact row, the button is
-                // OFF-SCREEN. BringIntoView asks the closest ScrollViewer
-                // to scroll the element into the viewport - synchronous
-                // for non-animated scroll (WPF default). UpdateLayout
-                // forces a layout pass so subsequent PointToScreen reads
-                // the post-scroll coordinate.
+                // Bring into view (button may be scrolled off-screen if
+                // user hasn't navigated to that row) + force layout so
+                // WarpCursorToCenter's PointToScreen reads the correct
+                // post-scroll coordinate.
                 button.Dispatcher.Invoke(() =>
                 {
                     button.BringIntoView();
@@ -1149,49 +1159,15 @@ namespace LVP_WPF.Windows
                 });
                 WpfTreeHelpers.DoEvents();
                 System.Threading.Thread.Sleep(100);
-                Log.Debug("FocusAndClick: after BringIntoView+UpdateLayout ({Name})", btnName);
 
                 button.Dispatcher.Invoke(() => WarpCursorToCenter(button));
                 System.Threading.Thread.Sleep(200);
-                Log.Debug("FocusAndClick: after cursor warp + highlight pause ({Name})", btnName);
 
-                // ButtonAutomationPeer.Invoke() is WPF's standard way to
-                // programmatically click a Button. Unlike RaiseEvent it
-                // goes through the same code path as accessibility tools
-                // (screen readers, UI automation), guaranteed to fire the
-                // Click handler regardless of hit-test / focus state. Also
-                // triggers the button's visual "pressed" animation so the
-                // user sees the same feedback as a real click.
-                //
-                // The Invoke MUST run on the button's dispatcher; the
-                // AutomationPeer touches WPF internals that are thread-
-                // affine.
-                button.Dispatcher.Invoke(() =>
-                {
-                    if (button is System.Windows.Controls.Button b)
-                    {
-                        var peer = new System.Windows.Automation.Peers.ButtonAutomationPeer(b);
-                        var invoker = (System.Windows.Automation.Provider.IInvokeProvider)
-                            peer.GetPattern(System.Windows.Automation.Peers.PatternInterface.Invoke);
-                        if (invoker == null)
-                        {
-                            Log.Warning("FocusAndClick: could not get IInvokeProvider for '{Name}'", btnName);
-                            return;
-                        }
-                        Log.Information("FocusAndClick: invoking button '{Name}'", btnName);
-                        invoker.Invoke();
-                        Log.Information("FocusAndClick: invoke returned for '{Name}'", btnName);
-                    }
-                    else
-                    {
-                        Log.Warning("FocusAndClick: '{Name}' is not a Button ({Type}), skipping invoke",
-                            btnName, button.GetType().Name);
-                    }
-                });
+                Log.Information("FocusButton: complete for '{Name}' (caller will invoke action)", btnName);
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "FocusAndClick: failed for '{Name}'", btnName);
+                Log.Error(ex, "FocusButton: failed for '{Name}'", btnName);
             }
         }
 

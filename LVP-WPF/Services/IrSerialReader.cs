@@ -309,42 +309,28 @@ namespace LVP_WPF.Services
                     });
                     break;
                 case "cartoons":
-                    // Route through the actual shuffle-button click so the
-                    // shortcut behaves identically to a manual mouse click:
-                    // BringIntoView, cursor warp, hover highlight pause,
-                    // then ButtonAutomationPeer.Invoke fires the button's
-                    // Click handler exactly as a manual click would.
-                    Log.Information("IR -> shuffleButton click (PlayRandomCartoons) - gui={GuiNull} button={BtnNull}",
-                        _gui == null ? "NULL" : "ok",
-                        _gui?.shuffleButton == null ? "NULL" : "ok");
+                    // FocusButton is decoration only (cursor warp for the
+                    // hover highlight); the actual marathon launch is a
+                    // direct StaThreadWrapper call. This is the same code
+                    // path the MainWindow's ShuffleButton_Click uses when
+                    // the user clicks with a mouse - single source of truth
+                    // for what "cartoons" does, without depending on any
+                    // WPF programmatic-click path that turned out to be
+                    // unreliable from the serial-worker thread.
+                    Log.Information("IR -> PlayRandomCartoons");
                     if (_gui?.shuffleButton != null)
                     {
-                        layoutPoint.FocusAndClick(_gui.shuffleButton);
+                        layoutPoint.FocusButton(_gui.shuffleButton);
                     }
-                    else
-                    {
-                        // Fallback: if the button ref hasn't been wired
-                        // yet (edge case: IR arrives before MainWindow_Loaded
-                        // finishes gui.shuffleButton = this.shuffleButton),
-                        // fire the marathon directly. Keeps the shortcut
-                        // functional even without the visual feedback.
-                        Log.Warning("IR -> shuffleButton is null, falling back to direct StaThreadWrapper call");
-                        TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayRandomCartoons());
-                    }
+                    TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayRandomCartoons());
                     break;
                 case "history-play":
-                    Log.Information("IR -> historyButton click (PlayHistoryList) - gui={GuiNull} button={BtnNull}",
-                        _gui == null ? "NULL" : "ok",
-                        _gui?.historyButton == null ? "NULL" : "ok");
+                    Log.Information("IR -> PlayHistoryList");
                     if (_gui?.historyButton != null)
                     {
-                        layoutPoint.FocusAndClick(_gui.historyButton);
+                        layoutPoint.FocusButton(_gui.historyButton);
                     }
-                    else
-                    {
-                        Log.Warning("IR -> historyButton is null, falling back to direct StaThreadWrapper call");
-                        TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayHistoryList());
-                    }
+                    TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayHistoryList());
                     break;
                 default:
                     Log.Warning("IR unknown command: '{Cmd}'", msg);

@@ -249,17 +249,58 @@ namespace LVP_WPF.Windows
             }
             finally
             {
-                // Unconditional Stop before Dispose. The old
-                // `if (mediaPlayer.IsPlaying) mediaPlayer.Stop();` was
-                // racy: LibVLC transitions through Buffering / Opening /
-                // Ended briefly where IsPlaying reports false even
-                // though the audio decoder is still driving output. If
-                // Stop is skipped in that window, Dispose sometimes
-                // fails to fully tear down the audio pipeline and the
-                // sound persists after the window is gone. Stop is
-                // idempotent (safe on a paused / stopped / ended
-                // player), so calling it unconditionally is strictly
-                // better.
+                // Aggressive multi-step teardown. LibVLC has a habit of
+                // keeping the audio output alive past mediaPlayer.Dispose()
+                // if the media is still attached / TimeChanged callbacks
+                // are still firing / the VideoView still holds a reference.
+                // The audio "still plays after the window closed" symptom
+                // came from exactly this - Dispose returned but the
+                // decoder thread kept pumping frames. Killing it in this
+                // order gives every one of those a shot at cutting the
+                // pipeline before we release the player:
+                //
+                //   1. Unsubscribe LibVLC events. TimeChanged fires many
+                //      times a second and touches the player - any callback
+                //      arriving during Dispose can extend the lifetime.
+                //   2. Detach the VideoView. WPF holds a reference to the
+                //      player through videoView.MediaPlayer; nulling it
+                //      releases WPF's grip so the refcount can actually
+                //      reach zero.
+                //   3. Mute + Volume=0 as a belt for the moment between
+                //      Stop and Dispose - the decoder briefly keeps
+                //      producing samples during Stop's transition, and
+                //      muting means those samples don't reach the speakers.
+                //   4. Stop() - tells the decoder to shut down. Idempotent.
+                //   5. Dispose() - releases native resources.
+                //
+                // Every step is wrapped in try/catch: a failure in step N
+                // must not stop N+1 from running, because each step still
+                // helps kill the audio even if the previous ones already
+                // did.
+                try
+                {
+                    if (mediaPlayer != null)
+                    {
+                        mediaPlayer.TimeChanged   -= MediaPlayer_TimeChanged;
+                        mediaPlayer.LengthChanged -= MediaPlayer_LengthChanged;
+                        mediaPlayer.EncounteredError -= MediaPlayer_EncounteredError;
+                        mediaPlayer.EndReached    -= MediaPlayer_EndReached;
+                    }
+                }
+                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: event unsubscribe threw"); }
+
+                try
+                {
+                    if (videoView != null) videoView.MediaPlayer = null;
+                }
+                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: videoView.MediaPlayer=null threw"); }
+
+                try { if (mediaPlayer != null) mediaPlayer.Mute = true; }
+                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: mediaPlayer.Mute=true threw"); }
+
+                try { if (mediaPlayer != null) mediaPlayer.Volume = 0; }
+                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: mediaPlayer.Volume=0 threw"); }
+
                 try { mediaPlayer?.Stop(); }
                 catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: mediaPlayer.Stop threw"); }
 

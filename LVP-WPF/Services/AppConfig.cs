@@ -24,6 +24,7 @@ namespace LVP_WPF.Services
         public static string[] Drives { get; private set; }
         public static string[] Languages { get; private set; }
         public static string[] CartoonExceptions { get; private set; }
+        public static string[] ForceCartoons { get; private set; }
         public static string TmdbApiKey { get; private set; }
         public static string LibreTranslatePath { get; private set; }
         public static int CartoonLimit { get; private set; }
@@ -45,6 +46,7 @@ namespace LVP_WPF.Services
             Drives = ConfigurationManager.AppSettings["Drives"].Split(';');
             Languages = ConfigurationManager.AppSettings["Languages"].Split(';');
             CartoonExceptions = ConfigurationManager.AppSettings["CartoonExceptions"].Split(';');
+            ForceCartoons = ConfigurationManager.AppSettings["ForceCartoons"].Split(';');
             TmdbApiKey = ConfigurationManager.AppSettings["TmdbApiKey"];
             LibreTranslatePath = ConfigurationManager.AppSettings["LibreTranslatePath"];
             CartoonLimit = int.Parse(ConfigurationManager.AppSettings["CartoonLimit"]);
