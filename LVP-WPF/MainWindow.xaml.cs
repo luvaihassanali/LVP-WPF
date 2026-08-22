@@ -335,6 +335,15 @@ namespace LVP_WPF
 
         private void ShuffleButton_Click(object sender, RoutedEventArgs e)
         {
+            // Guard against stacking sessions - mouse clicks can race the
+            // same way IR presses can. See IrSerialReader case "cartoons"
+            // for the full explanation (multiple PlayerWindows only one
+            // tracked -> orphaned audio decoders on exit).
+            if (TcpSerialListener.layoutPoint?.playerWindowActive == true)
+            {
+                Serilog.Log.Warning("ShuffleButton_Click IGNORED: player already open");
+                return;
+            }
             // Same dispatch shape as the IR remote's "cartoons" command and the
             // S hotkey in App.GlobalKeyUp - run the marathon on an STA pump
             // thread so its modal PlayerWindow can own the message loop.
@@ -344,6 +353,11 @@ namespace LVP_WPF
         private void HistoryButton_Click(object sender, RoutedEventArgs e)
         {
             if (gui == null || model == null || model.HistoryList.Count == 0) return;
+            if (TcpSerialListener.layoutPoint?.playerWindowActive == true)
+            {
+                Serilog.Log.Warning("HistoryButton_Click IGNORED: player already open");
+                return;
+            }
             TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayHistoryList());
         }
 

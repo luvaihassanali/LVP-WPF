@@ -110,6 +110,27 @@ namespace LVP_WPF.Windows
                 NotificationDialog.Show("Error", "Media player failed to start.");
             }
 
+            // Defensively unmute and set full volume every time we start
+            // playback. LibVLC on Windows uses a per-application WASAPI
+            // session; a previous mediaPlayer instance (or any external
+            // tool like Windows Volume Mixer) can leave the app's session
+            // in muted state, and new instances inherit that state. Setting
+            // it explicitly here guarantees fresh playback is audible
+            // regardless of what state LibVLC/Windows thought the app was
+            // in before. Setting AFTER Play() because LibVLC ignores audio
+            // property writes on a stopped player - the media must be
+            // loaded first.
+            try
+            {
+                mediaPlayer.Mute = false;
+                mediaPlayer.Volume = 100;
+                Log.Debug("Play: audio reset - Mute=false, Volume=100");
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Play: audio reset failed");
+            }
+
             if (currMedia is Episode episode)
             {
                 if (PlaybackSession.IsHistoryWatch)
@@ -249,42 +270,35 @@ namespace LVP_WPF.Windows
             }
             finally
             {
-                // Aggressive multi-step teardown. LibVLC has a habit of
-                // keeping the audio output alive past mediaPlayer.Dispose()
-                // if the media is still attached / TimeChanged callbacks
-                // are still firing / the VideoView still holds a reference.
-                // The audio "still plays after the window closed" symptom
-                // came from exactly this - Dispose returned but the
-                // decoder thread kept pumping frames. Killing it in this
-                // order gives every one of those a shot at cutting the
-                // pipeline before we release the player:
-                //
-                //   1. Unsubscribe LibVLC events. TimeChanged fires many
-                //      times a second and touches the player - any callback
-                //      arriving during Dispose can extend the lifetime.
-                //   2. Detach the VideoView. WPF holds a reference to the
+                // Teardown order:
+                //   1. Unsubscribe LibVLC events (TimeChanged fires ~4Hz
+                //      during playback; a callback arriving mid-Dispose
+                //      can extend the object lifetime).
+                //   2. Detach VideoView. WPF holds a reference to the
                 //      player through videoView.MediaPlayer; nulling it
-                //      releases WPF's grip so the refcount can actually
+                //      releases WPF's grip so the native refcount can
                 //      reach zero.
-                //   3. Mute + Volume=0 as a belt for the moment between
-                //      Stop and Dispose - the decoder briefly keeps
-                //      producing samples during Stop's transition, and
-                //      muting means those samples don't reach the speakers.
-                //   4. Stop() - tells the decoder to shut down. Idempotent.
-                //   5. Dispose() - releases native resources.
+                //   3. Stop() + Dispose() - releases the player.
                 //
-                // Every step is wrapped in try/catch: a failure in step N
-                // must not stop N+1 from running, because each step still
-                // helps kill the audio even if the previous ones already
-                // did.
+                // Deliberately NOT touching Mute or Volume here. LibVLC
+                // on Windows uses per-application WASAPI audio sessions -
+                // setting Mute=true on the mediaPlayer marks the whole
+                // app's session muted in Windows Volume Mixer, and that
+                // state PERSISTS across subsequent MediaPlayer instances
+                // because they share the same session. Doing it "for
+                // safety" during teardown caused the entire app to go
+                // silent for future playback (system sound + standalone
+                // VLC both worked; only playback through LVP-WPF was
+                // silent). Stop() + Dispose() releases audio cleanly
+                // without touching mute state.
                 try
                 {
                     if (mediaPlayer != null)
                     {
-                        mediaPlayer.TimeChanged   -= MediaPlayer_TimeChanged;
-                        mediaPlayer.LengthChanged -= MediaPlayer_LengthChanged;
+                        mediaPlayer.TimeChanged      -= MediaPlayer_TimeChanged;
+                        mediaPlayer.LengthChanged    -= MediaPlayer_LengthChanged;
                         mediaPlayer.EncounteredError -= MediaPlayer_EncounteredError;
-                        mediaPlayer.EndReached    -= MediaPlayer_EndReached;
+                        mediaPlayer.EndReached       -= MediaPlayer_EndReached;
                     }
                 }
                 catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: event unsubscribe threw"); }
@@ -294,12 +308,6 @@ namespace LVP_WPF.Windows
                     if (videoView != null) videoView.MediaPlayer = null;
                 }
                 catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: videoView.MediaPlayer=null threw"); }
-
-                try { if (mediaPlayer != null) mediaPlayer.Mute = true; }
-                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: mediaPlayer.Mute=true threw"); }
-
-                try { if (mediaPlayer != null) mediaPlayer.Volume = 0; }
-                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: mediaPlayer.Volume=0 threw"); }
 
                 try { mediaPlayer?.Stop(); }
                 catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: mediaPlayer.Stop threw"); }

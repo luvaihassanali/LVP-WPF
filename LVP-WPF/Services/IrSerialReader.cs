@@ -309,6 +309,21 @@ namespace LVP_WPF.Services
                     });
                     break;
                 case "cartoons":
+                    // Guard against stacking sessions: pressing 'cartoons'
+                    // while a player is already open would launch a SECOND
+                    // StaThreadWrapper -> second feature thread -> second
+                    // PlayerWindow -> second mediaPlayer. Only the most
+                    // recent one gets tracked by MainWindow.gui.playerWindow,
+                    // so on exit only one closes and the orphaned decoder
+                    // keeps playing audio. That was the actual root cause
+                    // of "audio persists after cartoon exit" - user pressed
+                    // 'cartoons' twice (e.g., first press seemed to lag)
+                    // and got two overlapping shuffles.
+                    if (layoutPoint.playerWindowActive)
+                    {
+                        Log.Warning("IR -> cartoons IGNORED: player is already open (playerWindowActive=true)");
+                        break;
+                    }
                     // FocusButton is decoration only (cursor warp for the
                     // hover highlight); the actual marathon launch is a
                     // direct StaThreadWrapper call. This is the same code
@@ -325,6 +340,11 @@ namespace LVP_WPF.Services
                     TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayRandomCartoons());
                     break;
                 case "history-play":
+                    if (layoutPoint.playerWindowActive)
+                    {
+                        Log.Warning("IR -> history-play IGNORED: player is already open (playerWindowActive=true)");
+                        break;
+                    }
                     Log.Information("IR -> PlayHistoryList");
                     if (_gui?.historyButton != null)
                     {
