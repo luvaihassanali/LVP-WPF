@@ -160,6 +160,10 @@ namespace LVP_WPF.Windows
 
             TcpSerialListener.layoutPoint.Select("PlayerWindow");
             ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
+            if (CursorConfig.HideCursor)
+            {
+                Mouse.OverrideCursor = Cursors.None;
+            }
 
             // overlayGrid starts Visible (XAML default) so the user gets brief
             // visual confirmation the controls exist. Start the polling timer
@@ -179,6 +183,10 @@ namespace LVP_WPF.Windows
             {
                 if (pollingTimer == null) return;
                 overlayGrid.Visibility = Visibility.Visible;
+                if (CursorConfig.HideCursor)
+                {
+                    Mouse.OverrideCursor = Cursors.Arrow;
+                }
                 pollingTimer.Stop();
                 pollingTimer.Start();
                 Log.Debug("WakeOverlay: overlay shown, auto-hide timer armed for 3s");
@@ -317,6 +325,19 @@ namespace LVP_WPF.Windows
 
                 try { inactivityTimer?.Dispose(); }
                 catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: inactivityTimer.Dispose threw"); }
+
+                // Clear the per-app OverrideCursor set on Loaded / overlay
+                // toggle so cursor state at the main menu isn't stuck on
+                // whatever the player last set. Wrap in Dispatcher.Invoke -
+                // Closing may fire on the STA feature thread.
+                try
+                {
+                    Application.Current?.Dispatcher.Invoke(() =>
+                    {
+                        Mouse.OverrideCursor = CursorConfig.HideCursor ? Cursors.None : null;
+                    });
+                }
+                catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: OverrideCursor reset threw"); }
 
                 Log.Information("PlayerWindow.Closing: complete (mediaPlayer disposed, inactivityTimer disposed)");
             }
@@ -891,6 +912,15 @@ namespace LVP_WPF.Windows
 
             Log.Debug("PollingTimer_Tick: auto-hiding overlay");
             overlayGrid.Visibility = Visibility.Hidden;
+            if (CursorConfig.HideCursor)
+            {
+                Mouse.OverrideCursor = Cursors.None;
+            }
+            // Park cursor off-screen so it doesn't linger visible over the
+            // video surface after the overlay auto-hides - matters most when
+            // HideCursor=false and the user last moved the mouse into a
+            // wake-zone to reveal the menu.
+            ComInterop.SetCursorPos(CursorConfig.HideCursorX, CursorConfig.HideCursorY);
 
             // Capture the cursor position so the synthetic WM_MOUSEMOVE that
             // WPF posts when hit-test recomputes (the cursor was over a

@@ -203,18 +203,32 @@ function Test-Show {
     Write-Info   ("Path: {0}" -f $ShowDir)
 
     # ----- resolve TMDB id ------------------------------------------------
-    $folderName  = [IO.Path]::GetFileName($ShowDir)
+    # Trim trailing separators - GetFileName returns '' when the path ends
+    # in '\' or '/', which then blanks out displayName and every downstream
+    # message. Users tab-completing a folder in PowerShell get a trailing
+    # backslash by default.
+    $trimmed     = $ShowDir.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+    $folderName  = [IO.Path]::GetFileName($trimmed)
     $split       = $folderName -split '%', 2
     $displayName = $split[0].Trim()
     $tmdbId      = $null
 
-    if ($split.Length -eq 2 -and ($split[1] -match '^\d+$')) {
-        $tmdbId = [int]$split[1]
+    Write-Info ("Folder name: $folderName")
+    # A %-suffix is a TMDB id ONLY when it's a plausible id (>= 4 digits, but
+    # not a 4-digit year in the 1900-2099 range). '% 1993' is a year the user
+    # tacked on for disambiguation, not id 1993 - fall through to name search.
+    $suffix = if ($split.Length -eq 2) { $split[1].Trim() } else { '' }
+    $isTmdbId = $suffix -match '^\d+$' -and -not ($suffix -match '^(19|20)\d{2}$')
+    if ($isTmdbId) {
+        $tmdbId = [int]$suffix
         Write-Info ("TMDB: id {0} (pinned via folder %suffix)" -f $tmdbId)
     } else {
+        if ($suffix) {
+            Write-Info ("Folder %suffix '$suffix' treated as disambiguator, not TMDB id - searching by name")
+        }
         $search = Search-Tv $displayName $ApiKey
         if (-not $search.results -or $search.results.Count -eq 0) {
-            Write-Fail "Show '$displayName' not found on TMDB"
+            Write-Fail "Show '$displayName' not found on TMDB $($folderName)"
             $Totals.Fail++
             return
         }
