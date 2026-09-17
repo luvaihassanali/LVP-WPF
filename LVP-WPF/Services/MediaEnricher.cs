@@ -201,6 +201,22 @@ namespace LVP_WPF.Services
             {
                 tvShow.Poster = await _tmdb.DownloadImageAsync(tvShow.Poster, false, tvShow.Name);
             }
+
+            // Local override: drop poster.jpg / backdrop.jpg into the show
+            // root and it wins over whatever TMDB returned (or fills in when
+            // TMDB has no image at all). Same convention CustomCache uses
+            // for the fully-hand-curated shows. Use it for TMDB-known shows
+            // whose entries lack images (e.g. The Sinbad Show).
+            ApplyLocalImageOverride(tvShow);
+        }
+
+        private static void ApplyLocalImageOverride(TvShow tvShow)
+        {
+            if (string.IsNullOrEmpty(tvShow.Path)) return;
+            string localPoster = Path.Combine(tvShow.Path, "poster.jpg");
+            string localBackdrop = Path.Combine(tvShow.Path, "backdrop.jpg");
+            if (File.Exists(localPoster)) tvShow.Poster = localPoster;
+            if (File.Exists(localBackdrop)) tvShow.Backdrop = localBackdrop;
         }
 
         private async Task BuildSeasonCache(TvShow tvShow)

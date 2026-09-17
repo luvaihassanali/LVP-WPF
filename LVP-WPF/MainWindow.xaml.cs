@@ -234,6 +234,20 @@ namespace LVP_WPF
                 {
                     show.Cartoon = true;
                 }
+
+                // Local poster/backdrop override, applied on every launch
+                // (not just first-scan). MediaEnricher is skipped for shows
+                // already in media.json, so its enrichment-time override
+                // never re-runs - dropping poster.jpg / backdrop.jpg into
+                // the show root has to take effect here to be visible
+                // without a rebuild. File.Exists is cheap enough per show.
+                if (!string.IsNullOrEmpty(show.Path))
+                {
+                    string lp = System.IO.Path.Combine(show.Path, "poster.jpg");
+                    string lb = System.IO.Path.Combine(show.Path, "backdrop.jpg");
+                    if (System.IO.File.Exists(lp)) show.Poster = lp;
+                    if (System.IO.File.Exists(lb)) show.Backdrop = lb;
+                }
             }
 
             // Partition once instead of double-iterating model.TvShows with
