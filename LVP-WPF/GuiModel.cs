@@ -40,6 +40,7 @@ namespace LVP_WPF
         public Button playerCloseButton;
         public Button historyButton;
         public Button shuffleButton;
+        public Button tvShuffleButton;
         public Dictionary<int, Media> mediaDict = new Dictionary<int, Media>();
         public Grid mainGrid;
         public PlayerWindow playerWindow;

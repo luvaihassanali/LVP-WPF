@@ -1,6 +1,7 @@
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LVP_WPF.Services
 {
@@ -85,7 +86,17 @@ namespace LVP_WPF.Services
                 Log.Warning("PlaybackSession.PickRandomEpisode: show '{Name}' has no seasons", show.Name);
                 return null;
             }
-            Season season = show.Seasons[_random.Next(show.Seasons.Length)];
+            // Filter out the Extras/Specials season (Id == -1, set by
+            // LibraryScanner for the "Extras" subfolder). Bloopers,
+            // deleted scenes, and TMDB "Specials" shouldn't appear in the
+            // shuffle pool - same policy as HistoryList.
+            Season[] pickable = show.Seasons.Where(s => s.Id != -1).ToArray();
+            if (pickable.Length == 0)
+            {
+                Log.Warning("PlaybackSession.PickRandomEpisode: show '{Name}' has no non-Extras seasons", show.Name);
+                return null;
+            }
+            Season season = pickable[_random.Next(pickable.Length)];
             if (season.Episodes == null || season.Episodes.Length == 0)
             {
                 Log.Warning("PlaybackSession.PickRandomEpisode: show '{Name}' season {Sn} has no episodes",

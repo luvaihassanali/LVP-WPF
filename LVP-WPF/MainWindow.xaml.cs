@@ -133,6 +133,7 @@ namespace LVP_WPF
                 gui.mainGrid = this.mainGrid;
                 gui.historyButton = this.historyButton;
                 gui.shuffleButton = this.shuffleButton;
+                gui.tvShuffleButton = this.tvShuffleButton;
                 tcpWorker = new TcpSerialListener(gui);
                 tcpWorker.StartThread();
             });
@@ -259,6 +260,7 @@ namespace LVP_WPF
             // are also tracked in a flat list used by the S-hotkey / IR-remote
             // "play random cartoons" marathon.
             foreach (TvShow c in cartoons) TvShowWindow.cartoons.Add(c);
+            foreach (TvShow t in tvShows)  TvShowWindow.tvShows.Add(t);
 
             await LoadCategoryAsync(tvShows, gui.TvShows, "TvShows", show => new MainWindowBox
             {
@@ -362,6 +364,16 @@ namespace LVP_WPF
             // S hotkey in App.GlobalKeyUp - run the marathon on an STA pump
             // thread so its modal PlayerWindow can own the message loop.
             TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayRandomCartoons());
+        }
+
+        private void TvShuffleButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (TcpSerialListener.layoutPoint?.playerWindowActive == true)
+            {
+                Serilog.Log.Warning("TvShuffleButton_Click IGNORED: player already open");
+                return;
+            }
+            TcpSerialListener.StaThreadWrapper(() => TvShowWindow.PlayRandomTvShows());
         }
 
         private void HistoryButton_Click(object sender, RoutedEventArgs e)

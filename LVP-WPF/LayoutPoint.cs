@@ -870,21 +870,22 @@ namespace LVP_WPF.Windows
         // buttons - so joystick / IR-remote nav lands on them naturally.
         private void BuildMainWindowGrid()
         {
-            AddButtonPseudoRow();                                      // Row 0: History
+            AddButtonPseudoRow(navigableCells: 2);                     // Row 0: TvShuffle + History
             AppendMainGridSection(gui.TvShows.Count, columnsPerRow: 6);
-            AddButtonPseudoRow();                                      // between TV and Cartoons: Shuffle
+            AddButtonPseudoRow(navigableCells: 1);                     // between TV and Cartoons: cartoon Shuffle
             AppendMainGridSection(gui.Cartoons.Count, columnsPerRow: 6);
             AppendMainGridSection(gui.Movies.Count, columnsPerRow: 6);
             BuildMainWindowControlGrid();
         }
 
-        // Append a row where only column 0 is occupied (1) and cols 1..N-1
-        // are sentinels (0). Used to give the History / Shuffle buttons a
-        // dedicated navigable cell in the otherwise poster-only grid.
-        private void AddButtonPseudoRow()
+        // Append a row where the first `navigableCells` columns are
+        // occupied (1) and the rest are sentinels (0). Used to give the
+        // header action buttons (History / Shuffle / TvShuffle) dedicated
+        // navigable cells in the otherwise poster-only grid.
+        private void AddButtonPseudoRow(int navigableCells = 1)
         {
             int[] row = new int[MainGridColumns];
-            row[0] = 1;
+            for (int c = 0; c < navigableCells && c < MainGridColumns; c++) row[c] = 1;
             mainWindowGrid.Add(row);
             mainWindowControlGrid.Add(new FrameworkElement[MainGridColumns]);
         }
@@ -948,17 +949,21 @@ namespace LVP_WPF.Windows
             }
 
             // Row layout produced by BuildMainWindowGrid:
-            //   row 0:                          History pseudo-row
+            //   row 0:                          TvShuffle (col 0) + History (col 1) pseudo-row
             //   rows 1..1+ceil(TV/6):           TV posters
-            //   row M:                          Shuffle pseudo-row
+            //   row M:                          cartoon Shuffle pseudo-row
             //   rows M+1..:                     Cartoon posters
             //   rows ...:                       Movie posters
 
             int row = 0;
             int controlIndex = gui.Movies.Count;  // start at TvShows in source list
 
-            // History pseudo-row.
-            if (row < mainWindowGrid.Count) mainWindowControlGrid[row][0] = gui.historyButton;
+            // TvShuffle + History pseudo-row.
+            if (row < mainWindowGrid.Count)
+            {
+                mainWindowControlGrid[row][0] = gui.tvShuffleButton;
+                mainWindowControlGrid[row][1] = gui.historyButton;
+            }
             row++;
 
             // TV poster rows.

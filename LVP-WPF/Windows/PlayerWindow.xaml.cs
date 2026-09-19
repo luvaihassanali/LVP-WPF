@@ -36,6 +36,12 @@ namespace LVP_WPF.Windows
         // otherwise make Tick keep the overlay visible forever after every
         // F / R / End / Home press.
         private bool _userPaused = false;
+        // Environment.TickCount of the most recent backward press. Used by
+        // HandleBackwardPress to detect a double-tap (press within 2s of
+        // the previous one) so the second press jumps to the previous
+        // item in the queue instead of just restarting the current file.
+        private int _lastBackwardTick = 0;
+        private const int BackwardDoubleTapMs = 2000;
         private double prevSliderValue;
         // Environment.TickCount of the most recent programmatic seek
         // (SeekRelative / JumpToEdge). Used by Slider_ValueChanged to
@@ -133,9 +139,12 @@ namespace LVP_WPF.Windows
 
             if (currMedia is Episode episode)
             {
-                if (PlaybackSession.IsHistoryWatch)
+                // Show the top-left banner for any queue-driven mode so the
+                // first episode gets the same "what am I watching?" hint the
+                // auto-advanced ones get.
+                if (PlaybackSession.IsHistoryWatch || PlaybackSession.IsCartoonShuffle)
                 {
-                    ShowHistoryWatchBanner(episode);
+                    ShowPlaybackBanner(episode);
                 }
 
                 if (episode.SavedTime != 0 && episode.SavedTime < episode.Length)
@@ -203,6 +212,22 @@ namespace LVP_WPF.Windows
             // setting IsEnabled=false after Stop() is redundant - Stop does both.
             pollingTimer?.Stop();
             pollingTimer = null;
+
+            // Always release the IR guard here so *any* close path unlocks
+            // the remote: user close via ClosePlayerWindow already clears
+            // this before invoking Close(), but paths like InactivityDetected
+            // -> this.Close() and EndReached -> DeferCloseCurrWindow do not.
+            // Without this reset the flag stays true, and every subsequent
+            // IR command logs "player=true" and gets swallowed by the
+            // playerWindowActive guard in IrSerialReader.
+            try
+            {
+                if (TcpSerialListener.layoutPoint != null)
+                {
+                    TcpSerialListener.layoutPoint.playerWindowActive = false;
+                }
+            }
+            catch (Exception ex) { Log.Warning(ex, "PlayerWindow.Closing: playerWindowActive reset threw"); }
 
             // Wrap the mode-specific bookkeeping in try/finally so a
             // failure in the progress-save / history-reset paths CAN'T
@@ -362,17 +387,58 @@ namespace LVP_WPF.Windows
         /// for 5 seconds, then fade it out. Used both at initial playback start
         /// and when MediaPlayer_EndReached advances to the next history entry.
         /// </summary>
-        private void ShowHistoryWatchBanner(Episode episode)
+        // Shows the small top-left banner with Show name / Episode name /
+        // context line (date for history, [i/N] for shuffle modes). Reused
+        // across HistoryWatch, CartoonShuffle, and TvShuffle - all of them
+        // benefit from an at-a-glance "what am I watching?" hint after each
+        // auto-advance because there's no menu context to fall back on.
+        private void ShowPlaybackBanner(Episode episode)
         {
+            string showName = ResolveShowName(episode);
+            string context;
+            if (PlaybackSession.IsHistoryWatch)
+            {
+                context = $"{episode.Date:MMMM d, yyyy}  ·  [{MainWindow.model.HistoryIndex + 1}/{MainWindow.model.HistoryList.Count}]";
+            }
+            else if (PlaybackSession.IsCartoonShuffle)
+            {
+                context = $"[{PlaybackSession.CartoonShuffleIndex + 1}/{PlaybackSession.CartoonShuffleLimit}]";
+            }
+            else
+            {
+                context = episode.Date != default ? $"{episode.Date:MMMM d, yyyy}" : string.Empty;
+            }
+
             hwGrid.Dispatcher.BeginInvoke(() =>
             {
-                hwTxtBlock.Text = $"{episode.Date:MMMM dd, yyyy}\n{episode.Name}";
+                hwShowText.Text    = showName;
+                hwEpisodeText.Text = episode.Name ?? string.Empty;
+                hwContextText.Text = context;
+                hwContextText.Visibility = string.IsNullOrEmpty(context) ? Visibility.Collapsed : Visibility.Visible;
                 hwGrid.Visibility = Visibility.Visible;
             });
             Task.Delay(5000).ContinueWith(t =>
             {
                 hwGrid.Dispatcher.BeginInvoke(() => { hwGrid.Visibility = Visibility.Hidden; });
             });
+        }
+
+        // Episode has no back-ref to its owning show, so derive it from the
+        // path: any TvShow whose Path is a prefix of the episode's Path is
+        // the owner. Falls back to "" so the show line just goes empty
+        // rather than showing a bogus name if the lookup misses.
+        private static string ResolveShowName(Episode episode)
+        {
+            if (episode?.Path == null || MainWindow.model?.TvShows == null) return string.Empty;
+            foreach (TvShow tv in MainWindow.model.TvShows)
+            {
+                if (!string.IsNullOrEmpty(tv.Path) &&
+                    episode.Path.StartsWith(tv.Path, StringComparison.OrdinalIgnoreCase))
+                {
+                    return tv.Name ?? string.Empty;
+                }
+            }
+            return string.Empty;
         }
 
         // CloseCurrWindow can NOT be called directly from this event handler -
@@ -425,7 +491,7 @@ namespace LVP_WPF.Windows
                     MainWindow.model.HistoryIndex + 1, MainWindow.model.HistoryList.Count,
                     MainWindow.model.HistoryEpisode.Name);
                 PlayMediaOnVlcThread(MainWindow.model.HistoryEpisode);
-                ShowHistoryWatchBanner(MainWindow.model.HistoryEpisode);
+                ShowPlaybackBanner(MainWindow.model.HistoryEpisode);
                 return;
             }
 
@@ -449,6 +515,7 @@ namespace LVP_WPF.Windows
                     PlaybackSession.CartoonShuffleIndex + 1, PlaybackSession.CartoonShuffleLimit,
                     nextCartoon.Name);
                 PlayMediaOnVlcThread(nextCartoon);
+                ShowPlaybackBanner(nextCartoon);
                 return;
             }
 
@@ -647,8 +714,143 @@ namespace LVP_WPF.Windows
         // WakeOverlay so the bug was mouse-click specific.
         private void BackwardButton_Click(object sender, RoutedEventArgs e)
         {
-            JumpToEdge(toStart: true);
+            HandleBackwardPress();
             WakeOverlay();
+        }
+
+        // Double-tap backward: first press restarts the current file
+        // (JumpToEdge to start), a second press within BackwardDoubleTapMs
+        // jumps to the PREVIOUS item. Called from both the mouse click
+        // and the IR remote "backward" case so both surfaces share timing.
+        //
+        // Edge cases handled here:
+        //   - Queue at index 0 (HistoryIndex==0 / CartoonShuffleIndex==0):
+        //     no previous item, fall back to a restart of the current file
+        //     so the user still gets *some* response to the second press.
+        //   - Normal-TV mode on an Extras episode (Id < 0): don't attempt
+        //     previous - forward already refuses to advance out of Extras;
+        //     symmetric behavior on the way back.
+        //   - Normal-TV mode at first episode of first regular season:
+        //     GetPreviousEpisode returns null, fall back to restart.
+        //   - Normal-TV mode at first episode of a season: cross to LAST
+        //     episode of previous non-empty regular season, update
+        //     tvShow.CurrSeason and refresh the TvShowWindow (mirrors the
+        //     forward season-transition path).
+        //   - TvShowWindow.tvShow is null (player opened outside the TV
+        //     flow, e.g. a movie): no previous concept; just restart.
+        //   - Rapid triple-tap: each transition resets _lastBackwardTick,
+        //     so consecutive quick presses continue walking backward one
+        //     item at a time. Useful for skipping past several items.
+        internal void HandleBackwardPress()
+        {
+            int now = Environment.TickCount;
+            bool isDoubleTap = _lastBackwardTick != 0 && (now - _lastBackwardTick) < BackwardDoubleTapMs;
+            _lastBackwardTick = now;
+
+            if (!isDoubleTap)
+            {
+                Log.Debug("HandleBackwardPress: single tap - restart current file");
+                JumpToEdge(toStart: true);
+                return;
+            }
+
+            Log.Information("HandleBackwardPress: double-tap detected ({Ms}ms), attempting previous item",
+                now - _lastBackwardTick);
+            // Reset so a third press within the window starts a fresh
+            // single-tap counter (otherwise every following press within
+            // 2s would count as another double-tap off the same anchor).
+            _lastBackwardTick = 0;
+
+            if (TryPreviousInQueue()) return;
+            if (TryPreviousInShow()) return;
+
+            Log.Information("HandleBackwardPress: no previous item available, restarting current file");
+            JumpToEdge(toStart: true);
+        }
+
+        // Queue-mode previous: HistoryWatch / CartoonShuffle / TvShuffle
+        // (both shuffle modes share the CartoonShuffle plumbing). Returns
+        // true if we advanced backward, false when the mode doesn't apply
+        // OR the index is already at 0.
+        private bool TryPreviousInQueue()
+        {
+            if (PlaybackSession.IsHistoryWatch)
+            {
+                if (MainWindow.model.HistoryIndex <= 0)
+                {
+                    Log.Information("HistoryWatch: already at first item, no previous");
+                    return false;
+                }
+                MainWindow.model.HistoryIndex--;
+                MainWindow.model.HistoryEpisode = MainWindow.model.HistoryList[MainWindow.model.HistoryIndex];
+                Log.Information("HistoryWatch: back to [{Idx}/{Total}] '{Ep}'",
+                    MainWindow.model.HistoryIndex + 1, MainWindow.model.HistoryList.Count,
+                    MainWindow.model.HistoryEpisode.Name);
+                PlayMediaOnVlcThread(MainWindow.model.HistoryEpisode);
+                ShowPlaybackBanner(MainWindow.model.HistoryEpisode);
+                return true;
+            }
+
+            if (PlaybackSession.IsCartoonShuffle)
+            {
+                if (PlaybackSession.CartoonShuffleIndex <= 0)
+                {
+                    Log.Information("CartoonShuffle: already at first item, no previous");
+                    return false;
+                }
+                PlaybackSession.CartoonShuffleIndex--;
+                Episode prev = PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex];
+                Log.Information("CartoonShuffle: back to [{Idx}/{Limit}] '{Ep}'",
+                    PlaybackSession.CartoonShuffleIndex + 1, PlaybackSession.CartoonShuffleLimit, prev.Name);
+                PlayMediaOnVlcThread(prev);
+                ShowPlaybackBanner(prev);
+                return true;
+            }
+
+            return false;
+        }
+
+        // Normal-TV previous. Returns false when the current item isn't a
+        // regular episode with a resolvable TvShow, or when there's no
+        // previous episode to walk to (start of show, or currently on
+        // Extras).
+        private bool TryPreviousInShow()
+        {
+            if (currMedia is not Episode episode) return false;
+            if (episode.Id < 0)
+            {
+                Log.Information("HandleBackwardPress: on Extras episode - refusing to walk backward");
+                return false;
+            }
+            TvShow tvShow = TvShowWindow.tvShow;
+            if (tvShow == null)
+            {
+                Log.Debug("HandleBackwardPress: TvShowWindow.tvShow is null - can't compute previous");
+                return false;
+            }
+
+            Episode? prev = tvShow.GetPreviousEpisode(episode, out bool seasonChanged);
+            if (prev == null) return false;
+
+            if (seasonChanged)
+            {
+                int newSeasonId = tvShow.FindSeasonIdOf(prev) ?? tvShow.CurrSeason;
+                Log.Information("HandleBackwardPress: '{Show}' season transition back: '{FromEp}' (S{FromSn}) -> '{ToEp}' (S{ToSn})",
+                    tvShow.Name, episode.Name, tvShow.CurrSeason, prev.Name, newSeasonId);
+                tvShow.CurrSeason = newSeasonId;
+                tvShowWindow?.Dispatcher.BeginInvoke(() =>
+                {
+                    tvShowWindow.UpdateTvWindowSeasonChange(tvShow.CurrSeason);
+                });
+            }
+            else
+            {
+                Log.Information("HandleBackwardPress: '{Show}' back within season: '{FromEp}' -> '{ToEp}'",
+                    tvShow.Name, episode.Name, prev.Name);
+            }
+
+            PlayMediaOnVlcThread(prev);
+            return true;
         }
         private void RewindButton_Click(object sender, RoutedEventArgs e)
         {
@@ -942,14 +1144,29 @@ namespace LVP_WPF.Windows
             if (mediaPlayer.IsPlaying) return;
 
             this.Dispatcher.Invoke(() => { this.Close(); });
-            foreach (Window w in Application.Current.Windows)
+
+            // Application.Current.Windows AND Application.Current.Shutdown
+            // are thread-affine to the MAIN dispatcher. This continuation
+            // resumes on the threadpool (no captured sync context), so
+            // touching them from here throws
+            // "The calling thread cannot access this object" - which then
+            // gets rethrown on whichever dispatcher async-void picked up
+            // (the feature dispatcher for cartoon shuffle), killing
+            // Dispatcher.Run and stranding playerWindowActive=true so no
+            // further IR commands get through. Marshal explicitly.
+            Application app = Application.Current;
+            if (app == null) return;
+            await app.Dispatcher.InvokeAsync(() =>
             {
-                if (w is TvShowWindow) w.Close();
-            }
+                foreach (Window w in app.Windows)
+                {
+                    if (w is TvShowWindow) w.Close();
+                }
+            });
 
             await Task.Delay(1000);
             Log.Information("Inactivity shutdown player");
-            Application.Current.Shutdown();
+            app.Dispatcher.Invoke(() => app.Shutdown());
         }
     }
 }

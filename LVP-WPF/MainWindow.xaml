@@ -50,6 +50,9 @@
                     <TextBlock Text="✖" Margin="0,-3,1,0" FontSize="28" FontFamily="Segoe UI"/>
                 </Button>
                 <Label Name="tvHeader" Content="TV" Foreground="White"/>
+                <Button Name="tvShuffleButton" Click="TvShuffleButton_Click" Style="{StaticResource HeaderActionButton}"
+                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,290,0"
+                        Content="▶ Shuffle" Focusable="False"/>
                 <Button Name="historyButton" Click="HistoryButton_Click" Style="{StaticResource HeaderActionButton}"
                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,90,0"
                         Content="▶ History" Focusable="False"/>

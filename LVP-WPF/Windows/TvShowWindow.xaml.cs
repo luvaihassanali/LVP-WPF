@@ -33,6 +33,7 @@ namespace LVP_WPF.Windows
         static internal TvShow tvShow;
         static internal EpisodeWindowBox[] episodes;
         static internal List<TvShow> cartoons = new List<TvShow>();
+        static internal List<TvShow> tvShows = new List<TvShow>();
 
         public static void Show(TvShow t)
         {
@@ -513,6 +514,18 @@ namespace LVP_WPF.Windows
         internal static void PlayRandomCartoons()
         {
             PlaybackSession.StartCartoonShuffle(AppConfig.CartoonLimit, cartoons);
+            TcpSerialListener.layoutPoint.playerWindowActive = true;
+            PlayerWindow.Show(PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex]);
+        }
+
+        // Mirrors PlayRandomCartoons but pulls from the non-cartoon TV pool.
+        // Reuses CartoonShuffle mode wholesale - queue, feature-thread pump,
+        // IR guard, and progress-save skips all behave identically for this
+        // random-walk case; the "cartoon" in the mode name is nominal.
+        internal static void PlayRandomTvShows()
+        {
+            PlaybackSession.StartCartoonShuffle(AppConfig.CartoonLimit, tvShows);
+            if (PlaybackSession.CartoonShuffleQueue.Count == 0) return;
             TcpSerialListener.layoutPoint.playerWindowActive = true;
             PlayerWindow.Show(PlaybackSession.CartoonShuffleQueue[PlaybackSession.CartoonShuffleIndex]);
         }

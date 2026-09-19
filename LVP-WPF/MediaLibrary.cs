@@ -1,6 +1,7 @@
 ﻿using LVP_WPF.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
@@ -153,13 +154,41 @@ namespace LVP_WPF
                 // by air date. Keeps the existing List<Episode> instance (Clear+AddRange
                 // rather than reassign) in case anything has captured the reference.
                 MainWindow.model.HistoryList.Clear();
+                // Skip the Extras/Specials season (Id == -1, set by
+                // LibraryScanner for the "Extras" subfolder) - bloopers,
+                // deleted scenes, and TMDB "Specials" don't belong in the
+                // chronological watch-through history queue.
                 MainWindow.model.HistoryList.AddRange(
                     MainWindow.model.TvShows
                         .Where(t => !t.Cartoon)
                         .SelectMany(t => t.Seasons)
+                        .Where(s => s.Id != -1)
                         .SelectMany(s => s.Episodes));
                 MainWindow.model.HistoryList.Sort((a, b) => a.Date.CompareTo(b.Date));
                 Log($"Init: HistoryList rebuilt in {phaseSw.ElapsedMilliseconds}ms ({MainWindow.model.HistoryList.Count} episodes)");
+            }
+            else
+            {
+                // Persisted HistoryList from an older media.json may still
+                // contain Extras-season episodes from before the filter
+                // above was added. Prune them in place so users don't have
+                // to force a rebuild.
+                HashSet<int> extrasEpIds = new HashSet<int>(
+                    MainWindow.model.TvShows
+                        .SelectMany(t => t.Seasons)
+                        .Where(s => s.Id == -1)
+                        .SelectMany(s => s.Episodes)
+                        .Select(e => e.Id));
+                if (extrasEpIds.Count > 0)
+                {
+                    int before = MainWindow.model.HistoryList.Count;
+                    MainWindow.model.HistoryList.RemoveAll(e => extrasEpIds.Contains(e.Id));
+                    int removed = before - MainWindow.model.HistoryList.Count;
+                    if (removed > 0)
+                    {
+                        Log($"Init: pruned {removed} Extras-season episodes from persisted HistoryList");
+                    }
+                }
             }
 
             Log($"Init: END (total {totalSw.ElapsedMilliseconds}ms)");

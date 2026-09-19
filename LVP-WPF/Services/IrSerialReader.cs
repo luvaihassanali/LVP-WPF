@@ -303,7 +303,12 @@ namespace LVP_WPF.Services
                 case "backward":
                     InvokeOnPlayer("backward", pw =>
                     {
-                        pw.JumpToEdge(true);
+                        // Route through HandleBackwardPress so IR presses
+                        // share the double-tap timing with mouse clicks:
+                        // first tap restarts the current file, second tap
+                        // within 2s walks to the previous item (queue mode)
+                        // or previous episode (normal-TV mode).
+                        pw.HandleBackwardPress();
                         pw.WakeOverlay();
                         layoutPoint.FocusPlayerControl(LayoutPoint.PlayerButtonBackward);
                     });

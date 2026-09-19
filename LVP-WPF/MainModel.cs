@@ -516,6 +516,67 @@ namespace LVP_WPF
             return null;
         }
 
+        // Mirror of GetNextEpisode for backward navigation. Same edge-case
+        // shape: skip empty seasons, treat Extras (Id == -1) as a hard stop,
+        // return null when there's nothing before the current episode.
+        internal Episode? GetPreviousEpisode(Episode current, out bool seasonChanged)
+        {
+            seasonChanged = false;
+            for (int i = 0; i < Seasons.Length; i++)
+            {
+                Season season = Seasons[i];
+                for (int j = 0; j < season.Episodes.Length; j++)
+                {
+                    if (!current.Name.Equals(season.Episodes[j].Name)) continue;
+
+                    if (j > 0)
+                    {
+                        // Still within this season - just step backward.
+                        Episode prev = season.Episodes[j - 1];
+                        Serilog.Log.Debug("GetPreviousEpisode: '{Show}' S{Sn}E{From} '{FromName}' -> E{To} '{ToName}'",
+                            Name, season.Id, current.Id, current.Name, prev.Id, prev.Name);
+                        return prev;
+                    }
+
+                    // At the first episode of this season - walk backward
+                    // through the seasons list to find the previous non-empty
+                    // regular (non-Extras) season and return its LAST episode.
+                    int prevSeasonIdx = i - 1;
+                    while (prevSeasonIdx >= 0)
+                    {
+                        Season prevSeason = Seasons[prevSeasonIdx];
+                        if (prevSeason.Id == -1)
+                        {
+                            // Extras sit at the end of Seasons per LibraryScanner,
+                            // but guard defensively in case order ever changes.
+                            prevSeasonIdx--;
+                            continue;
+                        }
+                        if (prevSeason.Episodes == null || prevSeason.Episodes.Length == 0)
+                        {
+                            Serilog.Log.Warning("GetPreviousEpisode: '{Show}' S{Sn} has no episodes on disk - skipping",
+                                Name, prevSeason.Id);
+                            prevSeasonIdx--;
+                            continue;
+                        }
+
+                        seasonChanged = true;
+                        Episode lastOfPrev = prevSeason.Episodes[prevSeason.Episodes.Length - 1];
+                        Serilog.Log.Information("GetPreviousEpisode: '{Show}' season change S{From} -> S{To}, opening '{PrevName}'",
+                            Name, season.Id, prevSeason.Id, lastOfPrev.Name);
+                        return lastOfPrev;
+                    }
+
+                    Serilog.Log.Information("GetPreviousEpisode: '{Show}' S{Sn}E{Ep} '{Name}' - START OF SHOW (no earlier seasons with episodes)",
+                        Name, season.Id, current.Id, current.Name);
+                    return null;
+                }
+            }
+            Serilog.Log.Warning("GetPreviousEpisode: '{Show}' current ep '{Name}' not found in any season ({TotalSeasons} seasons searched) - returning null",
+                Name, current.Name, Seasons.Length);
+            return null;
+        }
+
         /// <summary>
         /// Copy the top-level TvShow fields (not the Seasons array - that's
         /// done index-by-index by IngestSeasonsByIndex) from <paramref name="other"/>.
