@@ -19,7 +19,15 @@ namespace LVP_WPF.Windows
         static private TvShowWindow? tvShowWindow;
         private const string VlcFontStyle = "--freetype-font=Segoe UI";
         private const string VlcFontSize = "--freetype-fontsize=48";
-        static internal LibVLC libVLC = new LibVLC(VlcFontStyle, VlcFontSize);
+        // Rolling-average volume normalizer: pulls quiet episodes up and hot
+        // episodes down so shuffle / cross-show playback doesn't require the
+        // user to keep adjusting volume. buff-size=20 is ~1-2s of averaging
+        // (fast enough for new-episode leveling, slow enough not to pump);
+        // max-level=2.0 is the VLC default target gain ceiling.
+        private const string VlcNormVol = "--audio-filter=normvol";
+        private const string VlcNormBuff = "--norm-buff-size=20";
+        private const string VlcNormMax = "--norm-max-level=2.0";
+        static internal LibVLC libVLC = new LibVLC(VlcFontStyle, VlcFontSize, VlcNormVol, VlcNormBuff, VlcNormMax);
         private MediaPlayer mediaPlayer;
         private DispatcherTimer pollingTimer;
         InactivityTimer inactivityTimer;
